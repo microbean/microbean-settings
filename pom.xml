@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="utf-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                             http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>org.microbean</groupId>
+  <artifactId>microbean-settings</artifactId>
+  <version>0.0.1-SNAPSHOT</version>
+
+  <parent>
+    <groupId>org.microbean</groupId>
+    <artifactId>microbean-pluginmanagement-pom</artifactId>
+    <version>14</version>
+    <relativePath/>
+  </parent>
+
+  <name>microBean™ Settings</name>
+  <description>${project.name}</description>
+  <inceptionYear>2019</inceptionYear>
+  <url>https://microbean.github.io/${project.artifactId}</url>
+
+  <scm>
+    <connection>scm:git:git@github.com:microbean/${project.artifactId}.git</connection>
+    <developerConnection>scm:git:git@github.com:microbean/${project.artifactId}.git</developerConnection>
+    <url>https://github.com/microbean/${project.artifactId}/</url>
+  </scm>
+
+  <dependencyManagement>
+    <dependencies>
+
+
+      <!-- Imports. -->
+
+
+      <dependency>
+        <groupId>org.microbean</groupId>
+        <artifactId>microbean-base-specification</artifactId>
+        <version>0.5.0</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+
+      <dependency>
+        <groupId>org.microbean</groupId>
+        <artifactId>microbean-weld-se-environment</artifactId>
+        <version>0.7.0</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+
+
+      <!-- Normal dependencies. -->
+
+
+      <dependency>
+        <groupId>org.microbean</groupId>
+        <artifactId>microbean-development-annotations</artifactId>
+        <version>0.2.4</version>
+        <type>jar</type>
+      </dependency>
+
+
+    </dependencies>
+  </dependencyManagement>
+
+  <dependencies>
+
+
+    <!-- Test-scoped dependencies. -->
+
+
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <type>jar</type>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.microbean</groupId>
+      <artifactId>microbean-weld-se-environment</artifactId>
+      <type>pom</type>
+      <scope>test</scope>
+    </dependency>
+
+
+    <!-- Runtime-scoped dependencies. -->
+
+
+    <dependency>
+      <groupId>org.jboss</groupId>
+      <artifactId>jandex</artifactId>
+      <type>jar</type>
+      <scope>runtime</scope>
+      <optional>true</optional>
+    </dependency>
+
+
+    <!-- Provided-scoped dependencies. -->
+
+
+    <dependency>
+      <groupId>org.microbean</groupId>
+      <artifactId>microbean-base-specification</artifactId>
+      <type>pom</type>
+      <scope>provided</scope>
+    </dependency>
+
+
+    <!-- Compile-scoped dependencies. -->
+
+
+    <dependency>
+        <groupId>org.microbean</groupId>
+        <artifactId>microbean-development-annotations</artifactId>
+        <type>jar</type>
+        <scope>compile</scope>
+    </dependency>
+
+
+  </dependencies>
+
+  <build>
+
+    <plugins>
+
+      <plugin>
+        <groupId>com.github.github</groupId>
+        <artifactId>site-maven-plugin</artifactId>
+      </plugin>
+
+      <plugin>
+        <groupId>org.jboss.jandex</groupId>
+        <artifactId>jandex-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>make-index</id>
+            <goals>
+              <goal>jandex</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+    </plugins>
+  </build>
+
+  <properties>
+
+    <!-- maven-javadoc-plugin properties -->
+    <links/>
+
+  </properties>
+
+  <reporting>
+    <plugins>
+      <plugin>
+        <artifactId>maven-javadoc-plugin</artifactId>
+        <reportSets>
+          <reportSet>
+            <reports>
+              <report>javadoc-no-fork</report>
+            </reports>
+          </reportSet>
+        </reportSets>
+      </plugin>
+    </plugins>
+  </reporting>
+
+</project>
