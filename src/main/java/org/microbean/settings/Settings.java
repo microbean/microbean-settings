@@ -21,13 +21,11 @@ import java.beans.FeatureDescriptor;
 import java.lang.annotation.Annotation;
 
 import java.lang.reflect.Type;
-import java.lang.reflect.TypeVariable;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
@@ -49,121 +47,93 @@ import javax.enterprise.util.TypeLiteral;
 
 public class Settings {
 
-  public static final TypeLiteral<String> stringTypeLiteral = new TypeLiteral<String>() {
-      private static final long serialVersionUID = 1L;
-    };
-
-  public static final Converter<String> stringConverter = new Converter<String>() {
-      @Override
-      public final String convert(final Value value) {
-        return value == null ? null : value.get();
-      }
-    };
-
   private static final Comparator<Value> valueComparator = Comparator.<Value>comparingInt(v -> v.getQualifiers().size()).reversed();
 
-  private final Map<Type, Converter<?>> converters;
+  private final Converters converters;
 
-  private final Iterable<? extends Source> sources;
+  private final Collection<? extends Source> sources;
 
-  private final Iterable<? extends Arbiter> arbiters;
+  private final Collection<? extends Arbiter> arbiters;
 
-  public Settings(final Iterable<? extends Source> sources,
-                  final Iterable<? extends Arbiter> arbiters) {
+  public <T> Settings(final Collection<? extends Source> sources,
+                      final Converters converters,
+                      final Collection<? extends Arbiter> arbiters) {
     super();
-    if (sources == null) {
-      this.sources = null;
-    } else if (sources instanceof Collection) {
-      this.sources = new ArrayList<>((Collection<? extends Source>)sources);
+    if (sources == null || sources.isEmpty()) {
+      this.sources = Collections.emptySet();
     } else {
-      final Collection<Source> c = new ArrayList<>();
-      for (final Source source : sources) {
-        if (source != null) {
-          c.add(source);
-        }
-      }
-      this.sources = c;
+      this.sources = Collections.unmodifiableCollection(new ArrayList<>(sources));
     }
-    if (arbiters == null) {
-      this.arbiters = null;
-    } else if (arbiters instanceof Collection) {
-      this.arbiters = new ArrayList<>((Collection<? extends Arbiter>)arbiters);
+    this.converters = Objects.requireNonNull(converters);
+    if (arbiters == null || arbiters.isEmpty()) {
+      this.arbiters = Collections.emptySet();
     } else {
-      final Collection<Arbiter> c = new ArrayList<>();
-      for (final Arbiter arbiter : arbiters) {
-        if (arbiter != null) {
-          c.add(arbiter);
-        }
-      }
-      this.arbiters = c;
+      this.arbiters = Collections.unmodifiableCollection(new ArrayList<>(arbiters));
     }
-    this.converters = new HashMap<>();
-    this.putConverter(String.class, stringConverter);
   }
 
-  public <T> T getValue(final String name,
-                        Set<Annotation> qualifiers,
-                        final Class<T> cls,
-                        final Supplier<? extends String> defaultValueSupplier) {
-    final Set<Source> activeSources = new HashSet<>();
+  public final <T> T get(final String name,
+                         final Set<Annotation> qualifiers,
+                         final Class<T> cls,
+                         final Supplier<? extends String> defaultValueSupplier) {
     final ExpressionFactory expressionFactory = ExpressionFactory.newInstance();
     final StandardELContext elContext = new StandardELContext(expressionFactory);
-    elContext.addELResolver(new SourceELResolver(this, expressionFactory, activeSources, qualifiers));
-    return this.getValue(name,
-                         qualifiers,
-                         activeSources,
-                         elContext,
-                         expressionFactory,
-                         this.getConverter(cls),
-                         defaultValueSupplier);
-  }
-  
-  public <T> T getValue(final String name,
-                        Set<Annotation> qualifiers,
-                        final TypeLiteral<T> typeLiteral,
-                        final Supplier<? extends String> defaultValueSupplier) {
-    final Set<Source> activeSources = new HashSet<>();
-    final ExpressionFactory expressionFactory = ExpressionFactory.newInstance();
-    final StandardELContext elContext = new StandardELContext(expressionFactory);
-    elContext.addELResolver(new SourceELResolver(this, expressionFactory, activeSources, qualifiers));
-    return this.getValue(name,
-                         qualifiers,
-                         activeSources,
-                         elContext,
-                         expressionFactory,
-                         this.getConverter(typeLiteral),
-                         defaultValueSupplier);
+    elContext.addELResolver(new SourceELResolver(this, expressionFactory, qualifiers));
+    return this.get(name,
+                    qualifiers,
+                    elContext,
+                    expressionFactory,
+                    this.converters.getConverter(cls),
+                    defaultValueSupplier);
   }
 
-  public <T> T getValue(final String name,
-                        Set<Annotation> qualifiers,
-                        final Converter<T> converter,
-                        final Supplier<? extends String> defaultValueSupplier) {
-    final Set<Source> activeSources = new HashSet<>();
+  public final <T> T get(final String name,
+                         final Set<Annotation> qualifiers,
+                         final TypeLiteral<T> typeLiteral,
+                         final Supplier<? extends String> defaultValueSupplier) {
     final ExpressionFactory expressionFactory = ExpressionFactory.newInstance();
     final StandardELContext elContext = new StandardELContext(expressionFactory);
-    elContext.addELResolver(new SourceELResolver(this, expressionFactory, activeSources, qualifiers));
-    return this.getValue(name,
-                         qualifiers,
-                         activeSources,
-                         elContext,
-                         expressionFactory,
-                         converter,
-                         defaultValueSupplier);
+    elContext.addELResolver(new SourceELResolver(this, expressionFactory, qualifiers));
+    return this.get(name,
+                    qualifiers,
+                    elContext,
+                    expressionFactory,
+                    this.converters.getConverter(typeLiteral),
+                    defaultValueSupplier);
   }
 
-  private final <T> T getValue(final String name,
+  public <T> T get(final String name,
+                   Set<Annotation> qualifiers,
+                   final Converter<T> converter,
+                   final Supplier<? extends String> defaultValueSupplier) {
+    final ExpressionFactory expressionFactory = ExpressionFactory.newInstance();
+    final StandardELContext elContext = new StandardELContext(expressionFactory);
+    elContext.addELResolver(new SourceELResolver(this, expressionFactory, qualifiers));
+    return this.get(name,
+                    qualifiers,
+                    elContext,
+                    expressionFactory,
+                    converter,
+                    defaultValueSupplier);
+  }
+
+  private final <T> T get(final String name,
+                          final Set<Annotation> qualifiers,
+                          final ELContext elContext,
+                          final ExpressionFactory expressionFactory,
+                          final Converter<T> converter,
+                          final Supplier<? extends String> rawDefaultValueSupplier) {
+    return Objects.requireNonNull(converter).convert(this.getValue(name, qualifiers, elContext, expressionFactory, rawDefaultValueSupplier));
+  }
+
+  private final Value getValue(final String name,
                                Set<Annotation> qualifiers,
-                               final Set<Source> activeSources,
                                final ELContext elContext,
                                final ExpressionFactory expressionFactory,
-                               final Converter<T> converter,
                                final Supplier<? extends String> rawDefaultValueSupplier) {
     Objects.requireNonNull(name);
-    Objects.requireNonNull(activeSources);
     Objects.requireNonNull(elContext);
     Objects.requireNonNull(expressionFactory);
-    Objects.requireNonNull(converter);
 
     final int qualifiersSize;
     if (qualifiers == null || qualifiers.isEmpty()) {
@@ -187,17 +157,7 @@ public class Settings {
       for (final Source source : sources) {
         if (source != null) {
 
-          final Value value;
-          try {
-            if (activeSources.contains(source)) {
-              value = null;
-            } else {
-              activeSources.add(source);
-              value = source.getValue(name, qualifiers);
-            }
-          } finally {
-            activeSources.remove(source);
-          }
+          final Value value = source.getValue(name, qualifiers);
 
           if (value != null) {
 
@@ -325,7 +285,6 @@ public class Settings {
         }
       }
     }
-    assert activeSources.isEmpty();
 
     if (badValues != null && !badValues.isEmpty()) {
       this.handleMalformedValues(name, qualifiers, badValues);
@@ -336,6 +295,14 @@ public class Settings {
     if (selectedValue == null) {
 
       if (conflictingValues != null) {
+
+        // Perform arbitration.  The first "round" of arbitration is
+        // hard-coded, effectively: we check to see if all conflicting
+        // values are of different specificities.  If they are, then
+        // the most specific value is selected.  If any two
+        // conflicting values share specificities, then they are added
+        // to a collection over which our supplied Arbiters will
+        // operate.
 
         int highestSpecificitySoFarEncountered = -1;
 
@@ -398,6 +365,9 @@ public class Settings {
 
     if (selectedValue == null) {
       selectedValue = this.arbitrate(name, qualifiers, valuesToArbitrate == null || valuesToArbitrate.isEmpty() ? Collections.emptySet() : Collections.unmodifiableCollection(valuesToArbitrate));
+      if (selectedValue == null) {
+        throw new AmbiguousValuesException(valuesToArbitrate);
+      }
     }
     valuesToArbitrate = null;
 
@@ -415,75 +385,26 @@ public class Settings {
       this.interpolate(stringToInterpolate,
                        elContext,
                        expressionFactory,
-                       activeSources,
                        qualifiers);
     if (selectedValue == null) {
       selectedValue = new Value(null, name, qualifiers, interpolatedString);
     } else {
       selectedValue = new Value(selectedValue, interpolatedString);
-    }    
-    final T returnValue = converter.convert(selectedValue);
-    return returnValue;
-  }
-
-  public <T> Converter<T> getConverter(final Class<T> cls) {
-    Objects.requireNonNull(cls);
-    @SuppressWarnings("unchecked")
-    final Converter<T> returnValue = (Converter<T>)this.converters.get(cls);
-    return returnValue;
-  }
-  
-  public <T> Converter<T> getConverter(final TypeLiteral<T> typeLiteral) {
-    Objects.requireNonNull(typeLiteral);
-    final Type type = typeLiteral.getType();
-    @SuppressWarnings("unchecked")
-    final Converter<T> returnValue = (Converter<T>)this.converters.get(type);
-    return returnValue;
-  }
-
-  public <T> Converter<T> putConverter(final Class<T> cls, final Converter<T> converter) {
-    final Converter<T> returnValue;
-    if (cls != null) {
-      @SuppressWarnings("unchecked")
-      final Converter<T> temp = (Converter<T>)this.converters.put(cls, converter);
-      returnValue = temp;
-    } else {
-      returnValue = null;
     }
-    return returnValue;
-  }
-  
-  public <T> Converter<T> putConverter(final TypeLiteral<T> typeLiteral, final Converter<T> converter) {
-    final Converter<T> returnValue;
-    if (typeLiteral != null) {
-      @SuppressWarnings("unchecked")
-      final Converter<T> temp = (Converter<T>)this.converters.put(typeLiteral.getType(), converter);
-      returnValue = temp;
-    } else {
-      returnValue = null;
-    }
-    return returnValue;
+    return selectedValue;
   }
 
-  public <T> Converter<T> removeConverter(final Object key) {
-    @SuppressWarnings("unchecked")
-    final Converter<T> returnValue = (Converter<T>)this.converters.remove(key);
-    return returnValue;
-  }
-  
-  public String interpolate(final String value,
-                            final Set<Annotation> qualifiers) {
-    final Set<Source> activeSources = new HashSet<>();
+  public final String interpolate(final String value,
+                                  final Set<Annotation> qualifiers) {
     final ExpressionFactory expressionFactory = ExpressionFactory.newInstance();
     final StandardELContext elContext = new StandardELContext(expressionFactory);
-    elContext.addELResolver(new SourceELResolver(this, expressionFactory, activeSources, qualifiers));
-    return this.interpolate(value, elContext, expressionFactory, activeSources, qualifiers);
+    elContext.addELResolver(new SourceELResolver(this, expressionFactory, qualifiers));
+    return this.interpolate(value, elContext, expressionFactory, qualifiers);
   }
 
   private final String interpolate(final String value,
                                    final ELContext elContext,
                                    final ExpressionFactory expressionFactory,
-                                   final Set<Source> activeSources,
                                    final Set<Annotation> qualifiers) {
     Objects.requireNonNull(elContext);
     Objects.requireNonNull(expressionFactory);
@@ -543,13 +464,78 @@ public class Settings {
    */
 
 
+  private static final class Key {
+
+    private final String name;
+
+    private final Set<Annotation> qualifiers;
+
+    private Key(final String name, final Set<Annotation> qualifiers) {
+      super();
+      this.name = Objects.requireNonNull(name);
+      if (qualifiers == null || qualifiers.isEmpty()) {
+        this.qualifiers = Collections.emptySet();
+      } else {
+        this.qualifiers = Collections.unmodifiableSet(new HashSet<>(qualifiers));
+      }
+    }
+
+    private final String getName() {
+      return this.name;
+    }
+
+    private final Set<Annotation> getQualifiers() {
+      return this.qualifiers;
+    }
+
+    @Override
+    public final int hashCode() {
+      int hashCode = 17;
+      final Object name = this.getName();
+      int c = name == null ? 0 : name.hashCode();
+      hashCode = 37 * hashCode + c;
+      final Collection<?> qualifiers = this.getQualifiers();
+      c = qualifiers == null || qualifiers.isEmpty() ? 0 : qualifiers.hashCode();
+      hashCode = 37 * hashCode + c;
+      return hashCode;
+    }
+
+    @Override
+    public boolean equals(final Object other) {
+      if (other == this) {
+        return true;
+      } else if (other instanceof Key) {
+        final Key her = (Key)other;
+        final Object name = this.getName();
+        if (name == null) {
+          if (her.getName() != null) {
+            return false;
+          }
+        } else if (!name.equals(her.getName())) {
+          return false;
+        }
+        final Collection<?> qualifiers = this.getQualifiers();
+        if (qualifiers == null || qualifiers.isEmpty()) {
+          final Collection<?> herQualifiers = her.getQualifiers();
+          if (herQualifiers != null && !herQualifiers.isEmpty()) {
+            return false;
+          }
+        } else if (!qualifiers.equals(her.getQualifiers())) {
+          return false;
+        }
+        return true;
+      } else {
+        return false;
+      }
+    }
+
+  }
+
   private static final class SourceELResolver extends ELResolver {
 
     private final Settings settings;
 
     private final ExpressionFactory expressionFactory;
-
-    private final Set<Source> activeSources;
 
     private final Set<Annotation> qualifiers;
 
@@ -557,18 +543,15 @@ public class Settings {
                              final Set<Annotation> qualifiers) {
       this(settings,
            ExpressionFactory.newInstance(),
-           new HashSet<>(),
            qualifiers);
     }
 
     private SourceELResolver(final Settings settings,
                              final ExpressionFactory expressionFactory,
-                             final Set<Source> activeSources,
                              final Set<Annotation> qualifiers) {
       super();
       this.settings = Objects.requireNonNull(settings);
       this.expressionFactory = expressionFactory;
-      this.activeSources = activeSources;
       if (qualifiers == null) {
         this.qualifiers = Collections.emptySet();
       } else {
@@ -604,14 +587,14 @@ public class Settings {
           returnValue = this.settings.getClass();
         }
       } else if (base instanceof Settings && property instanceof String) {
+        final Settings settings = (Settings)base;
         final String value =
-          ((Settings)base).getValue((String)property,
-                                    this.qualifiers,
-                                    this.activeSources,
-                                    elContext,
-                                    this.expressionFactory,
-                                    stringConverter,
-                                    null);
+          settings.get((String)property,
+                       this.qualifiers,
+                       elContext,
+                       this.expressionFactory,
+                       settings.converters.getConverter(String.class),
+                       null);
         elContext.setPropertyResolved(true);
         if (value == null) {
           throw new PropertyNotFoundException((String)property);
@@ -632,14 +615,14 @@ public class Settings {
           returnValue = this.settings;
         }
       } else if (base instanceof Settings && property instanceof String) {
+        final Settings settings = (Settings)base;
         final String value =
-          ((Settings)base).getValue((String)property,
-                                    this.qualifiers,
-                                    this.activeSources,
-                                    elContext,
-                                    this.expressionFactory,
-                                    stringConverter,
-                                    null);
+          settings.get((String)property,
+                       this.qualifiers,
+                       elContext,
+                       this.expressionFactory,
+                       settings.converters.getConverter(String.class),
+                       null);
         elContext.setPropertyResolved(true);
         if (value == null) {
           throw new PropertyNotFoundException((String)property);

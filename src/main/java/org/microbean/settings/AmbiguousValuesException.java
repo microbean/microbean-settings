@@ -1,6 +1,6 @@
 /* -*- mode: Java; c-basic-offset: 2; indent-tabs-mode: nil; coding: utf-8-unix -*-
  *
- * Copyright © 2019–2020 microBean™.
+ * Copyright © 2020 microBean™.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,11 +16,21 @@
  */
 package org.microbean.settings;
 
-import java.io.Serializable;
+import java.util.Collection;
 
-@FunctionalInterface
-public interface Converter<T> extends Serializable {
+public class AmbiguousValuesException extends SettingsException {
+
+  private static final long serialVersionUID = 1L;
+
+  private Collection<Value> values;
   
-  public T convert(final Value value);
+  public AmbiguousValuesException(final Collection<Value> values) {
+    super();
+    this.values = values;
+  }
+
+  public Collection<Value> getValues() {
+    return this.values;
+  }
   
 }
