@@ -1,6 +1,6 @@
 /* -*- mode: Java; c-basic-offset: 2; indent-tabs-mode: nil; coding: utf-8-unix -*-
  *
- * Copyright © 2019–2020 microBean™.
+ * Copyright © 2020 microBean™.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,19 +16,16 @@
  */
 package org.microbean.settings;
 
-import java.io.Serializable;
+import java.lang.reflect.Type;
 
-import java.util.function.Function;
+import javax.enterprise.util.TypeLiteral;
 
-@FunctionalInterface
-public interface Converter<T> extends Function<Value, T>, Serializable {
+public interface ConverterProvider {
 
-  static final long serialVersionUID = 1L;
-
-  default public T apply(final Value value) {
-    return this.convert(value);
-  }
+  public <T> Converter<? extends T> getConverter(final Class<T> type);
   
-  public T convert(final Value value);
+  public <T> Converter<? extends T> getConverter(final TypeLiteral<T> type);
+
+  public Converter<?> getConverter(final Type type);
   
 }

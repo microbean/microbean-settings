@@ -1,6 +1,6 @@
 /* -*- mode: Java; c-basic-offset: 2; indent-tabs-mode: nil; coding: utf-8-unix -*-
  *
- * Copyright © 2019–2020 microBean™.
+ * Copyright © 2020 microBean™.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,19 +16,28 @@
  */
 package org.microbean.settings;
 
-import java.io.Serializable;
+public final class IntegerConverter implements Converter<Integer> {
 
-import java.util.function.Function;
+  private static final long serialVersionUID = 1L;
 
-@FunctionalInterface
-public interface Converter<T> extends Function<Value, T>, Serializable {
-
-  static final long serialVersionUID = 1L;
-
-  default public T apply(final Value value) {
-    return this.convert(value);
+  public IntegerConverter() {
+    super();
   }
-  
-  public T convert(final Value value);
-  
+
+  @Override
+  public final Integer convert(final Value value) {
+    final Integer returnValue;
+    if (value == null) {
+      returnValue = null;
+    } else {
+      final String stringValue = value.get();
+      if (stringValue == null) {
+        returnValue = null;
+      } else {
+        returnValue = Integer.decode(stringValue);
+      }
+    }
+    return returnValue;
+  }
+
 }

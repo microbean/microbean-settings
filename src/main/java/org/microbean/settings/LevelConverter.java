@@ -1,6 +1,6 @@
 /* -*- mode: Java; c-basic-offset: 2; indent-tabs-mode: nil; coding: utf-8-unix -*-
  *
- * Copyright © 2019–2020 microBean™.
+ * Copyright © 2020 microBean™.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,19 +16,30 @@
  */
 package org.microbean.settings;
 
-import java.io.Serializable;
+import java.util.logging.Level;
 
-import java.util.function.Function;
+public final class LevelConverter implements Converter<Level> {
 
-@FunctionalInterface
-public interface Converter<T> extends Function<Value, T>, Serializable {
+  private static final long serialVersionUID = 1L;
 
-  static final long serialVersionUID = 1L;
-
-  default public T apply(final Value value) {
-    return this.convert(value);
+  public LevelConverter() {
+    super();
   }
-  
-  public T convert(final Value value);
-  
+
+  @Override
+  public final Level convert(final Value value) {
+    final Level returnValue;
+    if (value == null) {
+      returnValue = null;
+    } else {
+      final String stringValue = value.get();
+      if (stringValue == null) {
+        returnValue = null;
+      } else {
+        returnValue = Level.parse(stringValue);
+      }
+    }
+    return returnValue;
+  }
+
 }

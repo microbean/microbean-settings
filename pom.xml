@@ -124,6 +124,35 @@
 
   <build>
 
+    <pluginManagement>
+      <plugins>
+
+        <plugin>
+          <artifactId>maven-javadoc-plugin</artifactId>
+          <configuration>
+            <tags>
+              <tag>
+                <name>idempotency</name>
+                <placement>m</placement>
+                <head>Idempotency:</head>
+              </tag>
+              <tag>
+                <name>nullability</name>
+                <placement>cfm</placement>
+                <head>Nullability:</head>
+              </tag>
+              <tag>
+                <name>threadsafety</name>
+                <placement>fmpt</placement>
+                <head>Thread Safety:</head>
+              </tag>
+            </tags>
+          </configuration>
+        </plugin>
+        
+      </plugins>
+    </pluginManagement>
+    
     <plugins>
 
       <plugin>
@@ -150,7 +179,7 @@
   <properties>
 
     <!-- maven-javadoc-plugin properties -->
-    <links/>
+    <links>https://jakarta.ee/specifications/cdi/2.0/apidocs</links>
 
   </properties>
 

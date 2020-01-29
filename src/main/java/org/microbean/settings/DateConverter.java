@@ -16,20 +16,40 @@
  */
 package org.microbean.settings;
 
-import java.io.Serializable;
+import java.time.Instant;
 
-import java.lang.annotation.Annotation;
+import java.util.Date;
 
-import java.util.Collection;
-import java.util.Set;
-
-public abstract class Arbiter implements Serializable {
+public final class DateConverter implements Converter<Date> {
 
   private static final long serialVersionUID = 1L;
+
+  private final InstantConverter delegate;
   
-  public abstract Value arbitrate(final Set<? extends Source> sources,
-                                  final String name,
-                                  final Set<? extends Annotation> qualifiers,
-                                  final Collection<? extends Value> values);
-  
+  public DateConverter() {
+    super();
+    this.delegate = new InstantConverter();
+  }
+
+  @Override
+  public final Date convert(final Value value) {
+    final Date returnValue;
+    if (value == null) {
+      returnValue = null;
+    } else {
+      final String stringValue = value.get();
+      if (stringValue == null) {
+        returnValue = null;
+      } else {
+        final Instant instant = this.delegate.convert(value);
+        if (instant == null) {
+          returnValue = null;
+        } else {
+          returnValue = Date.from(instant);
+        }
+      }
+    }
+    return returnValue;
+  }
+
 }

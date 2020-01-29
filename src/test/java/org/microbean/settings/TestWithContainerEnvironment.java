@@ -81,7 +81,7 @@ public class TestWithContainerEnvironment {
 
   @Test
   public <T> void testContainerStartup() {
-    final Settings settings = new Settings(Collections.singleton(new SystemPropertiesSource()),
+    final Settings settings = new Settings((name, qualifiers) -> Collections.singleton(new SystemPropertiesSource()),
                                            new Converters(),
                                            null);
     final String javaHome =

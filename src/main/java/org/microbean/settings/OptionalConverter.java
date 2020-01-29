@@ -1,6 +1,6 @@
 /* -*- mode: Java; c-basic-offset: 2; indent-tabs-mode: nil; coding: utf-8-unix -*-
  *
- * Copyright © 2019–2020 microBean™.
+ * Copyright © 2020 microBean™.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,19 +16,29 @@
  */
 package org.microbean.settings;
 
-import java.io.Serializable;
+import java.util.Objects;
+import java.util.Optional;
 
-import java.util.function.Function;
+public final class OptionalConverter<T> implements Converter<Optional<T>> {
 
-@FunctionalInterface
-public interface Converter<T> extends Function<Value, T>, Serializable {
+  private static final long serialVersionUID = 1L;
 
-  static final long serialVersionUID = 1L;
+  private final Converter<T> baseConverter;
 
-  default public T apply(final Value value) {
-    return this.convert(value);
+  public OptionalConverter(final Converter<T> baseConverter) {
+    super();
+    this.baseConverter = Objects.requireNonNull(baseConverter);
   }
-  
-  public T convert(final Value value);
-  
+
+  @Override
+  public final Optional<T> convert(final Value value) {
+    final Optional<T> returnValue;
+    if (value == null) {
+      returnValue = Optional.empty();
+    } else {
+      returnValue = Optional.ofNullable(this.baseConverter.convert(value));
+    }
+    return returnValue;
+  }
+
 }

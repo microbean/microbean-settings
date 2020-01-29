@@ -1,6 +1,6 @@
 /* -*- mode: Java; c-basic-offset: 2; indent-tabs-mode: nil; coding: utf-8-unix -*-
  *
- * Copyright © 2019–2020 microBean™.
+ * Copyright © 2020 microBean™.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,19 +16,24 @@
  */
 package org.microbean.settings;
 
-import java.io.Serializable;
+public class MalformedValuesException extends SettingsException {
 
-import java.util.function.Function;
+  private static final long serialVersionUID = 1L;
+  
+  public MalformedValuesException() {
+    super();
+  }
 
-@FunctionalInterface
-public interface Converter<T> extends Function<Value, T>, Serializable {
+  public MalformedValuesException(final String message) {
+    super(message);
+  }
 
-  static final long serialVersionUID = 1L;
-
-  default public T apply(final Value value) {
-    return this.convert(value);
+  public MalformedValuesException(final Throwable cause) {
+    super(cause);
   }
   
-  public T convert(final Value value);
+  public MalformedValuesException(final String message, final Throwable cause) {
+    super(message, cause);
+  }
   
 }

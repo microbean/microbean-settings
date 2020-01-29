@@ -28,12 +28,14 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Objects;
 import java.util.PriorityQueue;
 import java.util.Queue;
 import java.util.Set;
 
+import java.util.function.BiFunction;
 import java.util.function.Supplier;
 
 import javax.el.ELContext;
@@ -49,41 +51,58 @@ public class Settings {
 
   private static final Comparator<Value> valueComparator = Comparator.<Value>comparingInt(v -> v.getQualifiers().size()).reversed();
 
-  private final Converters converters;
+  private final ConverterProvider converterProvider;
 
-  private final Collection<? extends Source> sources;
+  private final BiFunction<? super String, ? super Set<Annotation>, ? extends Set<? extends Source>> sourcesSupplier;
 
-  private final Collection<? extends Arbiter> arbiters;
+  private final Iterable<? extends Arbiter> arbiters;
 
-  public <T> Settings(final Collection<? extends Source> sources,
-                      final Converters converters,
-                      final Collection<? extends Arbiter> arbiters) {
+  public Settings() {
     super();
-    if (sources == null || sources.isEmpty()) {
-      this.sources = Collections.emptySet();
+
+    final Set<Source> sources = new LinkedHashSet<>();
+    sources.add(new SystemPropertiesSource());
+    sources.add(new EnvironmentVariablesSource());
+    this.sourcesSupplier = (name, qualifiers) -> Collections.unmodifiableSet(sources);
+
+    this.converterProvider = new Converters();
+
+    this.arbiters = Collections.singleton(new SourceOrderArbiter());
+  }
+  
+  public Settings(final BiFunction<? super String, ? super Set<Annotation>, ? extends Set<? extends Source>> sourcesSupplier,
+                  final ConverterProvider converterProvider,
+                  final Iterable<? extends Arbiter> arbiters) {
+    super();
+    if (sourcesSupplier == null) {
+      this.sourcesSupplier = (name, qualifiers) -> Collections.emptySet();
     } else {
-      this.sources = Collections.unmodifiableCollection(new ArrayList<>(sources));
+      this.sourcesSupplier = sourcesSupplier;
     }
-    this.converters = Objects.requireNonNull(converters);
-    if (arbiters == null || arbiters.isEmpty()) {
+    this.converterProvider = Objects.requireNonNull(converterProvider);
+    if (arbiters == null) {
       this.arbiters = Collections.emptySet();
     } else {
-      this.arbiters = Collections.unmodifiableCollection(new ArrayList<>(arbiters));
+      this.arbiters = arbiters;
     }
+  }
+
+  public final String get(final String name,
+                          final Set<Annotation> qualifiers,
+                          final Supplier<? extends String> defaultValueSupplier) {
+    return this.get(name,
+                    qualifiers,
+                    this.converterProvider.getConverter(String.class),
+                    defaultValueSupplier);
   }
 
   public final <T> T get(final String name,
                          final Set<Annotation> qualifiers,
                          final Class<T> cls,
                          final Supplier<? extends String> defaultValueSupplier) {
-    final ExpressionFactory expressionFactory = ExpressionFactory.newInstance();
-    final StandardELContext elContext = new StandardELContext(expressionFactory);
-    elContext.addELResolver(new SourceELResolver(this, expressionFactory, qualifiers));
     return this.get(name,
                     qualifiers,
-                    elContext,
-                    expressionFactory,
-                    this.converters.getConverter(cls),
+                    this.converterProvider.getConverter(cls),
                     defaultValueSupplier);
   }
 
@@ -91,29 +110,34 @@ public class Settings {
                          final Set<Annotation> qualifiers,
                          final TypeLiteral<T> typeLiteral,
                          final Supplier<? extends String> defaultValueSupplier) {
-    final ExpressionFactory expressionFactory = ExpressionFactory.newInstance();
-    final StandardELContext elContext = new StandardELContext(expressionFactory);
-    elContext.addELResolver(new SourceELResolver(this, expressionFactory, qualifiers));
     return this.get(name,
                     qualifiers,
-                    elContext,
-                    expressionFactory,
-                    this.converters.getConverter(typeLiteral),
+                    this.converterProvider.getConverter(typeLiteral),
                     defaultValueSupplier);
   }
 
-  public <T> T get(final String name,
-                   Set<Annotation> qualifiers,
-                   final Converter<T> converter,
-                   final Supplier<? extends String> defaultValueSupplier) {
+  public final Object get(final String name,
+                          final Set<Annotation> qualifiers,
+                          final Type type,
+                          final Supplier<? extends String> defaultValueSupplier) {
+    return this.get(name,
+                    qualifiers,
+                    this.converterProvider.getConverter(type),
+                    defaultValueSupplier);
+  }
+
+  public final <T> T get(final String name,
+                         final Set<Annotation> qualifiers,
+                         final Converter<? extends T> converter,
+                         final Supplier<? extends String> defaultValueSupplier) {
     final ExpressionFactory expressionFactory = ExpressionFactory.newInstance();
     final StandardELContext elContext = new StandardELContext(expressionFactory);
     elContext.addELResolver(new SourceELResolver(this, expressionFactory, qualifiers));
-    return this.get(name,
+    return this.get(Objects.requireNonNull(name),
                     qualifiers,
                     elContext,
                     expressionFactory,
-                    converter,
+                    Objects.requireNonNull(converter),
                     defaultValueSupplier);
   }
 
@@ -121,9 +145,13 @@ public class Settings {
                           final Set<Annotation> qualifiers,
                           final ELContext elContext,
                           final ExpressionFactory expressionFactory,
-                          final Converter<T> converter,
+                          final Converter<? extends T> converter,
                           final Supplier<? extends String> rawDefaultValueSupplier) {
-    return Objects.requireNonNull(converter).convert(this.getValue(name, qualifiers, elContext, expressionFactory, rawDefaultValueSupplier));
+    return Objects.requireNonNull(converter).convert(this.getValue(name,
+                                                                   qualifiers,
+                                                                   elContext,
+                                                                   expressionFactory,
+                                                                   rawDefaultValueSupplier));
   }
 
   private final Value getValue(final String name,
@@ -153,6 +181,7 @@ public class Settings {
     // Bad values.
     Collection<Value> badValues = null;
 
+    final Set<? extends Source> sources = this.sourcesSupplier.apply(name, qualifiers);
     if (sources != null) {
       for (final Source source : sources) {
         if (source != null) {
@@ -252,7 +281,6 @@ public class Settings {
                 }
 
               } else if (qualifiers.containsAll(valueQualifiers)) {
-                assert selectedValue == null;
                 assert qualifiersSize > valueQualifiersSize;
                 // We specified, e.g., {a=b, c=d, e=f} and they
                 // have, say, {c=d, e=f} or {a=b, c=d} etc. but not,
@@ -299,10 +327,10 @@ public class Settings {
         // Perform arbitration.  The first "round" of arbitration is
         // hard-coded, effectively: we check to see if all conflicting
         // values are of different specificities.  If they are, then
-        // the most specific value is selected.  If any two
-        // conflicting values share specificities, then they are added
-        // to a collection over which our supplied Arbiters will
-        // operate.
+        // the most specific value is selected and the others are
+        // discarded.  Otherwise, if any two conflicting values share
+        // specificities, then they are added to a collection over
+        // which our supplied Arbiters will operate.
 
         int highestSpecificitySoFarEncountered = -1;
 
@@ -357,16 +385,21 @@ public class Settings {
               valuesToArbitrate.add(value);
             }
           } else {
-            assert false : "valueSpecificity > highestSpecificitySoFarEncountered: " + valueSpecificity + " > " + highestSpecificitySoFarEncountered;
+            assert false : "valueSpecificity > highestSpecificitySoFarEncountered: " +
+              valueSpecificity + " > " + highestSpecificitySoFarEncountered;
           }
         }
       }
     }
 
     if (selectedValue == null) {
-      selectedValue = this.arbitrate(name, qualifiers, valuesToArbitrate == null || valuesToArbitrate.isEmpty() ? Collections.emptySet() : Collections.unmodifiableCollection(valuesToArbitrate));
-      if (selectedValue == null) {
-        throw new AmbiguousValuesException(valuesToArbitrate);
+      if (valuesToArbitrate == null || valuesToArbitrate.isEmpty()) {
+        selectedValue = this.arbitrate(sources, name, qualifiers, Collections.emptySet());
+      } else {
+        selectedValue = this.arbitrate(sources, name, qualifiers, Collections.unmodifiableCollection(valuesToArbitrate));
+        if (selectedValue == null) {
+          throw new AmbiguousValuesException(valuesToArbitrate);
+        }
       }
     }
     valuesToArbitrate = null;
@@ -381,25 +414,135 @@ public class Settings {
     } else {
       stringToInterpolate = selectedValue.get();
     }
-    final String interpolatedString =
-      this.interpolate(stringToInterpolate,
-                       elContext,
-                       expressionFactory,
-                       qualifiers);
+    final String interpolatedString = this.interpolate(stringToInterpolate, elContext, expressionFactory, qualifiers);
     if (selectedValue == null) {
-      selectedValue = new Value(null, name, qualifiers, interpolatedString);
+      selectedValue = new Value(null /* no Source; we synthesized this Value */, name, qualifiers, interpolatedString);
     } else {
       selectedValue = new Value(selectedValue, interpolatedString);
     }
     return selectedValue;
   }
 
-  public final String interpolate(final String value,
-                                  final Set<Annotation> qualifiers) {
-    final ExpressionFactory expressionFactory = ExpressionFactory.newInstance();
-    final StandardELContext elContext = new StandardELContext(expressionFactory);
-    elContext.addELResolver(new SourceELResolver(this, expressionFactory, qualifiers));
-    return this.interpolate(value, elContext, expressionFactory, qualifiers);
+  protected Value arbitrate(final Set<? extends Source> sources,
+                            final String name,
+                            final Set<Annotation> qualifiers,
+                            final Collection<? extends Value> values) {
+    final Value returnValue;
+    Value temp = null;
+    final Iterable<? extends Arbiter> arbiters = this.arbiters;
+    if (arbiters == null) {
+      returnValue = null;
+    } else {
+      for (final Arbiter arbiter : arbiters) {
+        if (arbiter != null) {
+          temp = arbiter.arbitrate(sources, name, qualifiers, values);
+          if (temp != null) {
+            break;
+          }
+        }
+      }
+      returnValue = temp;
+    }
+    return returnValue;
+  }
+
+  /**
+   * Given a {@link Source}, a name of a setting and a (possibly
+   * {@code null}) {@link Set} of qualifying {@link Annotation}s,
+   * returns a {@link Value} for the supplied {@code name} originating
+   * from the supplied {@link Source}.
+   *
+   * <p>The default implementation of this method calls the {@link
+   * Source#getValue(String, Set)} method on the supplied {@link
+   * Source}, passing the remaining arguments to it, and returns its
+   * result.</p>
+   *
+   * @param source the {@link Source} of the {@link Value} to be
+   * returned; must not be {@code null}
+   *
+   * @param name the name of the setting for which a {@link Value} is
+   * to be returned; must not be {@code null}
+   *
+   * @param qualifiers an {@link Collections#unmodifiableSet(Set)
+   * unmodifiable} {@link Set} of qualifying {@link Annotation}s; may
+   * be {@code null}
+   *
+   * @return an appropriate {@link Value}, or {@code null}
+   *
+   * @exception NullPointerException if {@code source} or {@code name}
+   * is {@code null}
+   *
+   * @exception UnsupportedOperationException if an override of this
+   * method attempts to modify the {@code qualifiers} parameter
+   *
+   * @exception ValueAcquisitionException if there was an exceptional
+   * problem acquiring a {@link Value}, but not in the relatively
+   * common case that an appropriate {@link Value} could not be
+   * located
+   *
+   * @nullability This method and its overrides are permitted to
+   * return {@code null}.
+   *
+   * @idempotency No guarantees of any kind are made with respect to
+   * the idempotency of this method or its overrides.
+   *
+   * @threadsafety This method is and its overrides must be safe for
+   * concurrent use by multiple threads.
+   *
+   * @see Source#getValue(String, Set)
+   */
+  protected Value getValue(final Source source, final String name, final Set<Annotation> qualifiers) {
+    return source.getValue(name, qualifiers);
+  }
+
+  /**
+   * Processes a {@link Collection} of {@link Value} instances that
+   * were determined to be malformed in some way during the execution
+   * of a {@link #get(String, Set, Converter, Supplier)} operation.
+   *
+   * <p>The default implementation of this method does nothing.
+   * Overrides may consider throwing a {@link
+   * MalformedValuesException} instead.</p>
+   *
+   * <p>{@link Value} instances in the supplied {@link Collection} of
+   * {@link Value} instances will be discarded after this method
+   * completes and are for informational purposes only.</p>
+   *
+   * @param name the name of the configuration setting for which a
+   * {@link Value} is being retrieved by an invocation of the {@link
+   * #get(String, Set, Converter, Supplier)} method; must not be
+   * {@code null}
+   *
+   * @param qualifiers an {@linkplain Collections#unmodifiableSet(Set)
+   * unmodifiable} {@link Set} of qualifier {@link Annotation}s
+   * qualifying the value retrieval operation; may be {@code null}
+   *
+   * @param badValues a non-{@code null} {@linkplain
+   * Collections#unmodifiableCollection(Collection) unmodifiable}
+   * {@link Collection} of {@link Value}s that have been determined to
+   * be malformed in some way
+   *
+   * @exception NullPointerException if {@code name} or {@code
+   * badValues} is {@code null}
+   *
+   * @exception UnsupportedOperationException if an override attempts
+   * to modify either of the {@code qualifiers} or the {@code
+   * badValues} parameters
+   *
+   * @exception MalformedValuesException if processing should abort
+   *
+   * @threadsafety This method is and its overrides must be safe for
+   * concurrent use by multiple threads.
+   *
+   * @idempotency No guarantees of any kind are made with respect to
+   * the idempotency of this method or its overrides.
+   *
+   * @see #get(String, Set, Converter, Supplier)
+   *
+   * @see Value
+   */
+  protected void handleMalformedValues(final String name, final Set<Annotation> qualifiers, final Collection<? extends Value> badValues) {
+
   }
 
   private final String interpolate(final String value,
@@ -422,35 +565,6 @@ public class Settings {
       }
     }
     return returnValue;
-  }
-
-  protected Value arbitrate(final String name,
-                            final Set<Annotation> qualifiers,
-                            final Collection<? extends Value> values) {
-    final Value returnValue;
-    if (this.arbiters == null) {
-      returnValue = null;
-    } else {
-      Value temp = null;
-      for (final Arbiter arbiter : this.arbiters) {
-        if (arbiter != null) {
-          temp = arbiter.arbitrate(name, qualifiers, values);
-          if (temp != null) {
-            break;
-          }
-        }
-      }
-      returnValue = temp;
-    }
-    return returnValue;
-  }
-
-  protected Value getValue(final Source source, final String name, final Set<Annotation> qualifiers) {
-    return source.getValue(name, qualifiers);
-  }
-
-  protected void handleMalformedValues(final String name, final Set<Annotation> qualifiers, final Collection<? extends Value> badValues) {
-
   }
 
 
@@ -593,7 +707,7 @@ public class Settings {
                        this.qualifiers,
                        elContext,
                        this.expressionFactory,
-                       settings.converters.getConverter(String.class),
+                       settings.converterProvider.getConverter(String.class),
                        null);
         elContext.setPropertyResolved(true);
         if (value == null) {
@@ -621,7 +735,7 @@ public class Settings {
                        this.qualifiers,
                        elContext,
                        this.expressionFactory,
-                       settings.converters.getConverter(String.class),
+                       settings.converterProvider.getConverter(String.class),
                        null);
         elContext.setPropertyResolved(true);
         if (value == null) {

@@ -1,6 +1,6 @@
 /* -*- mode: Java; c-basic-offset: 2; indent-tabs-mode: nil; coding: utf-8-unix -*-
  *
- * Copyright © 2019–2020 microBean™.
+ * Copyright © 2020 microBean™.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,19 +16,28 @@
  */
 package org.microbean.settings;
 
-import java.io.Serializable;
+import org.junit.Before;
+import org.junit.Test;
 
-import java.util.function.Function;
+import static org.junit.Assert.assertTrue;
 
-@FunctionalInterface
-public interface Converter<T> extends Function<Value, T>, Serializable {
+public class TestConversion {
 
-  static final long serialVersionUID = 1L;
-
-  default public T apply(final Value value) {
-    return this.convert(value);
+  private Converters converters;
+  
+  public TestConversion() {
+    super();
   }
-  
-  public T convert(final Value value);
-  
+
+  @Before
+  public void setUp() {
+    this.converters = new Converters();
+  }
+
+  @Test
+  public void testGenerics() {
+    final Converter<? extends CharSequence> c = converters.getConverter(CharSequence.class);
+    assertTrue(c instanceof StringConverter);
+  }
+
 }
