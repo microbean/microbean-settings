@@ -14,32 +14,27 @@
  * implied.  See the License for the specific language governing
  * permissions and limitations under the License.
  */
-package org.microbean.settings;
+package org.microbean.settings.converter;
 
-import java.lang.annotation.Annotation;
-
-import java.util.Collections;
-import java.util.Set;
+import java.io.Serializable;
 
 import javax.enterprise.context.ApplicationScoped;
 
-@ApplicationScoped
-public class SystemPropertiesSource extends Source {
+import org.microbean.settings.Converter;
+import org.microbean.settings.Value;
 
-  public SystemPropertiesSource() {
+@ApplicationScoped
+public class SerializableConverter implements Converter<Serializable> {
+
+  private static final long serialVersionUID = 1L;
+
+  public SerializableConverter() {
     super();
   }
 
   @Override
-  public Value getValue(final String name, final Set<Annotation> qualifiers) {
-    final Value returnValue;
-    final String stringValue = System.getProperty(name);
-    if (stringValue == null) {
-      returnValue = null;
-    } else {
-      returnValue = new Value(this, name, Collections.emptySet(), false, stringValue);
-    }
-    return returnValue;
+  public Serializable convert(final Value value) {
+    return value == null ? null : value.get();
   }
-  
+
 }

@@ -29,7 +29,14 @@ public final class EnvironmentVariablesSource extends Source {
 
   @Override
   public final Value getValue(final String name, final Set<Annotation> qualifiers) {
-    return new Value(this, name, Collections.emptySet(), false, System.getenv(name));
+    final Value returnValue;
+    final String stringValue = System.getenv(name);
+    if (stringValue == null) {
+      returnValue = null;
+    } else {
+      returnValue = new Value(this, name, Collections.emptySet(), false, stringValue);
+    }
+    return returnValue;
   }
   
 }

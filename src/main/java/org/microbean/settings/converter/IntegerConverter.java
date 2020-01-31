@@ -14,32 +14,33 @@
  * implied.  See the License for the specific language governing
  * permissions and limitations under the License.
  */
-package org.microbean.settings;
+package org.microbean.settings.converter;
 
-import java.lang.annotation.Annotation;
+import org.microbean.settings.Converter;
+import org.microbean.settings.Value;
 
-import java.util.Collections;
-import java.util.Set;
+public final class IntegerConverter implements Converter<Integer> {
 
-import javax.enterprise.context.ApplicationScoped;
+  private static final long serialVersionUID = 1L;
 
-@ApplicationScoped
-public class SystemPropertiesSource extends Source {
-
-  public SystemPropertiesSource() {
+  public IntegerConverter() {
     super();
   }
 
   @Override
-  public Value getValue(final String name, final Set<Annotation> qualifiers) {
-    final Value returnValue;
-    final String stringValue = System.getProperty(name);
-    if (stringValue == null) {
+  public final Integer convert(final Value value) {
+    final Integer returnValue;
+    if (value == null) {
       returnValue = null;
     } else {
-      returnValue = new Value(this, name, Collections.emptySet(), false, stringValue);
+      final String stringValue = value.get();
+      if (stringValue == null) {
+        returnValue = null;
+      } else {
+        returnValue = Integer.decode(stringValue);
+      }
     }
     return returnValue;
   }
-  
+
 }

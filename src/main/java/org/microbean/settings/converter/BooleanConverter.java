@@ -14,32 +14,37 @@
  * implied.  See the License for the specific language governing
  * permissions and limitations under the License.
  */
-package org.microbean.settings;
-
-import java.lang.annotation.Annotation;
-
-import java.util.Collections;
-import java.util.Set;
+package org.microbean.settings.converter;
 
 import javax.enterprise.context.ApplicationScoped;
 
-@ApplicationScoped
-public class SystemPropertiesSource extends Source {
+import org.microbean.settings.Converter;
+import org.microbean.settings.Value;
 
-  public SystemPropertiesSource() {
+@ApplicationScoped
+public class BooleanConverter implements Converter<Boolean> {
+
+  private static final long serialVersionUID = 1L;
+
+  public BooleanConverter() {
     super();
   }
 
   @Override
-  public Value getValue(final String name, final Set<Annotation> qualifiers) {
-    final Value returnValue;
-    final String stringValue = System.getProperty(name);
-    if (stringValue == null) {
+  public final Boolean convert(final Value value) {
+    final Boolean returnValue;
+    if (value == null) {
       returnValue = null;
     } else {
-      returnValue = new Value(this, name, Collections.emptySet(), false, stringValue);
+      final String stringValue = value.get();
+      returnValue = Boolean.valueOf(stringValue != null &&
+                                    ("true".equalsIgnoreCase(stringValue) ||
+                                     "y".equalsIgnoreCase(stringValue) ||
+                                     "yes".equalsIgnoreCase(stringValue) ||
+                                     "on".equalsIgnoreCase(stringValue) ||
+                                     "1".equals(stringValue)));
     }
     return returnValue;
   }
-  
+
 }

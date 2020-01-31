@@ -25,18 +25,12 @@ import java.lang.reflect.Type;
 
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.LinkedHashSet;
 import java.util.Objects;
 import java.util.Set;
 
 import java.util.function.BiFunction;
 import java.util.function.Supplier;
 
-import javax.el.ELContext;
-import javax.el.ExpressionFactory;
-import javax.el.StandardELContext;
-
-import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.context.Dependent;
 
 import javax.enterprise.context.spi.CreationalContext;
@@ -67,23 +61,44 @@ import javax.enterprise.util.TypeLiteral;
 
 import javax.inject.Singleton;
 
+import org.microbean.settings.converter.StringConverter;
+
 public class SettingsExtension implements Extension {
+
+
+  /*
+   * Instance fields.
+   */
+
+
+  private final Set<Set<Annotation>> settingQualifierSets;
 
   private final Set<Set<Annotation>> settingsQualifierSets;
 
   private final Set<Type> knownConversionTypes;
 
+
+  /*
+   * Constructors.
+   */
+
+
   public SettingsExtension() {
     super();
+    this.settingQualifierSets = new HashSet<>();
     this.settingsQualifierSets = new HashSet<>();
     this.knownConversionTypes = new HashSet<>(Collections.singleton(String.class));
   }
 
+
+  /*
+   * Observer methods.
+   */
+
+
   private final <T, X extends Settings> void processSettingsInjectionPoint(@Observes final ProcessInjectionPoint<T, X> event) {
-    final InjectionPoint injectionPoint = event.getInjectionPoint();
-    final Set<Annotation> injectionPointQualifiers = injectionPoint.getQualifiers();
-    assert injectionPointQualifiers != null;
-    final Set<Annotation> qualifiers = new HashSet<>(injectionPointQualifiers);
+    final Set<Annotation> qualifiers = new HashSet<>(event.getInjectionPoint().getQualifiers());
+    qualifiers.add(Any.Literal.INSTANCE);
     this.settingsQualifierSets.add(qualifiers);
   }
 
@@ -93,16 +108,26 @@ public class SettingsExtension implements Extension {
     if (!Settings.class.equals(type)) {
       final Set<Annotation> injectionPointQualifiers = injectionPoint.getQualifiers();
       boolean containsSetting = false;
-      for (final Annotation qualifier : injectionPointQualifiers) {
-        if (qualifier instanceof Setting) {
+      for (final Annotation injectionPointQualifier : injectionPointQualifiers) {
+        if (injectionPointQualifier instanceof Setting) {
           containsSetting = true;
           break;
         }
       }
       if (containsSetting) {
         this.knownConversionTypes.add(type);
-        final Set<Annotation> qualifiers = new HashSet<>(injectionPointQualifiers);
-        this.settingsQualifierSets.add(qualifiers);
+
+        final Set<Annotation> settingQualifiers = new HashSet<>(injectionPointQualifiers);
+        settingQualifiers.add(Any.Literal.INSTANCE);
+        this.settingQualifierSets.add(settingQualifiers);
+
+        final Set<Annotation> settingsQualifiers = new HashSet<>(injectionPointQualifiers);
+        settingsQualifiers.removeIf(e -> e instanceof Setting);
+        if (settingsQualifiers.isEmpty()) {
+          settingsQualifiers.add(Default.Literal.INSTANCE);
+        }
+        settingsQualifiers.add(Any.Literal.INSTANCE);
+        this.settingsQualifierSets.add(settingsQualifiers);
       }
     }
   }
@@ -111,6 +136,7 @@ public class SettingsExtension implements Extension {
                                                    final BeanManager beanManager) {
     addBean(event,
             beanManager,
+            this.settingsQualifierSets,
             (e, bm, nq) -> e.addBean()
               .types(ConverterProvider.class)
               .scope(Singleton.class)
@@ -122,11 +148,12 @@ public class SettingsExtension implements Extension {
                                                  final BeanManager beanManager) {
     addBean(event,
             beanManager,
+            this.settingsQualifierSets,
             (e, bm, nq) -> e.addBean()
               .types(new TypeLiteral<BiFunction<String, Set<Annotation>, Set<Source>>>() {
                   private static final long serialVersionUID = 1L;
                 }.getType())
-              .scope(Singleton.class) // no need for proxies/ApplicationScoped
+              .scope(Singleton.class)
               .qualifiers(nq)
               .createWith(cc -> new BeanManagerBackedSourcesSupplier(bm)));
   }
@@ -135,15 +162,18 @@ public class SettingsExtension implements Extension {
                                           final BeanManager beanManager) {
     addBean(event,
             beanManager,
+            this.settingsQualifierSets,
             (e, bm, nq) -> e.addBean()
               .addTransitiveTypeClosure(Settings.class)
-              .scope(Singleton.class) // no need for proxies/ApplicationScoped
+              .scope(Singleton.class)
               .qualifiers(nq)
               .beanClass(Settings.class)
               .produceWith(instance -> {
-                final Annotation[] qualifiersArray = nq.toArray(new Annotation[nq.size()]);   
+                final Annotation[] qualifiersArray = nq.toArray(new Annotation[nq.size()]);
                 final BiFunction<? super String, ? super Set<Annotation>, ? extends Set<? extends Source>> sourcesSupplier =
-                  instance.select(new TypeLiteral<BiFunction<? super String, ? super Set<Annotation>, ? extends Set<? extends Source>>>() {
+                  instance.select(new TypeLiteral<BiFunction<? super String,
+                                                             ? super Set<Annotation>,
+                                                             ? extends Set<? extends Source>>>() {
                     private static final long serialVersionUID = 1L;
                   },
                   qualifiersArray).get();
@@ -155,7 +185,7 @@ public class SettingsExtension implements Extension {
 
   private final void installSettingProducers(@Observes final AfterBeanDiscovery event,
                                              final BeanManager beanManager) {
-    if (!this.settingsQualifierSets.isEmpty()) {
+    if (!this.settingQualifierSets.isEmpty()) {
       final AnnotatedType<SettingsExtension> annotatedType = beanManager.createAnnotatedType(SettingsExtension.class);
       final AnnotatedMethod<? super SettingsExtension> producerMethodTemplate = annotatedType.getMethods()
         .stream()
@@ -163,15 +193,24 @@ public class SettingsExtension implements Extension {
         .findFirst() // ...and only
         .get();
       final BeanAttributes<?> delegate = beanManager.createBeanAttributes(producerMethodTemplate);
-      for (final Set<Annotation> qualifiers : this.settingsQualifierSets) {
+      for (final Set<Annotation> settingQualifiers : this.settingQualifierSets) {
+        final Set<Annotation> settingsQualifiers = new HashSet<>(settingQualifiers);
+        settingsQualifiers.removeIf(e -> e instanceof Setting);
+        if (settingsQualifiers.isEmpty()) {
+          settingsQualifiers.add(Default.Literal.INSTANCE);
+        }
         for (final Type type : this.knownConversionTypes) {
-          final ProducerFactory<SettingsExtension> containerProducerFactory = beanManager.getProducerFactory(producerMethodTemplate, null);
+          final BeanAttributes<?> beanAttributes =
+            new FlexiblyTypedBeanAttributes<Object>(delegate, settingQualifiers, Collections.singleton(type));
+          final ProducerFactory<SettingsExtension> defaultProducerFactory =
+            beanManager.getProducerFactory(producerMethodTemplate, null);
           final ProducerFactory<SettingsExtension> producerFactory = new ProducerFactory<SettingsExtension>() {
               @Override
               public final <T> Producer<T> createProducer(final Bean<T> bean) {
-                final Producer<T> delegateProducer = containerProducerFactory.createProducer(bean);
-                final Set<InjectionPoint> injectionPoints = qualifyInjectionPoints(delegateProducer.getInjectionPoints(), qualifiers);
-                return new DelegatingProducer<T>(delegateProducer) {
+                final Producer<T> defaultProducer = defaultProducerFactory.createProducer(bean);
+                final Set<InjectionPoint> injectionPoints =
+                qualifyInjectionPoints(defaultProducer.getInjectionPoints(), settingsQualifiers);
+                return new DelegatingProducer<T>(defaultProducer) {
                   @Override
                   public final Set<InjectionPoint> getInjectionPoints() {
                     return injectionPoints;
@@ -179,7 +218,6 @@ public class SettingsExtension implements Extension {
                 };
               }
             };
-          final BeanAttributes<?> beanAttributes = new FlexiblyTypedBeanAttributes<Object>(delegate, qualifiers, Collections.singleton(type));
           final Bean<?> bean = beanManager.createBean(beanAttributes, SettingsExtension.class, producerFactory);
           event.addBean(bean);
         }
@@ -187,30 +225,68 @@ public class SettingsExtension implements Extension {
     }
   }
 
+
+  /*
+   * Utility methods.
+   */
+
+
+  private final void addBean(final AfterBeanDiscovery event,
+                             final BeanManager beanManager,
+                             final Set<Set<Annotation>> qualifiersSets,
+                             final BeanAdder beanAdder) {
+    for (final Set<Annotation> qualifiers : qualifiersSets) {
+      beanAdder.addBean(event, beanManager, qualifiers);
+    }
+  }
+
+
+  /*
+   * Static methods.
+   */
+
+
+  /**
+   * A <strong>method template that must not be called
+   * directly</strong> used in building <a
+   * href="https://lairdnelson.wordpress.com/2017/02/11/dynamic-cdi-producer-methods/">dynamic
+   * producer methods</a>.
+   *
+   * @param injectionPoint the injection point for which a setting
+   * value is destined; must not be {@code null}
+   *
+   * @param settings an appropriate {@link Settings} to use to
+   * {@linkplain Settings#get(String, Set, Type, Supplier) acquire a
+   * value}; must not be {@code null}
+   *
+   * @return a value for a setting, or {@code null}
+   *
+   * @nullability This method may return {@code null}.
+   *
+   * @idempotency No guarantees with respect to idempotency are made
+   * of this method.
+   *
+   * @threadsafety This method is safe for concurrent use by mulitple
+   * threads.
+   *
+   * @see <a
+   * href="https://lairdnelson.wordpress.com/2017/02/11/dynamic-cdi-producer-methods/">Dynamic
+   * CDI Producer Methods</a>
+   *
+   * @deprecated This method should be called only by the CDI container.
+   */
   @Dependent
+  @Deprecated
   private static final Object producerMethodTemplate(final InjectionPoint injectionPoint,
                                                      final Settings settings) {
     Objects.requireNonNull(injectionPoint);
     Objects.requireNonNull(settings);
     final Set<Annotation> qualifiers = new HashSet<>(Objects.requireNonNull(injectionPoint.getQualifiers()));
     qualifiers.removeIf(e -> e instanceof Setting);
-    return settings.get(Objects.requireNonNull(getName(injectionPoint)),
+    return settings.get(getName(injectionPoint),
                         qualifiers,
                         injectionPoint.getType(),
                         getDefaultValueSupplier(injectionPoint));
-  }
-
-  private final void addBean(final AfterBeanDiscovery event,
-                             final BeanManager beanManager,
-                             final BeanAdder beanAdder) {
-    final Set<Set<Annotation>> seen = new HashSet<>();
-    for (final Set<Annotation> qualifiers : this.settingsQualifierSets) {
-      final Set<Annotation> newQualifiers = new HashSet<>(qualifiers);
-      newQualifiers.removeIf(e -> e instanceof Setting);
-      if (!seen(beanManager, seen, newQualifiers)) {
-        beanAdder.addBean(event, beanManager, newQualifiers);
-      }
-    }
   }
 
   private static final Setting extractSetting(final InjectionPoint injectionPoint) {
@@ -287,30 +363,13 @@ public class SettingsExtension implements Extension {
     return name;
   }
 
-  private static final boolean seen(final BeanManager beanManager,
-                                    final Set<Set<Annotation>> allSeen,
-                                    final Set<Annotation> qualifiers) {
-    Objects.requireNonNull(allSeen);
-    Objects.requireNonNull(qualifiers);
-    for (final Set<Annotation> seen : allSeen) {
-      for (final Annotation seenQualifier : seen) {
-        for (final Annotation qualifier : qualifiers) {
-          if (!beanManager.areQualifiersEquivalent(seenQualifier, qualifier)) {
-            return false;
-          }
-        }
-      }
-    }
-    return true;
-  }
-
   private static final String returnNull() {
     return null;
   }
 
   private static final Set<InjectionPoint> qualifyInjectionPoints(final Set<InjectionPoint> injectionPoints,
                                                                   final Set<Annotation> qualifiers) {
-    final Set<InjectionPoint> returnValue = new LinkedHashSet<>();
+    final Set<InjectionPoint> returnValue = new HashSet<>();
     for (final InjectionPoint injectionPoint : injectionPoints) {
       if (injectionPoint instanceof InjectionPoint) {
         returnValue.add(injectionPoint);
@@ -334,7 +393,7 @@ public class SettingsExtension implements Extension {
     } else if (qualifiers == null || qualifiers.isEmpty() || originalQualifiers.equals(qualifiers)) {
       returnValue = injectionPoint; // just leave it alone
     } else {
-      final Set<Annotation> newQualifiers = new LinkedHashSet<>(qualifiers);
+      final Set<Annotation> newQualifiers = new HashSet<>(qualifiers);
       newQualifiers.addAll(originalQualifiers);
       returnValue = new FlexiblyQualifiedInjectionPoint(injectionPoint, newQualifiers);
     }
@@ -347,6 +406,7 @@ public class SettingsExtension implements Extension {
    */
 
 
+  @FunctionalInterface
   private interface BeanAdder {
 
     void addBean(final AfterBeanDiscovery event, final BeanManager beanManager, final Set<Annotation> qualifiers);

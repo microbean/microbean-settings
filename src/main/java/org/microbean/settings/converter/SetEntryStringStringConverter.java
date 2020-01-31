@@ -14,32 +14,24 @@
  * implied.  See the License for the specific language governing
  * permissions and limitations under the License.
  */
-package org.microbean.settings;
+package org.microbean.settings.converter;
 
-import java.lang.annotation.Annotation;
-
-import java.util.Collections;
-import java.util.Set;
+import java.util.Map.Entry;
 
 import javax.enterprise.context.ApplicationScoped;
 
+import javax.inject.Inject;
+
+import org.microbean.settings.Converter;
+
 @ApplicationScoped
-public class SystemPropertiesSource extends Source {
+public class SetEntryStringStringConverter extends SetConverter<Entry<String, String>> {
 
-  public SystemPropertiesSource() {
-    super();
+  private static final long serialVersionUID = 1L;
+
+  @Inject
+  public SetEntryStringStringConverter(final Converter<Entry<String, String>> scalarConverter) {
+    super(scalarConverter);
   }
 
-  @Override
-  public Value getValue(final String name, final Set<Annotation> qualifiers) {
-    final Value returnValue;
-    final String stringValue = System.getProperty(name);
-    if (stringValue == null) {
-      returnValue = null;
-    } else {
-      returnValue = new Value(this, name, Collections.emptySet(), false, stringValue);
-    }
-    return returnValue;
-  }
-  
 }

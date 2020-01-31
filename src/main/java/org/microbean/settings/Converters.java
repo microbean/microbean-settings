@@ -69,6 +69,8 @@ import java.util.regex.Pattern;
 
 import javax.enterprise.util.TypeLiteral;
 
+import org.microbean.settings.converter.*;
+
 /**
  * A hub for the centralized conversion of {@link Value}s.
  *

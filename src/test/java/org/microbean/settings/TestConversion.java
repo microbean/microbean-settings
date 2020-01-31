@@ -19,6 +19,8 @@ package org.microbean.settings;
 import org.junit.Before;
 import org.junit.Test;
 
+import org.microbean.settings.converter.StringConverter;
+
 import static org.junit.Assert.assertTrue;
 
 public class TestConversion {

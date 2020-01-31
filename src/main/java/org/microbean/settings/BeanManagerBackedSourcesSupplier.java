@@ -20,7 +20,7 @@ import java.lang.annotation.Annotation;
 
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Objects;
 import java.util.Set;
 
@@ -53,7 +53,7 @@ public class BeanManagerBackedSourcesSupplier implements BiFunction<String, Set<
     if (beans == null || beans.isEmpty()) {
       returnValue = Collections.emptySet();
     } else {
-      final Set<Source> sources = new HashSet<>();
+      final Set<Source> sources = new LinkedHashSet<>();
       for (final Bean<?> bean : beans) {
         @SuppressWarnings("unchecked")
         final Source source = (Source)this.beanManager.getReference(bean, Source.class, this.beanManager.createCreationalContext(null));
