@@ -16,36 +16,22 @@
  */
 package org.microbean.settings.converter;
 
-import java.util.logging.Level;
+import java.time.MonthDay;
 
 import javax.enterprise.context.ApplicationScoped;
 
+import javax.inject.Inject;
+
 import org.microbean.settings.Converter;
-import org.microbean.settings.Value;
 
 @ApplicationScoped
-public class LevelConverter implements Converter<Level> {
+public class ListMonthDayConverter extends ListConverter<MonthDay> {
 
   private static final long serialVersionUID = 1L;
 
-  public LevelConverter() {
-    super();
+  @Inject
+  public ListMonthDayConverter(final Converter<MonthDay> scalarConverter) {
+    super(scalarConverter);
   }
-
-  @Override
-  public Level convert(final Value value) {
-    final Level returnValue;
-    if (value == null) {
-      returnValue = null;
-    } else {
-      final String stringValue = value.get();
-      if (stringValue == null) {
-        returnValue = null;
-      } else {
-        returnValue = Level.parse(stringValue);
-      }
-    }
-    return returnValue;
-  }
-
+  
 }

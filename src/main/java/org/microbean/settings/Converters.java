@@ -324,7 +324,7 @@ public final class Converters implements ConverterProvider {
 
     } else if (Class.class.equals(type)) {
       @SuppressWarnings("unchecked")
-      final Converter<? extends T> temp = (Converter<? extends T>)new ClassConverter<T>();
+      final Converter<? extends T> temp = (Converter<? extends T>)new ClassConverter();
       returnValue = temp;
 
     } else if (type instanceof ParameterizedType) {

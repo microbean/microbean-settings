@@ -16,36 +16,24 @@
  */
 package org.microbean.settings.converter;
 
-import java.util.logging.Level;
-
 import javax.enterprise.context.ApplicationScoped;
 
+import javax.inject.Inject;
+
+import java.math.BigInteger;
+
+import java.util.List;
+
 import org.microbean.settings.Converter;
-import org.microbean.settings.Value;
 
 @ApplicationScoped
-public class LevelConverter implements Converter<Level> {
+public class ArrayBigIntegerConverter extends ArrayConverter<BigInteger> implements Converter<BigInteger[]> {
 
   private static final long serialVersionUID = 1L;
 
-  public LevelConverter() {
-    super();
+  @Inject
+  public ArrayBigIntegerConverter(final Converter<? extends List<BigInteger>> collectionConverter) {
+    super(collectionConverter);
   }
-
-  @Override
-  public Level convert(final Value value) {
-    final Level returnValue;
-    if (value == null) {
-      returnValue = null;
-    } else {
-      final String stringValue = value.get();
-      if (stringValue == null) {
-        returnValue = null;
-      } else {
-        returnValue = Level.parse(stringValue);
-      }
-    }
-    return returnValue;
-  }
-
+  
 }

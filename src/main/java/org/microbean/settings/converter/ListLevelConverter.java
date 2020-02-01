@@ -20,32 +20,18 @@ import java.util.logging.Level;
 
 import javax.enterprise.context.ApplicationScoped;
 
+import javax.inject.Inject;
+
 import org.microbean.settings.Converter;
-import org.microbean.settings.Value;
 
 @ApplicationScoped
-public class LevelConverter implements Converter<Level> {
+public class ListLevelConverter extends ListConverter<Level> {
 
   private static final long serialVersionUID = 1L;
 
-  public LevelConverter() {
-    super();
+  @Inject
+  public ListLevelConverter(final Converter<Level> scalarConverter) {
+    super(scalarConverter);
   }
-
-  @Override
-  public Level convert(final Value value) {
-    final Level returnValue;
-    if (value == null) {
-      returnValue = null;
-    } else {
-      final String stringValue = value.get();
-      if (stringValue == null) {
-        returnValue = null;
-      } else {
-        returnValue = Level.parse(stringValue);
-      }
-    }
-    return returnValue;
-  }
-
+  
 }

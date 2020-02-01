@@ -20,10 +20,13 @@ import java.time.Instant;
 
 import java.util.Date;
 
+import javax.enterprise.context.ApplicationScoped;
+
 import org.microbean.settings.Converter;
 import org.microbean.settings.Value;
 
-public final class DateConverter implements Converter<Date> {
+@ApplicationScoped
+public class DateConverter implements Converter<Date> {
 
   private static final long serialVersionUID = 1L;
 
@@ -35,7 +38,7 @@ public final class DateConverter implements Converter<Date> {
   }
 
   @Override
-  public final Date convert(final Value value) {
+  public Date convert(final Value value) {
     final Date returnValue;
     if (value == null) {
       returnValue = null;

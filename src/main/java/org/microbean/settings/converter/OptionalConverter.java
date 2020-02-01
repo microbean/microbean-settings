@@ -19,22 +19,27 @@ package org.microbean.settings.converter;
 import java.util.Objects;
 import java.util.Optional;
 
+import javax.enterprise.inject.Vetoed;
+
+import javax.inject.Inject;
+
 import org.microbean.settings.Converter;
 import org.microbean.settings.Value;
 
-public final class OptionalConverter<T> implements Converter<Optional<T>> {
+@Vetoed
+public class OptionalConverter<T> implements Converter<Optional<T>> {
 
   private static final long serialVersionUID = 1L;
 
-  private final Converter<T> baseConverter;
+  private final Converter<? extends T> baseConverter;
 
-  public OptionalConverter(final Converter<T> baseConverter) {
+  public OptionalConverter(final Converter<? extends T> baseConverter) {
     super();
     this.baseConverter = Objects.requireNonNull(baseConverter);
   }
 
   @Override
-  public final Optional<T> convert(final Value value) {
+  public Optional<T> convert(final Value value) {
     final Optional<T> returnValue;
     if (value == null) {
       returnValue = Optional.empty();

@@ -20,10 +20,13 @@ import java.time.MonthDay;
 
 import java.time.format.DateTimeParseException;
 
+import javax.enterprise.context.ApplicationScoped;
+
 import org.microbean.settings.Converter;
 import org.microbean.settings.Value;
 
-public final class MonthDayConverter implements Converter<MonthDay> {
+@ApplicationScoped
+public class MonthDayConverter implements Converter<MonthDay> {
 
   private static final long serialVersionUID = 1L;
 
@@ -32,7 +35,7 @@ public final class MonthDayConverter implements Converter<MonthDay> {
   }
 
   @Override
-  public final MonthDay convert(final Value value) {
+  public MonthDay convert(final Value value) {
     final MonthDay returnValue;
     if (value == null) {
       returnValue = null;

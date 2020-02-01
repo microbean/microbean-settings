@@ -88,6 +88,9 @@ public class BeanManagerBackedConverterProvider implements ConverterProvider {
       final Converter<?> temp = (Converter<?>)this.beanManager.getReference(bean, converterType, this.beanManager.createCreationalContext(null));
       returnValue = temp;
     }
+    if (returnValue == null) {
+      throw new IllegalArgumentException("No converter available for " + type);
+    }
     return returnValue;
   }
 

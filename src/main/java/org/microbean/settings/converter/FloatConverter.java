@@ -16,10 +16,13 @@
  */
 package org.microbean.settings.converter;
 
+import javax.enterprise.context.ApplicationScoped;
+
 import org.microbean.settings.Converter;
 import org.microbean.settings.Value;
 
-public final class FloatConverter implements Converter<Float> {
+@ApplicationScoped
+public class FloatConverter implements Converter<Float> {
 
   private static final long serialVersionUID = 1L;
 
@@ -28,7 +31,7 @@ public final class FloatConverter implements Converter<Float> {
   }
 
   @Override
-  public final Float convert(final Value value) {
+  public Float convert(final Value value) {
     final Float returnValue;
     if (value == null) {
       returnValue = null;

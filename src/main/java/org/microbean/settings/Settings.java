@@ -53,7 +53,9 @@ public class Settings {
 
   private final ConverterProvider converterProvider;
 
-  private final BiFunction<? super String, ? super Set<Annotation>, ? extends Set<? extends Source>> sourcesSupplier;
+  private final BiFunction<? super String,
+                           ? super Set<Annotation>,
+                           ? extends Set<? extends Source>> sourcesSupplier;
 
   private final Iterable<? extends Arbiter> arbiters;
 
@@ -70,7 +72,9 @@ public class Settings {
     this.arbiters = Collections.singleton(new SourceOrderArbiter());
   }
   
-  public Settings(final BiFunction<? super String, ? super Set<Annotation>, ? extends Set<? extends Source>> sourcesSupplier,
+  public Settings(final BiFunction<? super String,
+                                   ? super Set<Annotation>,
+                                   ? extends Set<? extends Source>> sourcesSupplier,
                   final ConverterProvider converterProvider,
                   final Iterable<? extends Arbiter> arbiters) {
     super();

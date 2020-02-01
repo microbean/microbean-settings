@@ -21,10 +21,13 @@ import java.time.Instant;
 import java.util.Calendar;
 import java.util.Date;
 
+import javax.enterprise.context.ApplicationScoped;
+
 import org.microbean.settings.Converter;
 import org.microbean.settings.Value;
 
-public final class CalendarConverter implements Converter<Calendar> {
+@ApplicationScoped
+public class CalendarConverter implements Converter<Calendar> {
 
   private static final long serialVersionUID = 1L;
 
@@ -36,7 +39,7 @@ public final class CalendarConverter implements Converter<Calendar> {
   }
 
   @Override
-  public final Calendar convert(final Value value) {
+  public Calendar convert(final Value value) {
     final Calendar returnValue;
     if (value == null) {
       returnValue = null;

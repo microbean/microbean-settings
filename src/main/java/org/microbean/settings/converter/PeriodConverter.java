@@ -20,10 +20,13 @@ import java.time.Period;
 
 import java.time.format.DateTimeParseException;
 
+import javax.enterprise.context.ApplicationScoped;
+
 import org.microbean.settings.Converter;
 import org.microbean.settings.Value;
 
-public final class PeriodConverter implements Converter<Period> {
+@ApplicationScoped
+public class PeriodConverter implements Converter<Period> {
 
   private static final long serialVersionUID = 1L;
 
@@ -32,7 +35,7 @@ public final class PeriodConverter implements Converter<Period> {
   }
 
   @Override
-  public final Period convert(final Value value) {
+  public Period convert(final Value value) {
     final Period returnValue;
     if (value == null) {
       returnValue = null;

@@ -20,10 +20,13 @@ import java.time.OffsetTime;
 
 import java.time.format.DateTimeParseException;
 
+import javax.enterprise.context.ApplicationScoped;
+
 import org.microbean.settings.Converter;
 import org.microbean.settings.Value;
 
-public final class OffsetTimeConverter implements Converter<OffsetTime> {
+@ApplicationScoped
+public class OffsetTimeConverter implements Converter<OffsetTime> {
 
   private static final long serialVersionUID = 1L;
 
@@ -32,7 +35,7 @@ public final class OffsetTimeConverter implements Converter<OffsetTime> {
   }
 
   @Override
-  public final OffsetTime convert(final Value value) {
+  public OffsetTime convert(final Value value) {
     final OffsetTime returnValue;
     if (value == null) {
       returnValue = null;

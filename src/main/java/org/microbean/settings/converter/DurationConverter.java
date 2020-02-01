@@ -20,10 +20,13 @@ import java.time.Duration;
 
 import java.time.format.DateTimeParseException;
 
+import javax.enterprise.context.ApplicationScoped;
+
 import org.microbean.settings.Converter;
 import org.microbean.settings.Value;
 
-public final class DurationConverter implements Converter<Duration> {
+@ApplicationScoped
+public class DurationConverter implements Converter<Duration> {
 
   private static final long serialVersionUID = 1L;
 
@@ -32,7 +35,7 @@ public final class DurationConverter implements Converter<Duration> {
   }
 
   @Override
-  public final Duration convert(final Value value) {
+  public Duration convert(final Value value) {
     final Duration returnValue;
     if (value == null) {
       returnValue = null;

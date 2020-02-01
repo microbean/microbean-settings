@@ -16,10 +16,13 @@
  */
 package org.microbean.settings.converter;
 
+import javax.enterprise.context.ApplicationScoped;
+
 import org.microbean.settings.Converter;
 import org.microbean.settings.Value;
 
-public final class ShortConverter implements Converter<Short> {
+@ApplicationScoped
+public class ShortConverter implements Converter<Short> {
 
   private static final long serialVersionUID = 1L;
 
@@ -28,7 +31,7 @@ public final class ShortConverter implements Converter<Short> {
   }
 
   @Override
-  public final Short convert(final Value value) {
+  public Short convert(final Value value) {
     final Short returnValue;
     if (value == null) {
       returnValue = null;

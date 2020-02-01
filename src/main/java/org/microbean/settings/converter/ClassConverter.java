@@ -16,12 +16,13 @@
  */
 package org.microbean.settings.converter;
 
+import javax.enterprise.context.ApplicationScoped;
+
 import org.microbean.settings.Converter;
 import org.microbean.settings.Value;
 
-import org.microbean.settings.Converter;
-
-public final class ClassConverter<T> implements Converter<Class<T>> {
+@ApplicationScoped
+public class ClassConverter implements Converter<Class<Object>> {
 
   private static final long serialVersionUID = 1L;
 
@@ -30,8 +31,8 @@ public final class ClassConverter<T> implements Converter<Class<T>> {
   }
 
   @Override
-  public final Class<T> convert(final Value value) {
-    final Class<T> returnValue;
+  public Class<Object> convert(final Value value) {
+    final Class<Object> returnValue;
     if (value == null) {
       returnValue = null;
     } else {
@@ -39,10 +40,10 @@ public final class ClassConverter<T> implements Converter<Class<T>> {
       if (className == null) {
         returnValue = null;
       } else {
-        Class<T> result = null;
+        Class<Object> result = null;
         try {
           @SuppressWarnings("unchecked")
-          final Class<T> temp = (Class<T>)Class.forName(className, true, Thread.currentThread().getContextClassLoader());
+          final Class<Object> temp = (Class<Object>)Class.forName(className, true, Thread.currentThread().getContextClassLoader());
           result = temp;
         } catch (final ClassNotFoundException classNotFoundException) {
           throw new IllegalArgumentException(className, classNotFoundException);

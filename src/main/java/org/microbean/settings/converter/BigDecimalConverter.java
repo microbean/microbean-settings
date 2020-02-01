@@ -18,10 +18,13 @@ package org.microbean.settings.converter;
 
 import java.math.BigDecimal;
 
+import javax.enterprise.context.ApplicationScoped;
+
 import org.microbean.settings.Converter;
 import org.microbean.settings.Value;
 
-public final class BigDecimalConverter implements Converter<BigDecimal> {
+@ApplicationScoped
+public class BigDecimalConverter implements Converter<BigDecimal> {
 
   private static final long serialVersionUID = 1L;
 
@@ -30,7 +33,7 @@ public final class BigDecimalConverter implements Converter<BigDecimal> {
   }
 
   @Override
-  public final BigDecimal convert(final Value value) {
+  public BigDecimal convert(final Value value) {
     final BigDecimal returnValue;
     if (value == null) {
       returnValue = null;

@@ -19,10 +19,16 @@ package org.microbean.settings;
 import java.lang.annotation.Annotation;
 
 import java.lang.reflect.Executable;
+import java.lang.reflect.GenericArrayType;
 import java.lang.reflect.Member;
 import java.lang.reflect.Parameter;
+import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.lang.reflect.TypeVariable;
+import java.lang.reflect.WildcardType;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Objects;
@@ -134,27 +140,33 @@ public class SettingsExtension implements Extension {
 
   private final void installConverterProviderBeans(@Observes final AfterBeanDiscovery event,
                                                    final BeanManager beanManager) {
+    final Type type = ConverterProvider.class;
     addBean(event,
             beanManager,
+            type,
             this.settingsQualifierSets,
-            (e, bm, nq) -> e.addBean()
-              .types(ConverterProvider.class)
+            (e, bm, t, nq) -> e.addBean()
+              .addTransitiveTypeClosure(BeanManagerBackedConverterProvider.class)
               .scope(Singleton.class)
               .qualifiers(nq)
+              .beanClass(BeanManagerBackedConverterProvider.class)
               .createWith(cc -> new BeanManagerBackedConverterProvider(bm, nq)));
   }
 
   private final void installSourcesSupplierBeans(@Observes final AfterBeanDiscovery event,
                                                  final BeanManager beanManager) {
+    final Type type = new TypeLiteral<BiFunction<String, Set<Annotation>, Set<Source>>>() {
+      private static final long serialVersionUID = 1L;
+    }.getType();
     addBean(event,
             beanManager,
+            type,
             this.settingsQualifierSets,
-            (e, bm, nq) -> e.addBean()
-              .types(new TypeLiteral<BiFunction<String, Set<Annotation>, Set<Source>>>() {
-                  private static final long serialVersionUID = 1L;
-                }.getType())
+            (e, bm, t, nq) -> e.addBean()
+              .types(t)
               .scope(Singleton.class)
               .qualifiers(nq)
+              .beanClass(BeanManagerBackedSourcesSupplier.class)
               .createWith(cc -> new BeanManagerBackedSourcesSupplier(bm)));
   }
 
@@ -162,9 +174,10 @@ public class SettingsExtension implements Extension {
                                           final BeanManager beanManager) {
     addBean(event,
             beanManager,
+            Settings.class,
             this.settingsQualifierSets,
-            (e, bm, nq) -> e.addBean()
-              .addTransitiveTypeClosure(Settings.class)
+            (e, bm, t, nq) -> e.addBean()
+              .addTransitiveTypeClosure(t)
               .scope(Singleton.class)
               .qualifiers(nq)
               .beanClass(Settings.class)
@@ -200,26 +213,32 @@ public class SettingsExtension implements Extension {
           settingsQualifiers.add(Default.Literal.INSTANCE);
         }
         for (final Type type : this.knownConversionTypes) {
-          final BeanAttributes<?> beanAttributes =
-            new FlexiblyTypedBeanAttributes<Object>(delegate, settingQualifiers, Collections.singleton(type));
-          final ProducerFactory<SettingsExtension> defaultProducerFactory =
-            beanManager.getProducerFactory(producerMethodTemplate, null);
-          final ProducerFactory<SettingsExtension> producerFactory = new ProducerFactory<SettingsExtension>() {
-              @Override
-              public final <T> Producer<T> createProducer(final Bean<T> bean) {
-                final Producer<T> defaultProducer = defaultProducerFactory.createProducer(bean);
-                final Set<InjectionPoint> injectionPoints =
-                qualifyInjectionPoints(defaultProducer.getInjectionPoints(), settingsQualifiers);
-                return new DelegatingProducer<T>(defaultProducer) {
-                  @Override
-                  public final Set<InjectionPoint> getInjectionPoints() {
-                    return injectionPoints;
-                  }
-                };
-              }
-            };
-          final Bean<?> bean = beanManager.createBean(beanAttributes, SettingsExtension.class, producerFactory);
-          event.addBean(bean);
+          if (noBeans(beanManager, type, settingQualifiers)) {
+            // type is the type of, say, an injection point.  So it
+            // could be a wildcard or a type variable.  Or it could be
+            // a ParameterizedType with recursive wildcards or type
+            // variables.
+            final BeanAttributes<?> beanAttributes =
+              new FlexiblyTypedBeanAttributes<Object>(delegate, settingQualifiers, Collections.singleton(synthesizeLegalBeanType(type)));
+            final ProducerFactory<SettingsExtension> defaultProducerFactory =
+              beanManager.getProducerFactory(producerMethodTemplate, null);
+            final ProducerFactory<SettingsExtension> producerFactory = new ProducerFactory<SettingsExtension>() {
+                @Override
+                public final <T> Producer<T> createProducer(final Bean<T> bean) {
+                  final Producer<T> defaultProducer = defaultProducerFactory.createProducer(bean);
+                  final Set<InjectionPoint> injectionPoints =
+                  qualifyInjectionPoints(defaultProducer.getInjectionPoints(), settingsQualifiers);
+                  return new DelegatingProducer<T>(defaultProducer) {
+                    @Override
+                    public final Set<InjectionPoint> getInjectionPoints() {
+                      return injectionPoints;
+                    }
+                  };
+                }
+              };
+            final Bean<?> bean = beanManager.createBean(beanAttributes, SettingsExtension.class, producerFactory);
+            event.addBean(bean);
+          }
         }
       }
     }
@@ -233,10 +252,13 @@ public class SettingsExtension implements Extension {
 
   private final void addBean(final AfterBeanDiscovery event,
                              final BeanManager beanManager,
+                             final Type type,
                              final Set<Set<Annotation>> qualifiersSets,
                              final BeanAdder beanAdder) {
     for (final Set<Annotation> qualifiers : qualifiersSets) {
-      beanAdder.addBean(event, beanManager, qualifiers);
+      if (noBeans(beanManager, type, qualifiers)) {
+        beanAdder.addBean(event, beanManager, type, qualifiers);
+      }
     }
   }
 
@@ -400,6 +422,86 @@ public class SettingsExtension implements Extension {
     return returnValue;
   }
 
+  private static final boolean noBeans(final BeanManager beanManager, final Type type, final Set<Annotation> qualifiers) {
+    Objects.requireNonNull(beanManager);
+    Objects.requireNonNull(type);
+    final Collection<?> beans;
+    if (qualifiers == null || qualifiers.isEmpty()) {
+      beans = beanManager.getBeans(type);
+    } else {
+      beans = beanManager.getBeans(type, qualifiers.toArray(new Annotation[qualifiers.size()]));
+    }
+    return beans == null || beans.isEmpty();
+  }
+
+  static Type synthesizeLegalBeanType(final Type type) {
+    final Type returnValue;
+    if (type instanceof Class) {
+      returnValue = type;
+    } else if (type instanceof ParameterizedType) {
+      final ParameterizedType ptype = (ParameterizedType)type;
+      final Type rawType = ptype.getRawType();
+      assert rawType instanceof Class;
+      final Type[] actualTypeArguments = ptype.getActualTypeArguments();
+      assert actualTypeArguments != null;
+      assert actualTypeArguments.length > 0;
+      final Collection<Type> newTypeArguments = new ArrayList<>();
+      for (final Type actualTypeArgument : actualTypeArguments) {
+        newTypeArguments.add(synthesizeLegalBeanType(actualTypeArgument)); // XXX recursive
+      }
+      returnValue = new ParameterizedTypeImplementation(ptype.getOwnerType(),
+                                                        (Class<?>)rawType,
+                                                        newTypeArguments.toArray(new Type[newTypeArguments.size()]));
+    } else if (type instanceof WildcardType) {
+      final WildcardType wtype = (WildcardType)type;
+      final Type[] upperBounds = wtype.getUpperBounds();
+      assert upperBounds != null;
+      assert upperBounds.length > 0;
+      final Type[] lowerBounds = wtype.getLowerBounds();
+      assert lowerBounds != null;
+      if (lowerBounds.length == 0) {
+        // Upper-bounded wildcard, e.g. ? extends Something
+        if (upperBounds.length == 1) {
+          // Turn ? extends Something into Something
+          returnValue = synthesizeLegalBeanType(upperBounds[0]); // XXX recursive
+        } else {
+          // Too complicated/unsupported; just let it fly and CDI will
+          // fail later
+          returnValue = type;
+        }
+      } else {
+        // Lower-bounded wildcard, e.g. ? super Something
+        assert upperBounds.length == 1;
+        assert Object.class.equals(upperBounds[0]);
+        if (lowerBounds.length == 1) {
+          // Turn ? super Something into Something
+          returnValue = synthesizeLegalBeanType(lowerBounds[0]); // XXX recursive
+        } else {
+          // Too complicated/unsupported; just let it fly and CDI will
+          // fail later
+          returnValue = type;
+        }
+      }
+    } else if (type instanceof TypeVariable) {
+      final TypeVariable<?> tv = (TypeVariable<?>)type;
+      final Type[] bounds = tv.getBounds();
+      assert bounds != null;
+      assert bounds.length > 0;
+      if (bounds.length == 1) {
+        returnValue = synthesizeLegalBeanType(bounds[0]); // XXX recursive
+      } else {
+        // Too complicated/unsupported; just let it fly and CDI will
+        // fail later
+        returnValue = type;
+      }
+    } else if (type instanceof GenericArrayType) {
+      returnValue = type;
+    } else {
+      throw new IllegalArgumentException("Unsupported Type implementation: " + type);
+    }
+    return returnValue;
+  }
+
 
   /*
    * Inner and nested classes.
@@ -409,7 +511,10 @@ public class SettingsExtension implements Extension {
   @FunctionalInterface
   private interface BeanAdder {
 
-    void addBean(final AfterBeanDiscovery event, final BeanManager beanManager, final Set<Annotation> qualifiers);
+    void addBean(final AfterBeanDiscovery event,
+                 final BeanManager beanManager,
+                 final Type type,
+                 final Set<Annotation> qualifiers);
 
   }
 

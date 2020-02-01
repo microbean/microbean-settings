@@ -36,6 +36,7 @@ public final class SourceOrderArbiter extends Arbiter {
     super();
   }
 
+  @Override
   public Value arbitrate(final Set<? extends Source> sources,
                          final String name,
                          final Set<? extends Annotation> qualifiers,

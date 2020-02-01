@@ -16,10 +16,13 @@
  */
 package org.microbean.settings.converter;
 
+import javax.enterprise.context.ApplicationScoped;
+
 import org.microbean.settings.Converter;
 import org.microbean.settings.Value;
 
-public final class DoubleConverter implements Converter<Double> {
+@ApplicationScoped
+public class DoubleConverter implements Converter<Double> {
 
   private static final long serialVersionUID = 1L;
 
@@ -28,7 +31,7 @@ public final class DoubleConverter implements Converter<Double> {
   }
 
   @Override
-  public final Double convert(final Value value) {
+  public Double convert(final Value value) {
     final Double returnValue;
     if (value == null) {
       returnValue = null;

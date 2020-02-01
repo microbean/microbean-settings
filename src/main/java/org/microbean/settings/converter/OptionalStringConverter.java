@@ -16,36 +16,20 @@
  */
 package org.microbean.settings.converter;
 
-import java.util.logging.Level;
-
 import javax.enterprise.context.ApplicationScoped;
 
+import javax.inject.Inject;
+
 import org.microbean.settings.Converter;
-import org.microbean.settings.Value;
 
 @ApplicationScoped
-public class LevelConverter implements Converter<Level> {
+public class OptionalStringConverter extends OptionalConverter<String> {
 
   private static final long serialVersionUID = 1L;
 
-  public LevelConverter() {
-    super();
-  }
-
-  @Override
-  public Level convert(final Value value) {
-    final Level returnValue;
-    if (value == null) {
-      returnValue = null;
-    } else {
-      final String stringValue = value.get();
-      if (stringValue == null) {
-        returnValue = null;
-      } else {
-        returnValue = Level.parse(stringValue);
-      }
-    }
-    return returnValue;
+  @Inject
+  public OptionalStringConverter(final Converter<String> baseConverter) {
+    super(baseConverter);
   }
 
 }

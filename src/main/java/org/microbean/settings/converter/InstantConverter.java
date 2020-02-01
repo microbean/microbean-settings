@@ -20,9 +20,12 @@ import java.time.Instant;
 
 import java.time.format.DateTimeParseException;
 
+import javax.enterprise.context.ApplicationScoped;
+
 import org.microbean.settings.Converter;
 import org.microbean.settings.Value;
 
+@ApplicationScoped
 public final class InstantConverter implements Converter<Instant> {
 
   private static final long serialVersionUID = 1L;
@@ -32,7 +35,7 @@ public final class InstantConverter implements Converter<Instant> {
   }
 
   @Override
-  public final Instant convert(final Value value) {
+  public Instant convert(final Value value) {
     final Instant returnValue;
     if (value == null) {
       returnValue = null;

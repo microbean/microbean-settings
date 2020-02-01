@@ -19,6 +19,7 @@ package org.microbean.settings;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.Set;
 
 import javax.enterprise.context.ApplicationScoped;
@@ -61,11 +62,15 @@ public class TestBasicInjection {
   private Set<Entry<String, String>> testEntrySet;
   
   @Inject
-  @Setting(name = "test.set")
-  private Set<String> testSet;
+  @Setting(name = "test.list")
+  private List<? extends String> testList;
 
   @Inject
-  @Setting(name = "test.set")
+  @Setting(name = "cls")
+  private Class<?> cls;
+
+  @Inject
+  @Setting(name = "test.list")
   private String[] testArray;
 
   @Inject
@@ -90,8 +95,9 @@ public class TestBasicInjection {
   @Before
   public void startContainer() throws Exception {
     this.stopContainer();
+    System.setProperty("cls", "java.lang.Integer");
     System.setProperty("test.map", "a=b,c=d,e=f");
-    System.setProperty("test.set", "a,b,c");
+    System.setProperty("test.list", "a,b,c");
     final SeContainerInitializer initializer = SeContainerInitializer.newInstance();
     initializer.addBeanClasses(TestBasicInjection.class);
     this.container = initializer.initialize();
@@ -103,12 +109,15 @@ public class TestBasicInjection {
       this.container.close();
       this.container = null;
       System.clearProperty("test.map");
-      System.clearProperty("test.set");
+      System.clearProperty("test.list");
+      System.clearProperty("cls");
     }
   }
 
-  private void onStartup(@Observes @Initialized(ApplicationScoped.class) final Object event) {
+  private void onStartup(@Observes @Initialized(ApplicationScoped.class) final Object event,
+                         @Setting(name = "test.list") final String testSet) {
     assertNotNull(event);
+    assertEquals("a,b,c", testSet);
     assertEquals("b", this.testMap.get("a"));
     assertEquals("d", this.testMap.get("c"));
     assertEquals("f", this.testMap.get("e"));
