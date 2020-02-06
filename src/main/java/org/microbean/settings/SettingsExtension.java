@@ -49,6 +49,7 @@ import javax.enterprise.inject.Instance;
 import javax.enterprise.inject.UnsatisfiedResolutionException;
 
 import javax.enterprise.inject.spi.AfterBeanDiscovery;
+import javax.enterprise.inject.spi.AfterDeploymentValidation;
 import javax.enterprise.inject.spi.Annotated;
 import javax.enterprise.inject.spi.AnnotatedField;
 import javax.enterprise.inject.spi.AnnotatedMember;
@@ -79,6 +80,8 @@ public class SettingsExtension implements Extension {
    */
 
 
+  private final Set<InjectionPoint> settingInjectionPoints;
+  
   private final Set<Set<Annotation>> settingQualifierSets;
 
   private final Set<Set<Annotation>> settingsQualifierSets;
@@ -93,6 +96,7 @@ public class SettingsExtension implements Extension {
 
   public SettingsExtension() {
     super();
+    this.settingInjectionPoints = new HashSet<>();
     this.settingQualifierSets = new HashSet<>();
     this.settingsQualifierSets = new HashSet<>();
     this.knownConversionTypes = new HashSet<>(Collections.singleton(String.class));
@@ -135,6 +139,8 @@ public class SettingsExtension implements Extension {
       }
       if (containsSetting) {
         this.knownConversionTypes.add(type);
+
+        this.settingInjectionPoints.add(injectionPoint);
 
         final Set<Annotation> settingQualifiers = new HashSet<>(injectionPointQualifiers);
         settingQualifiers.add(Any.Literal.INSTANCE);
@@ -255,6 +261,22 @@ public class SettingsExtension implements Extension {
         }
       }
     }
+  }
+
+  private final void validate(@Observes final AfterDeploymentValidation event,
+                              final BeanManager beanManager) {
+    final CreationalContext<?> cc = beanManager.createCreationalContext(null);
+    try {
+      for (final InjectionPoint settingInjectionPoint : this.settingInjectionPoints) {
+        beanManager.validate(settingInjectionPoint);
+        beanManager.getInjectableReference(settingInjectionPoint, cc);
+      }
+    } finally {
+      cc.release();
+    }
+    this.settingInjectionPoints.clear();
+    this.settingQualifierSets.clear();
+    this.settingsQualifierSets.clear();
   }
 
 

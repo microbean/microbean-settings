@@ -62,7 +62,7 @@ public class TestBasicInjection {
   private Set<Entry<String, String>> testEntrySet;
 
   @Inject
-  @Setting(name = "crap", required = true, defaultValue = "garbage")
+  @Setting(name = "crap", required = false)
   private List<String> crap;
   
   @Inject

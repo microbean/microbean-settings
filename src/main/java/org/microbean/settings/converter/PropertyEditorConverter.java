@@ -52,8 +52,8 @@ public class PropertyEditorConverter<T> implements Converter<T> {
   public T convert(final Value value) {
     final T returnValue;
     if (value == null) {
-      return null;
-    } else if (this.editor == null) {
+      returnValue = null;
+    } else {
       final String stringValue = value.get();
       if (this.editor == null) {
         throw new IllegalArgumentException("No PropertyEditor available to convert " + stringValue);
