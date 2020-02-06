@@ -16,6 +16,8 @@
  */
 package org.microbean.settings.converter;
 
+import java.time.LocalDate;
+
 import javax.enterprise.context.ApplicationScoped;
 
 import javax.inject.Inject;
@@ -23,12 +25,12 @@ import javax.inject.Inject;
 import org.microbean.settings.Converter;
 
 @ApplicationScoped
-public class SetBooleanConverter extends SetConverter<Boolean> {
+public class ListLocalDateConverter extends ListConverter<LocalDate> {
 
   private static final long serialVersionUID = 1L;
 
   @Inject
-  public SetBooleanConverter(final Converter<? extends Boolean> scalarConverter) {
+  public ListLocalDateConverter(final Converter<LocalDate> scalarConverter) {
     super(scalarConverter);
   }
   

@@ -40,6 +40,14 @@ public class TestTypeSynthesis {
   }
 
   @Test
+  public void testGenerics() {
+    final List<? extends List<? extends String>> list = new ArrayList<List<String>>();
+    // Worth remembering that this one doesn't compile:
+    // final List<          List<? extends String>> list2 = new ArrayList<List<String>>();
+    final List<? extends List<          String>> list3 = new ArrayList<List<String>>();
+  }
+
+  @Test
   public void testWildcardTypeSynthesis() {
     // Jump through a bunch of hoops to get our hands on a simple,
     // arbitrary wildcard type.

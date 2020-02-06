@@ -20,18 +20,16 @@ import javax.enterprise.context.ApplicationScoped;
 
 import javax.inject.Inject;
 
-import java.util.List;
-
 import org.microbean.settings.Converter;
 
 @ApplicationScoped
-public class ArrayCharSequenceConverter extends ArrayConverter<CharSequence> implements Converter<CharSequence[]> {
+public class ListStringBuilderConverter extends ListConverter<StringBuilder> {
 
   private static final long serialVersionUID = 1L;
 
   @Inject
-  public ArrayCharSequenceConverter(final Converter<? extends List<CharSequence>> collectionConverter) {
-    super(collectionConverter);
+  public ListStringBuilderConverter(final Converter<StringBuilder> scalarConverter) {
+    super(scalarConverter);
   }
   
 }

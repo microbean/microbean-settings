@@ -16,22 +16,22 @@
  */
 package org.microbean.settings.converter;
 
+import java.time.Year;
+
 import javax.enterprise.context.ApplicationScoped;
 
 import javax.inject.Inject;
 
-import java.util.List;
-
 import org.microbean.settings.Converter;
 
 @ApplicationScoped
-public class ArrayStringConverter extends ArrayConverter<String> implements Converter<String[]> {
+public class ListYearConverter extends ListConverter<Year> {
 
   private static final long serialVersionUID = 1L;
 
   @Inject
-  public ArrayStringConverter(final Converter<? extends List<String>> collectionConverter) {
-    super(collectionConverter);
+  public ListYearConverter(final Converter<Year> scalarConverter) {
+    super(scalarConverter);
   }
   
 }

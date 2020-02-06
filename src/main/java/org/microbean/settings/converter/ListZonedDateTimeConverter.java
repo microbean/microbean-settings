@@ -16,6 +16,8 @@
  */
 package org.microbean.settings.converter;
 
+import java.time.ZonedDateTime;
+
 import javax.enterprise.context.ApplicationScoped;
 
 import javax.inject.Inject;
@@ -23,12 +25,12 @@ import javax.inject.Inject;
 import org.microbean.settings.Converter;
 
 @ApplicationScoped
-public class SetByteConverter extends SetConverter<Byte> {
+public class ListZonedDateTimeConverter extends ListConverter<ZonedDateTime> {
 
   private static final long serialVersionUID = 1L;
 
   @Inject
-  public SetByteConverter(final Converter<? extends Byte> scalarConverter) {
+  public ListZonedDateTimeConverter(final Converter<ZonedDateTime> scalarConverter) {
     super(scalarConverter);
   }
   

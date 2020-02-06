@@ -19,10 +19,13 @@ package org.microbean.settings.converter;
 import java.net.URI;
 import java.net.URISyntaxException;
 
+import javax.enterprise.context.ApplicationScoped;
+
 import org.microbean.settings.Converter;
 import org.microbean.settings.Value;
 
-public final class URIConverter implements Converter<URI> {
+@ApplicationScoped
+public class URIConverter implements Converter<URI> {
 
   private static final long serialVersionUID = 1L;
 
@@ -31,7 +34,7 @@ public final class URIConverter implements Converter<URI> {
   }
 
   @Override
-  public final URI convert(final Value value) {
+  public URI convert(final Value value) {
     final URI returnValue;
     if (value == null) {
       returnValue = null;

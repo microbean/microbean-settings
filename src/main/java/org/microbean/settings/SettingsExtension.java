@@ -46,6 +46,7 @@ import javax.enterprise.event.Observes;
 import javax.enterprise.inject.Any;
 import javax.enterprise.inject.Default;
 import javax.enterprise.inject.Instance;
+import javax.enterprise.inject.UnsatisfiedResolutionException;
 
 import javax.enterprise.inject.spi.AfterBeanDiscovery;
 import javax.enterprise.inject.spi.Annotated;
@@ -57,6 +58,7 @@ import javax.enterprise.inject.spi.AnnotatedType;
 import javax.enterprise.inject.spi.Bean;
 import javax.enterprise.inject.spi.BeanAttributes;
 import javax.enterprise.inject.spi.BeanManager;
+import javax.enterprise.inject.spi.DefinitionException;
 import javax.enterprise.inject.spi.Extension;
 import javax.enterprise.inject.spi.InjectionPoint;
 import javax.enterprise.inject.spi.ProcessInjectionPoint;
@@ -116,6 +118,17 @@ public class SettingsExtension implements Extension {
       boolean containsSetting = false;
       for (final Annotation injectionPointQualifier : injectionPointQualifiers) {
         if (injectionPointQualifier instanceof Setting) {
+          final Setting setting = (Setting)injectionPointQualifier;
+          if (setting.required()) {
+            final Object defaultValue = setting.defaultValue();
+            if (defaultValue != null && !defaultValue.equals(Setting.UNSET)) {
+              event.addDefinitionError(new DefinitionException("While processing the injection point " + injectionPoint +
+                                                               " the Setting annotation named " + setting.name() +
+                                                               " had a defaultValue element specified (" + defaultValue +
+                                                               ") and returned true from its required() element."));
+              break;
+            }
+          }
           containsSetting = true;
           break;
         }
@@ -300,15 +313,19 @@ public class SettingsExtension implements Extension {
   @Dependent
   @Deprecated
   private static final Object producerMethodTemplate(final InjectionPoint injectionPoint,
+                                                     final BeanManager beanManager,
                                                      final Settings settings) {
     Objects.requireNonNull(injectionPoint);
     Objects.requireNonNull(settings);
     final Set<Annotation> qualifiers = new HashSet<>(Objects.requireNonNull(injectionPoint.getQualifiers()));
     qualifiers.removeIf(e -> e instanceof Setting);
+    if (qualifiers.isEmpty()) {
+      qualifiers.add(Default.Literal.INSTANCE);
+    }
     return settings.get(getName(injectionPoint),
                         qualifiers,
                         injectionPoint.getType(),
-                        getDefaultValueSupplier(injectionPoint));
+                        getDefaultValueSupplier(injectionPoint, beanManager));
   }
 
   private static final Setting extractSetting(final InjectionPoint injectionPoint) {
@@ -332,18 +349,28 @@ public class SettingsExtension implements Extension {
     return returnValue;
   }
 
-  private static final Supplier<? extends String> getDefaultValueSupplier(final InjectionPoint injectionPoint) {
-    return getDefaultValueSupplier(Objects.requireNonNull(extractSetting(injectionPoint)));
-  }
-
-  private static final Supplier<? extends String> getDefaultValueSupplier(final Setting setting) {
-    Objects.requireNonNull(setting);
+  private static final Supplier<? extends String> getDefaultValueSupplier(final InjectionPoint injectionPoint,
+                                                                          final BeanManager beanManager) {
+    Objects.requireNonNull(injectionPoint);
+    Objects.requireNonNull(beanManager);
+    final Setting setting = Objects.requireNonNull(extractSetting(injectionPoint));
     final Supplier<? extends String> returnValue;
-    final String defaultValue = setting.defaultValue();
-    if (defaultValue == null || defaultValue.equals(Setting.UNSET)) {
-      returnValue = SettingsExtension::returnNull;
+    if (setting.required()) {
+      returnValue = () -> {
+        final Set<Annotation> qualifiers = new HashSet<>(Objects.requireNonNull(injectionPoint.getQualifiers()));
+        qualifiers.removeIf(e -> e instanceof Setting);
+        if (qualifiers.isEmpty()) {
+          qualifiers.add(Default.Literal.INSTANCE);
+        }
+        throw new UnsatisfiedResolutionException("No value was found in any source for the setting named " + getName(injectionPoint) + " with qualifiers " + qualifiers);
+      };
     } else {
-      returnValue = setting::defaultValue;
+      final String defaultValue = setting.defaultValue();
+      if (defaultValue == null || defaultValue.equals(Setting.UNSET)) {
+        returnValue = SettingsExtension::returnNull;
+      } else {
+        returnValue = setting::defaultValue;
+      }
     }
     return returnValue;
   }
@@ -393,7 +420,8 @@ public class SettingsExtension implements Extension {
                                                                   final Set<Annotation> qualifiers) {
     final Set<InjectionPoint> returnValue = new HashSet<>();
     for (final InjectionPoint injectionPoint : injectionPoints) {
-      if (injectionPoint instanceof InjectionPoint) {
+      final Type injectionPointType = injectionPoint.getType();
+      if (InjectionPoint.class.equals(injectionPointType) || BeanManager.class.equals(injectionPointType)) {
         returnValue.add(injectionPoint);
       } else {
         returnValue.add(qualifyInjectionPoint(injectionPoint, qualifiers));
@@ -435,8 +463,12 @@ public class SettingsExtension implements Extension {
   }
 
   static Type synthesizeLegalBeanType(final Type type) {
+    return synthesizeLegalBeanType(type, -1, 0);
+  }
+
+  static Type synthesizeLegalBeanType(final Type type, final int depth, final int currentLevel) {
     final Type returnValue;
-    if (type instanceof Class) {
+    if (type instanceof Class || (depth >= 0 && currentLevel >= depth)) {
       returnValue = type;
     } else if (type instanceof ParameterizedType) {
       final ParameterizedType ptype = (ParameterizedType)type;
@@ -447,7 +479,7 @@ public class SettingsExtension implements Extension {
       assert actualTypeArguments.length > 0;
       final Collection<Type> newTypeArguments = new ArrayList<>();
       for (final Type actualTypeArgument : actualTypeArguments) {
-        newTypeArguments.add(synthesizeLegalBeanType(actualTypeArgument)); // XXX recursive
+        newTypeArguments.add(synthesizeLegalBeanType(actualTypeArgument, depth, currentLevel + 1)); // XXX recursive
       }
       returnValue = new ParameterizedTypeImplementation(ptype.getOwnerType(),
                                                         (Class<?>)rawType,
@@ -463,7 +495,7 @@ public class SettingsExtension implements Extension {
         // Upper-bounded wildcard, e.g. ? extends Something
         if (upperBounds.length == 1) {
           // Turn ? extends Something into Something
-          returnValue = synthesizeLegalBeanType(upperBounds[0]); // XXX recursive
+          returnValue = synthesizeLegalBeanType(upperBounds[0], depth, currentLevel + 1); // XXX recursive
         } else {
           // Too complicated/unsupported; just let it fly and CDI will
           // fail later
@@ -475,7 +507,7 @@ public class SettingsExtension implements Extension {
         assert Object.class.equals(upperBounds[0]);
         if (lowerBounds.length == 1) {
           // Turn ? super Something into Something
-          returnValue = synthesizeLegalBeanType(lowerBounds[0]); // XXX recursive
+          returnValue = synthesizeLegalBeanType(lowerBounds[0], depth, currentLevel + 1); // XXX recursive
         } else {
           // Too complicated/unsupported; just let it fly and CDI will
           // fail later
@@ -488,7 +520,7 @@ public class SettingsExtension implements Extension {
       assert bounds != null;
       assert bounds.length > 0;
       if (bounds.length == 1) {
-        returnValue = synthesizeLegalBeanType(bounds[0]); // XXX recursive
+        returnValue = synthesizeLegalBeanType(bounds[0], depth, currentLevel + 1); // XXX recursive
       } else {
         // Too complicated/unsupported; just let it fly and CDI will
         // fail later

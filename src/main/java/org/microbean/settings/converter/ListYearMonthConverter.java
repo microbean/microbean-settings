@@ -16,23 +16,22 @@
  */
 package org.microbean.settings.converter;
 
+import java.time.YearMonth;
+
 import javax.enterprise.context.ApplicationScoped;
 
 import javax.inject.Inject;
 
-import java.util.List;
-
 import org.microbean.settings.Converter;
-import org.microbean.settings.Value;
 
 @ApplicationScoped
-public class ArrayByteConverter extends ArrayConverter<Byte> implements Converter<Byte[]> {
+public class ListYearMonthConverter extends ListConverter<YearMonth> {
 
   private static final long serialVersionUID = 1L;
 
   @Inject
-  public ArrayByteConverter(final Converter<? extends List<? extends Byte>> collectionConverter) {
-    super(collectionConverter);
+  public ListYearMonthConverter(final Converter<YearMonth> scalarConverter) {
+    super(scalarConverter);
   }
-
+  
 }

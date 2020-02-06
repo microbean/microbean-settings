@@ -24,10 +24,13 @@ import java.io.ObjectInputStream;
 
 import java.util.Objects;
 
+import javax.enterprise.inject.Vetoed;
+
 import org.microbean.settings.Converter;
 import org.microbean.settings.Value;
 
-public final class PropertyEditorConverter<T> implements Converter<T> {
+@Vetoed
+public class PropertyEditorConverter<T> implements Converter<T> {
 
   private static final long serialVersionUID = 1L;
 
@@ -46,15 +49,13 @@ public final class PropertyEditorConverter<T> implements Converter<T> {
   }
 
   @Override
-  public final T convert(final Value value) {
+  public T convert(final Value value) {
     final T returnValue;
     if (value == null) {
       return null;
-    } else {
+    } else if (this.editor == null) {
       final String stringValue = value.get();
-      if (stringValue == null) {
-        returnValue = null;
-      } else if (this.editor == null) {
+      if (this.editor == null) {
         throw new IllegalArgumentException("No PropertyEditor available to convert " + stringValue);
       } else {
         synchronized (this.editor) {

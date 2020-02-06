@@ -20,18 +20,16 @@ import javax.enterprise.context.ApplicationScoped;
 
 import javax.inject.Inject;
 
-import java.util.List;
-
 import org.microbean.settings.Converter;
 
 @ApplicationScoped
-public class ArrayBooleanConverter extends ArrayConverter<Boolean> implements Converter<Boolean[]> {
+public class ListStringBufferConverter extends ListConverter<StringBuffer> {
 
   private static final long serialVersionUID = 1L;
 
   @Inject
-  public ArrayBooleanConverter(final Converter<? extends List<? extends Boolean>> collectionConverter) {
-    super(collectionConverter);
+  public ListStringBufferConverter(final Converter<StringBuffer> scalarConverter) {
+    super(scalarConverter);
   }
   
 }

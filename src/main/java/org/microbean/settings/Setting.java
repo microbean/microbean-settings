@@ -50,6 +50,9 @@ public @interface Setting {
   @Nonbinding
   String defaultValue() default UNSET;
 
+  @Nonbinding
+  boolean required() default false;
+
   public static final class Literal<T> extends AnnotationLiteral<Setting> implements Setting {
 
     private static final long serialVersionUID = 1L;
@@ -58,14 +61,22 @@ public @interface Setting {
 
     private final String defaultValue;
 
-    public Literal(final String name, final String defaultValue) {
+    private final boolean required;
+
+    public Literal(final String name, final String defaultValue, final boolean required) {
       this.name = name == null ? UNSET : name;
       this.defaultValue = defaultValue == null ? UNSET : defaultValue;
+      this.required = required;
     }
 
     @Override
     public final String name() {
       return this.name;
+    }
+
+    @Override
+    public final boolean required() {
+      return this.required;
     }
 
     @Override

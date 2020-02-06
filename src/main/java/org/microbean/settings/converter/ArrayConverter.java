@@ -33,8 +33,9 @@ import org.microbean.settings.Converter;
 import org.microbean.settings.Value;
 
 /**
- * An abstract class that can serve as the base class for implementations of, but which
- * deliberately does not itself implement, the {@link Converter} interface.
+ * An abstract class that can serve as the base class for
+ * implementations of, but which deliberately does not itself
+ * implement, the {@link Converter} interface.
  *
  * @author <a href="https://about.me/lairdnelson"
  * target="_parent">Laird Nelson</a>

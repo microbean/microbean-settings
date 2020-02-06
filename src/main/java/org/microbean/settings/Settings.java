@@ -30,6 +30,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.PriorityQueue;
 import java.util.Queue;
@@ -411,7 +412,9 @@ public class Settings {
     final String stringToInterpolate;
     if (selectedValue == null) {
       if (rawDefaultValueSupplier == null) {
-        stringToInterpolate = null;
+        // There was no value that came up.  There's also no way to
+        // get a default one.  So the value is missing.
+        throw new NoSuchElementException(name + " (" + qualifiers + ")");
       } else {
         stringToInterpolate = rawDefaultValueSupplier.get();
       }

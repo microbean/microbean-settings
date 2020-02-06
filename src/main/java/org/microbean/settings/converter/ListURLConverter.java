@@ -16,24 +16,22 @@
  */
 package org.microbean.settings.converter;
 
+import java.net.URL;
+
 import javax.enterprise.context.ApplicationScoped;
 
 import javax.inject.Inject;
 
-import java.math.BigInteger;
-
-import java.util.List;
-
 import org.microbean.settings.Converter;
 
 @ApplicationScoped
-public class ArrayBigIntegerConverter extends ArrayConverter<BigInteger> implements Converter<BigInteger[]> {
+public class ListURLConverter extends ListConverter<URL> {
 
   private static final long serialVersionUID = 1L;
 
   @Inject
-  public ArrayBigIntegerConverter(final Converter<? extends List<BigInteger>> collectionConverter) {
-    super(collectionConverter);
+  public ListURLConverter(final Converter<URL> scalarConverter) {
+    super(scalarConverter);
   }
   
 }

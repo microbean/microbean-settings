@@ -20,10 +20,13 @@ import java.time.LocalDateTime;
 
 import java.time.format.DateTimeParseException;
 
+import javax.enterprise.context.ApplicationScoped;
+
 import org.microbean.settings.Converter;
 import org.microbean.settings.Value;
 
-public final class LocalDateTimeConverter implements Converter<LocalDateTime> {
+@ApplicationScoped
+public class LocalDateTimeConverter implements Converter<LocalDateTime> {
 
   private static final long serialVersionUID = 1L;
 
@@ -32,7 +35,7 @@ public final class LocalDateTimeConverter implements Converter<LocalDateTime> {
   }
 
   @Override
-  public final LocalDateTime convert(final Value value) {
+  public LocalDateTime convert(final Value value) {
     final LocalDateTime returnValue;
     if (value == null) {
       returnValue = null;

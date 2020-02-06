@@ -17,18 +17,19 @@
 package org.microbean.settings.converter;
 
 import javax.enterprise.context.ApplicationScoped;
+import javax.enterprise.context.Dependent;
 
 import javax.inject.Inject;
 
 import org.microbean.settings.Converter;
 
-@ApplicationScoped
-public class ListClassConverter extends ListConverter<Class<?>> {
+@Dependent
+public class ListClassConverter<T> extends ListConverter<Class<T>> {
 
   private static final long serialVersionUID = 1L;
 
   @Inject
-  public ListClassConverter(final Converter<Class<?>> scalarConverter) {
+  public  ListClassConverter(final Converter<Class<T>> scalarConverter) {
     super(scalarConverter);
   }
   

@@ -60,22 +60,23 @@ public class TestBasicInjection {
   @Inject
   @Setting(name = "test.map")
   private Set<Entry<String, String>> testEntrySet;
+
+  @Inject
+  @Setting(name = "crap", required = true, defaultValue = "garbage")
+  private List<String> crap;
   
   @Inject
   @Setting(name = "test.list")
   private List<? extends String> testList;
 
   @Inject
-  @Setting(name = "cls")
+  @Setting(name = "cls", defaultValue = "java.lang.Integer")
   private Class<?> cls;
-
-  @Inject
-  @Setting(name = "test.list")
-  private String[] testArray;
 
   @Inject
   @Setting(name = "nonexistent", defaultValue = "${settings[\"java.home\"]}")
   private String nonexistent;
+  
 
   /*
    * Constructors.
@@ -118,12 +119,12 @@ public class TestBasicInjection {
                          @Setting(name = "test.list") final String testSet) {
     assertNotNull(event);
     assertEquals("a,b,c", testSet);
+    assertNotNull(this.testMap);
+    assertEquals(3, this.testMap.size());
     assertEquals("b", this.testMap.get("a"));
     assertEquals("d", this.testMap.get("c"));
     assertEquals("f", this.testMap.get("e"));
-    assertEquals("a", this.testArray[0]);
-    assertEquals("b", this.testArray[1]);
-    assertEquals("c", this.testArray[2]);
+    assertEquals(Integer.class, this.cls);
     assertEquals(this.javaHome, nonexistent);
   }
 

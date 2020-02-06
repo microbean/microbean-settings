@@ -20,10 +20,13 @@ import java.time.ZonedDateTime;
 
 import java.time.format.DateTimeParseException;
 
+import javax.enterprise.context.ApplicationScoped;
+
 import org.microbean.settings.Converter;
 import org.microbean.settings.Value;
 
-public final class ZonedDateTimeConverter implements Converter<ZonedDateTime> {
+@ApplicationScoped
+public class ZonedDateTimeConverter implements Converter<ZonedDateTime> {
 
   private static final long serialVersionUID = 1L;
 
@@ -32,7 +35,7 @@ public final class ZonedDateTimeConverter implements Converter<ZonedDateTime> {
   }
 
   @Override
-  public final ZonedDateTime convert(final Value value) {
+  public ZonedDateTime convert(final Value value) {
     final ZonedDateTime returnValue;
     if (value == null) {
       returnValue = null;

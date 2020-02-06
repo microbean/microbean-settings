@@ -16,6 +16,8 @@
  */
 package org.microbean.settings.converter;
 
+import java.net.URI;
+
 import javax.enterprise.context.ApplicationScoped;
 
 import javax.inject.Inject;
@@ -23,12 +25,12 @@ import javax.inject.Inject;
 import org.microbean.settings.Converter;
 
 @ApplicationScoped
-public class SetStringConverter extends SetConverter<String> {
+public class ListURIConverter extends ListConverter<URI> {
 
   private static final long serialVersionUID = 1L;
 
   @Inject
-  public SetStringConverter(final Converter<String> scalarConverter) {
+  public ListURIConverter(final Converter<URI> scalarConverter) {
     super(scalarConverter);
   }
   

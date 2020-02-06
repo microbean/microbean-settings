@@ -16,24 +16,22 @@
  */
 package org.microbean.settings.converter;
 
+import java.time.LocalDateTime;
+
 import javax.enterprise.context.ApplicationScoped;
 
 import javax.inject.Inject;
 
-import java.math.BigDecimal;
-
-import java.util.List;
-
 import org.microbean.settings.Converter;
 
 @ApplicationScoped
-public class ArrayBigDecimalConverter extends ArrayConverter<BigDecimal> implements Converter<BigDecimal[]> {
+public class ListLocalDateTimeConverter extends ListConverter<LocalDateTime> {
 
   private static final long serialVersionUID = 1L;
 
   @Inject
-  public ArrayBigDecimalConverter(final Converter<? extends List<BigDecimal>> collectionConverter) {
-    super(collectionConverter);
+  public ListLocalDateTimeConverter(final Converter<LocalDateTime> scalarConverter) {
+    super(scalarConverter);
   }
   
 }

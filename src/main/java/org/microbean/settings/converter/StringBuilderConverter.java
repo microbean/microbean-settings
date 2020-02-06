@@ -16,10 +16,13 @@
  */
 package org.microbean.settings.converter;
 
+import javax.enterprise.context.ApplicationScoped;
+
 import org.microbean.settings.Converter;
 import org.microbean.settings.Value;
 
-public final class StringBuilderConverter implements Converter<StringBuilder> {
+@ApplicationScoped
+public class StringBuilderConverter implements Converter<StringBuilder> {
 
   private static final long serialVersionUID = 1L;
 
@@ -28,7 +31,7 @@ public final class StringBuilderConverter implements Converter<StringBuilder> {
   }
 
   @Override
-  public final StringBuilder convert(final Value value) {
+  public StringBuilder convert(final Value value) {
     final StringBuilder returnValue;
     if (value == null) {
       returnValue = null;

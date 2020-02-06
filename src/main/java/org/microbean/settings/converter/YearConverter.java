@@ -20,10 +20,13 @@ import java.time.Year;
 
 import java.time.format.DateTimeParseException;
 
+import javax.enterprise.context.ApplicationScoped;
+
 import org.microbean.settings.Converter;
 import org.microbean.settings.Value;
 
-public final class YearConverter implements Converter<Year> {
+@ApplicationScoped
+public class YearConverter implements Converter<Year> {
 
   private static final long serialVersionUID = 1L;
 
@@ -32,7 +35,7 @@ public final class YearConverter implements Converter<Year> {
   }
 
   @Override
-  public final Year convert(final Value value) {
+  public Year convert(final Value value) {
     final Year returnValue;
     if (value == null) {
       returnValue = null;
