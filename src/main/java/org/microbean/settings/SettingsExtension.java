@@ -211,7 +211,7 @@ public class SettingsExtension implements Extension {
                   qualifiersArray).get();
                 final ConverterProvider converterProvider = instance.select(ConverterProvider.class, qualifiersArray).get();
                 final Iterable<? extends Arbiter> arbiters = instance.select(Arbiter.class, qualifiersArray);
-                return new Settings(sourcesSupplier, converterProvider, arbiters);
+                return new Settings(nq, sourcesSupplier, converterProvider, arbiters);
               }));
   }
 

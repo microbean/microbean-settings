@@ -52,6 +52,8 @@ public class Settings {
 
   private static final Comparator<Value> valueComparator = Comparator.<Value>comparingInt(v -> v.getQualifiers().size()).reversed();
 
+  private final Set<Annotation> qualifiers;
+
   private final ConverterProvider converterProvider;
 
   private final BiFunction<? super String,
@@ -60,8 +62,16 @@ public class Settings {
 
   private final Iterable<? extends Arbiter> arbiters;
 
+
+  /*
+   * Constructors.
+   */
+
+
   public Settings() {
     super();
+
+    this.qualifiers = Collections.emptySet();
 
     final Set<Source> sources = new LinkedHashSet<>();
     sources.add(new SystemPropertiesSource());
@@ -72,15 +82,29 @@ public class Settings {
 
     this.arbiters = Collections.singleton(new SourceOrderArbiter());
   }
-  
+
   public Settings(final BiFunction<? super String,
                                    ? super Set<Annotation>,
                                    ? extends Set<? extends Source>> sourcesSupplier,
                   final ConverterProvider converterProvider,
                   final Iterable<? extends Arbiter> arbiters) {
+    this(null, sourcesSupplier, converterProvider, arbiters);
+  }
+
+  public Settings(final Set<Annotation> qualifiers,
+                  final BiFunction<? super String,
+                                   ? super Set<Annotation>,
+                                   ? extends Set<? extends Source>> sourcesSupplier,
+                  final ConverterProvider converterProvider,
+                  final Iterable<? extends Arbiter> arbiters) {
     super();
+    if (qualifiers == null || qualifiers.isEmpty()) {
+      this.qualifiers = Collections.emptySet();
+    } else {
+      this.qualifiers = Collections.unmodifiableSet(new LinkedHashSet<>(qualifiers));
+    }
     if (sourcesSupplier == null) {
-      this.sourcesSupplier = (name, qualifiers) -> Collections.emptySet();
+      this.sourcesSupplier = (name, qs) -> Collections.emptySet();
     } else {
       this.sourcesSupplier = sourcesSupplier;
     }
@@ -92,12 +116,59 @@ public class Settings {
     }
   }
 
+
+  /*
+   * Instance methods.
+   */
+
+  
+  public final String get(final String name) {
+    return this.get(name,
+                    this.qualifiers,
+                    this.converterProvider.getConverter(String.class),
+                    null);
+  }
+  
+  public final String get(final String name,
+                          final Supplier<? extends String> defaultValueSupplier) {
+    return this.get(name,
+                    this.qualifiers,
+                    this.converterProvider.getConverter(String.class),
+                    defaultValueSupplier);
+  }
+
+  public final String get(final String name,
+                          final Set<Annotation> qualifiers) {
+    return this.get(name,
+                    qualifiers,
+                    this.converterProvider.getConverter(String.class),
+                    null);
+  }
+  
   public final String get(final String name,
                           final Set<Annotation> qualifiers,
                           final Supplier<? extends String> defaultValueSupplier) {
     return this.get(name,
                     qualifiers,
                     this.converterProvider.getConverter(String.class),
+                    defaultValueSupplier);
+  }
+
+  
+  public final <T> T get(final String name,
+                         final Class<T> cls) {
+    return this.get(name,
+                    this.qualifiers,
+                    this.converterProvider.getConverter(cls),
+                    null);
+  }
+  
+  public final <T> T get(final String name,
+                         final Class<T> cls,
+                         final Supplier<? extends String> defaultValueSupplier) {
+    return this.get(name,
+                    this.qualifiers,
+                    this.converterProvider.getConverter(cls),
                     defaultValueSupplier);
   }
 
@@ -111,6 +182,16 @@ public class Settings {
                     defaultValueSupplier);
   }
 
+
+  public final <T> T get(final String name,
+                         final TypeLiteral<T> typeLiteral,
+                         final Supplier<? extends String> defaultValueSupplier) {
+    return this.get(name,
+                    this.qualifiers,
+                    this.converterProvider.getConverter(typeLiteral),
+                    defaultValueSupplier);
+  }
+
   public final <T> T get(final String name,
                          final Set<Annotation> qualifiers,
                          final TypeLiteral<T> typeLiteral,
@@ -121,6 +202,16 @@ public class Settings {
                     defaultValueSupplier);
   }
 
+
+  public final Object get(final String name,
+                          final Type type,
+                          final Supplier<? extends String> defaultValueSupplier) {
+    return this.get(name,
+                    this.qualifiers,
+                    this.converterProvider.getConverter(type),
+                    defaultValueSupplier);
+  }
+
   public final Object get(final String name,
                           final Set<Annotation> qualifiers,
                           final Type type,
@@ -128,6 +219,16 @@ public class Settings {
     return this.get(name,
                     qualifiers,
                     this.converterProvider.getConverter(type),
+                    defaultValueSupplier);
+  }
+
+
+  public final <T> T get(final String name,
+                         final Converter<? extends T> converter,
+                         final Supplier<? extends String> defaultValueSupplier) {
+    return this.get(name,
+                    this.qualifiers,
+                    converter,
                     defaultValueSupplier);
   }
 
