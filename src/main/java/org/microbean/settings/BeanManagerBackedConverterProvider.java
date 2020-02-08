@@ -48,20 +48,6 @@ public class BeanManagerBackedConverterProvider implements ConverterProvider {
   }
 
   @Override
-  public <T> Converter<? extends T> getConverter(final TypeLiteral<T> type) {
-    @SuppressWarnings("unchecked")
-    final Converter<? extends T> returnValue = (Converter<? extends T>)this.getConverter(type.getType());
-    return returnValue;
-  }
-
-  @Override
-  public <T> Converter<? extends T> getConverter(final Class<T> type) {
-    @SuppressWarnings("unchecked")
-    final Converter<? extends T> returnValue = (Converter<? extends T>)this.getConverter((Type)type);
-    return returnValue;
-  }
-
-  @Override
   public Converter<?> getConverter(final Type type) {
     final Converter<?> returnValue;
     final Type converterType = new ParameterizedTypeImpl(Converter.class, type);

@@ -79,13 +79,8 @@ public abstract class ArrayConverter<T> {
    * from its {@link Converter#convert(Value)} method; must not be
    * {@code null}
    *
-   * @param arrayComponentType a {@link Class} identifying the
-   * {@linkplain Class#getComponentType() component type} of the array
-   * type in question; must not be {@code null}
-   *
-   * @exception NullPointerException if either {@code
-   * collectionConverter} or {@code arrayComponentType} is {@code
-   * null}
+   * @exception NullPointerException if {@code collectionConverter} is
+   * {@code null}
    *
    * @see #convert(Value)
    */

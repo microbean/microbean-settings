@@ -34,11 +34,15 @@ public class PropertyEditorConverter<T> implements Converter<T> {
 
   private static final long serialVersionUID = 1L;
 
-  private final Class<T> conversionClass;
+  private final Class<?> conversionClass;
 
   private transient PropertyEditor editor;
 
-  public PropertyEditorConverter(final Class<T> conversionClass, final PropertyEditor editor) {
+  public PropertyEditorConverter(final Class<?> conversionClass) {
+    this(conversionClass, null);
+  }
+  
+  public PropertyEditorConverter(final Class<?> conversionClass, final PropertyEditor editor) {
     super();
     this.conversionClass = Objects.requireNonNull(conversionClass);
     if (editor == null) {
@@ -79,7 +83,7 @@ public class PropertyEditorConverter<T> implements Converter<T> {
   private void readObject(final ObjectInputStream in) throws IOException, ClassNotFoundException {
     if (in != null) {
       in.defaultReadObject();
-      this.editor = PropertyEditorManager.findEditor(conversionClass);
+      this.editor = PropertyEditorManager.findEditor(this.conversionClass);
     }
   }
 

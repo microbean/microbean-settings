@@ -43,7 +43,7 @@ import javax.inject.Qualifier;
 @Target({ ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER, ElementType.TYPE })
 public @interface Setting {
 
-  static final String UNSET = "\u0000";
+  static final String UNSET = "\u2400"; // see https://en.wikipedia.org/wiki/Control_Pictures
 
   String name();
 
@@ -53,7 +53,7 @@ public @interface Setting {
   @Nonbinding
   boolean required() default false;
 
-  public static final class Literal<T> extends AnnotationLiteral<Setting> implements Setting {
+  public static final class Literal extends AnnotationLiteral<Setting> implements Setting {
 
     private static final long serialVersionUID = 1L;
 

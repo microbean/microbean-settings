@@ -16,13 +16,20 @@
  */
 package org.microbean.settings;
 
+import java.beans.BeanInfo;
 import java.beans.FeatureDescriptor;
+import java.beans.IntrospectionException;
+import java.beans.Introspector;
+import java.beans.PropertyDescriptor;
+import java.beans.PropertyEditor;
 
 import java.lang.annotation.Annotation;
 
+import java.lang.reflect.Method;
 import java.lang.reflect.Type;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -47,6 +54,8 @@ import javax.el.StandardELContext;
 import javax.el.ValueExpression;
 
 import javax.enterprise.util.TypeLiteral;
+
+import org.microbean.settings.converter.PropertyEditorConverter;
 
 public class Settings {
 
@@ -121,14 +130,14 @@ public class Settings {
    * Instance methods.
    */
 
-  
+
   public final String get(final String name) {
     return this.get(name,
                     this.qualifiers,
                     this.converterProvider.getConverter(String.class),
                     null);
   }
-  
+
   public final String get(final String name,
                           final Supplier<? extends String> defaultValueSupplier) {
     return this.get(name,
@@ -144,7 +153,7 @@ public class Settings {
                     this.converterProvider.getConverter(String.class),
                     null);
   }
-  
+
   public final String get(final String name,
                           final Set<Annotation> qualifiers,
                           final Supplier<? extends String> defaultValueSupplier) {
@@ -154,7 +163,8 @@ public class Settings {
                     defaultValueSupplier);
   }
 
-  
+  //----------------------------------------------------------------------------
+
   public final <T> T get(final String name,
                          final Class<T> cls) {
     return this.get(name,
@@ -162,7 +172,7 @@ public class Settings {
                     this.converterProvider.getConverter(cls),
                     null);
   }
-  
+
   public final <T> T get(final String name,
                          final Class<T> cls,
                          final Supplier<? extends String> defaultValueSupplier) {
@@ -182,6 +192,15 @@ public class Settings {
                     defaultValueSupplier);
   }
 
+  //----------------------------------------------------------------------------
+
+  public final <T> T get(final String name,
+                         final TypeLiteral<T> typeLiteral) {
+    return this.get(name,
+                    this.qualifiers,
+                    this.converterProvider.getConverter(typeLiteral),
+                    null);
+  }
 
   public final <T> T get(final String name,
                          final TypeLiteral<T> typeLiteral,
@@ -202,6 +221,24 @@ public class Settings {
                     defaultValueSupplier);
   }
 
+  //----------------------------------------------------------------------------
+
+  public final Object get(final String name,
+                          final Type type) {
+    return this.get(name,
+                    this.qualifiers,
+                    this.converterProvider.getConverter(type),
+                    null);
+  }
+
+  public final Object get(final String name,
+                          final Set<Annotation> qualifiers,
+                          final Type type) {
+    return this.get(name,
+                    qualifiers,
+                    this.converterProvider.getConverter(type),
+                    null);
+  }
 
   public final Object get(final String name,
                           final Type type,
@@ -222,6 +259,24 @@ public class Settings {
                     defaultValueSupplier);
   }
 
+  //----------------------------------------------------------------------------
+
+  public final <T> T get(final String name,
+                         final Converter<? extends T> converter) {
+    return this.get(name,
+                    this.qualifiers,
+                    converter,
+                    null);
+  }
+
+  public final <T> T get(final String name,
+                         final Set<Annotation> qualifiers,
+                         final Converter<? extends T> converter) {
+    return this.get(name,
+                    qualifiers,
+                    converter,
+                    null);
+  }
 
   public final <T> T get(final String name,
                          final Converter<? extends T> converter,
@@ -247,24 +302,28 @@ public class Settings {
                     defaultValueSupplier);
   }
 
+  //----------------------------------------------------------------------------
+
   private final <T> T get(final String name,
                           final Set<Annotation> qualifiers,
                           final ELContext elContext,
                           final ExpressionFactory expressionFactory,
                           final Converter<? extends T> converter,
-                          final Supplier<? extends String> rawDefaultValueSupplier) {
+                          final Supplier<? extends String> defaultValueSupplier) {
     return Objects.requireNonNull(converter).convert(this.getValue(name,
                                                                    qualifiers,
                                                                    elContext,
                                                                    expressionFactory,
-                                                                   rawDefaultValueSupplier));
+                                                                   defaultValueSupplier));
   }
+
+  //----------------------------------------------------------------------------
 
   private final Value getValue(final String name,
                                Set<Annotation> qualifiers,
                                final ELContext elContext,
                                final ExpressionFactory expressionFactory,
-                               final Supplier<? extends String> rawDefaultValueSupplier) {
+                               final Supplier<? extends String> defaultValueSupplier) {
     Objects.requireNonNull(name);
     Objects.requireNonNull(elContext);
     Objects.requireNonNull(expressionFactory);
@@ -512,12 +571,12 @@ public class Settings {
 
     final String stringToInterpolate;
     if (selectedValue == null) {
-      if (rawDefaultValueSupplier == null) {
+      if (defaultValueSupplier == null) {
         // There was no value that came up.  There's also no way to
         // get a default one.  So the value is missing.
         throw new NoSuchElementException(name + " (" + qualifiers + ")");
       } else {
-        stringToInterpolate = rawDefaultValueSupplier.get();
+        stringToInterpolate = defaultValueSupplier.get();
       }
     } else {
       stringToInterpolate = selectedValue.get();
@@ -529,6 +588,162 @@ public class Settings {
       selectedValue = new Value(selectedValue, interpolatedString);
     }
     return selectedValue;
+  }
+
+  public final void configure(final Object object)
+    throws IntrospectionException, ReflectiveOperationException {
+    this.configure(object,
+                   Arrays.asList(Introspector.getBeanInfo(object.getClass()).getPropertyDescriptors()),
+                   null,
+                   this.qualifiers);
+  }
+
+  public final void configure(final Object object,
+                              final String prefix)
+    throws IntrospectionException, ReflectiveOperationException {
+    this.configure(object,
+                   Arrays.asList(Introspector.getBeanInfo(object.getClass()).getPropertyDescriptors()),
+                   prefix,
+                   this.qualifiers);
+  }
+
+  public final void configure(final Object object,
+                              final Set<Annotation> qualifiers)
+    throws IntrospectionException, ReflectiveOperationException {
+    this.configure(object,
+                   Arrays.asList(Introspector.getBeanInfo(object.getClass()).getPropertyDescriptors()),
+                   null,
+                   qualifiers);
+  }
+
+  public final void configure(final Object object,
+                              final String prefix,
+                              final Set<Annotation> qualifiers)
+    throws IntrospectionException, ReflectiveOperationException {
+    this.configure(object,
+                   Arrays.asList(Introspector.getBeanInfo(object.getClass()).getPropertyDescriptors()),
+                   prefix,
+                   qualifiers);
+  }
+
+  public final void configure(final Object object,
+                              final BeanInfo beanInfo)
+    throws ReflectiveOperationException {
+    this.configure(object,
+                   Arrays.asList(beanInfo.getPropertyDescriptors()),
+                   null,
+                   this.qualifiers);
+  }
+
+  public final void configure(final Object object,
+                              final BeanInfo beanInfo,
+                              final String prefix)
+    throws ReflectiveOperationException {
+    this.configure(object,
+                   Arrays.asList(beanInfo.getPropertyDescriptors()),
+                   prefix,
+                   this.qualifiers);
+  }
+
+  
+  public final void configure(final Object object,
+                              final BeanInfo beanInfo,
+                              final Set<Annotation> qualifiers)
+    throws ReflectiveOperationException {
+    this.configure(object,
+                   Arrays.asList(beanInfo.getPropertyDescriptors()),
+                   null,
+                   qualifiers);
+  }
+
+  public final void configure(final Object object,
+                              final BeanInfo beanInfo,
+                              final String prefix,
+                              final Set<Annotation> qualifiers)
+    throws ReflectiveOperationException {
+    this.configure(object,
+                   Arrays.asList(beanInfo.getPropertyDescriptors()),
+                   prefix,
+                   qualifiers);
+  }
+
+  public final void configure(final Object object,
+                              final Collection<? extends PropertyDescriptor> propertyDescriptors)
+    throws ReflectiveOperationException {
+    this.configure(object,
+                   propertyDescriptors,
+                   null,
+                   this.qualifiers);
+  }
+
+  public final void configure(final Object object,
+                              final Collection<? extends PropertyDescriptor> propertyDescriptors,
+                              final String prefix)
+    throws ReflectiveOperationException {
+    this.configure(object,
+                   propertyDescriptors,
+                   prefix,
+                   this.qualifiers);
+  }
+
+  public final void configure(final Object object,
+                              final Collection<? extends PropertyDescriptor> propertyDescriptors,
+                              final String prefix,
+                              final Set<Annotation> qualifiers)
+    throws ReflectiveOperationException {
+    Objects.requireNonNull(object);
+    Objects.requireNonNull(propertyDescriptors);
+    for (final PropertyDescriptor pd : propertyDescriptors) {
+      if (pd != null) {
+        final String name = pd.getName();
+        if (name != null) {
+          final Method writeMethod = pd.getWriteMethod();
+          if (writeMethod != null) {
+
+            final String settingName;
+            if (prefix == null) {
+              settingName = name;
+            } else {
+              settingName = new StringBuilder(prefix).append(name).toString();
+            }
+            
+            final Type type;
+            final Object typeObject = pd.getValue("propertyType");
+            if (typeObject instanceof Type) {
+              type = (Type)typeObject;
+            } else if (typeObject instanceof TypeLiteral) {
+              type = ((TypeLiteral<?>)typeObject).getType();
+            } else {
+              type = pd.getPropertyType();
+            }
+            assert type != null;
+
+            final Converter<?> converter;
+            final PropertyEditor propertyEditor = pd.createPropertyEditor(object);
+            if (propertyEditor != null && type instanceof Class) {
+              converter = new PropertyEditorConverter<Object>((Class<?>)type, propertyEditor);
+            } else {
+              converter = this.converterProvider.getConverter(type);
+            }
+
+            final Supplier<? extends String> defaultValueSupplier;
+            final Object defaultValue = pd.getValue("defaultValue");
+            if (defaultValue instanceof String) {
+              defaultValueSupplier = () -> (String)defaultValue;
+            } else {
+              defaultValueSupplier = null;
+            }
+            
+            try {
+              writeMethod.invoke(object, this.get(settingName, qualifiers, converter, defaultValueSupplier));
+            } catch (final NoSuchElementException noSuchElementException) {
+              // That's fine
+            }
+
+          }
+        }
+      }
+    }
   }
 
   protected Value arbitrate(final Set<? extends Source> sources,

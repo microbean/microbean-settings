@@ -1,6 +1,6 @@
 /* -*- mode: Java; c-basic-offset: 2; indent-tabs-mode: nil; coding: utf-8-unix -*-
  *
- * Copyright © 2019 microBean™.
+ * Copyright © 2019–2020 microBean™.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import java.util.Optional;
 import java.util.Set;
 
 import javax.enterprise.context.ApplicationScoped;
+import javax.enterprise.context.Dependent;
 import javax.enterprise.context.Initialized;
 
 import javax.enterprise.event.Observes;
@@ -37,6 +38,7 @@ import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 
 @ApplicationScoped
 public class TestBasicInjection {
@@ -76,6 +78,13 @@ public class TestBasicInjection {
   @Inject
   @Setting(name = "nonexistent", defaultValue = "${settings[\"java.home\"]}")
   private String nonexistent;
+
+  @Inject
+  @Configured
+  private Person configuredPerson;
+
+  @Inject
+  private Person basicPerson;
   
 
   /*
@@ -96,11 +105,12 @@ public class TestBasicInjection {
   @Before
   public void startContainer() throws Exception {
     this.stopContainer();
+    System.setProperty("firstName", "Abraham");
     System.setProperty("cls", "java.lang.Integer");
     System.setProperty("test.map", "a=b,c=d,e=f");
     System.setProperty("test.list", "a,b,c");
     final SeContainerInitializer initializer = SeContainerInitializer.newInstance();
-    initializer.addBeanClasses(TestBasicInjection.class);
+    initializer.addBeanClasses(TestBasicInjection.class, Person.class);
     this.container = initializer.initialize();
   }
 
@@ -109,9 +119,10 @@ public class TestBasicInjection {
     if (this.container != null) {
       this.container.close();
       this.container = null;
-      System.clearProperty("test.map");
       System.clearProperty("test.list");
+      System.clearProperty("test.map");
       System.clearProperty("cls");
+      System.clearProperty("firstName");
     }
   }
 
@@ -126,10 +137,55 @@ public class TestBasicInjection {
     assertEquals("f", this.testMap.get("e"));
     assertEquals(Integer.class, this.cls);
     assertEquals(this.javaHome, nonexistent);
+    assertNotNull(this.basicPerson);
+    assertNull(this.basicPerson.getFirstName());
+    assertNotNull(this.configuredPerson);
+    assertEquals("Abraham", this.configuredPerson.getFirstName());
+    assertNull(this.configuredPerson.getLastName());
+    
   }
 
   @Test
   public void testContainerStartup() {
+
+  }
+
+  @Dependent
+  private static class Person {
+
+    private String firstName;
+
+    private String lastName;
+
+    private int age;
+    
+    Person() {
+      super();
+    }
+
+    public int getAge() {
+      return this.age;
+    }
+
+    public void setAge(final int age) {
+      this.age = age;
+    }
+
+    public String getFirstName() {
+      return this.firstName;
+    }
+
+    public void setFirstName(final String firstName) {
+      this.firstName = firstName;
+    }
+
+    public String getLastName() {
+      return this.lastName;
+    }
+
+    public void setLastName(final String lastName) {
+      this.lastName = lastName;
+    }
 
   }
 

@@ -16,6 +16,11 @@
  */
 package org.microbean.settings;
 
+import java.beans.BeanInfo;
+import java.beans.IntrospectionException;
+import java.beans.Introspector;
+import java.beans.PropertyDescriptor;
+
 import java.lang.annotation.Annotation;
 
 import java.lang.reflect.Executable;
@@ -28,9 +33,13 @@ import java.lang.reflect.TypeVariable;
 import java.lang.reflect.WildcardType;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
 
@@ -44,6 +53,7 @@ import javax.enterprise.context.spi.CreationalContext;
 import javax.enterprise.event.Observes;
 
 import javax.enterprise.inject.Any;
+import javax.enterprise.inject.CreationException;
 import javax.enterprise.inject.Default;
 import javax.enterprise.inject.Instance;
 import javax.enterprise.inject.UnsatisfiedResolutionException;
@@ -62,9 +72,12 @@ import javax.enterprise.inject.spi.BeanManager;
 import javax.enterprise.inject.spi.DefinitionException;
 import javax.enterprise.inject.spi.Extension;
 import javax.enterprise.inject.spi.InjectionPoint;
+import javax.enterprise.inject.spi.ProcessAnnotatedType;
 import javax.enterprise.inject.spi.ProcessInjectionPoint;
+import javax.enterprise.inject.spi.ProcessProducer;
 import javax.enterprise.inject.spi.Producer;
 import javax.enterprise.inject.spi.ProducerFactory;
+import javax.enterprise.inject.spi.WithAnnotations;
 
 import javax.enterprise.util.TypeLiteral;
 
@@ -79,6 +92,8 @@ public class SettingsExtension implements Extension {
    * Instance fields.
    */
 
+
+  private final Map<Set<Annotation>, Set<Type>> configuredTypes;
 
   private final Set<InjectionPoint> settingInjectionPoints;
   
@@ -96,6 +111,7 @@ public class SettingsExtension implements Extension {
 
   public SettingsExtension() {
     super();
+    this.configuredTypes = new HashMap<>();
     this.settingInjectionPoints = new HashSet<>();
     this.settingQualifierSets = new HashSet<>();
     this.settingsQualifierSets = new HashSet<>();
@@ -114,10 +130,24 @@ public class SettingsExtension implements Extension {
     this.settingsQualifierSets.add(qualifiers);
   }
 
-  private final <T, X> void processSettingInjectionPoint(@Observes final ProcessInjectionPoint<T, X> event) {
+  private final <T, X> void processInjectionPoint(@Observes final ProcessInjectionPoint<T, X> event,
+                                                  final BeanManager beanManager) {
     final InjectionPoint injectionPoint = event.getInjectionPoint();
+    try {
+      if (!this.processSettingInjectionPoint(injectionPoint)) {
+        this.processNonSettingInjectionPoint(injectionPoint, beanManager);
+      }
+    } catch (final Exception definitionException) {
+      event.addDefinitionError(definitionException);
+    }
+  }
+
+  private final boolean processSettingInjectionPoint(final InjectionPoint injectionPoint) {
+    final boolean returnValue;
     final Type type = injectionPoint.getType();
-    if (!Settings.class.equals(type)) {
+    if (Settings.class.equals(type)) {
+      returnValue = false;
+    } else {
       final Set<Annotation> injectionPointQualifiers = injectionPoint.getQualifiers();
       boolean containsSetting = false;
       for (final Annotation injectionPointQualifier : injectionPointQualifiers) {
@@ -126,11 +156,10 @@ public class SettingsExtension implements Extension {
           if (setting.required()) {
             final Object defaultValue = setting.defaultValue();
             if (defaultValue != null && !defaultValue.equals(Setting.UNSET)) {
-              event.addDefinitionError(new DefinitionException("While processing the injection point " + injectionPoint +
-                                                               " the Setting annotation named " + setting.name() +
-                                                               " had a defaultValue element specified (" + defaultValue +
-                                                               ") and returned true from its required() element."));
-              break;
+              throw new DefinitionException("While processing the injection point " + injectionPoint +
+                                            " the Setting annotation named " + setting.name() +
+                                            " had a defaultValue element specified (" + defaultValue +
+                                            ") and returned true from its required() element.");
             }
           }
           containsSetting = true;
@@ -153,6 +182,30 @@ public class SettingsExtension implements Extension {
         }
         settingsQualifiers.add(Any.Literal.INSTANCE);
         this.settingsQualifierSets.add(settingsQualifiers);
+        returnValue = true;
+      } else {
+        returnValue = false;
+      }      
+    }
+    return returnValue;
+  }
+
+  private final void processNonSettingInjectionPoint(final InjectionPoint injectionPoint,
+                                                     final BeanManager beanManager) {
+    Objects.requireNonNull(injectionPoint);
+    Objects.requireNonNull(beanManager);
+    final Set<Annotation> qualifiers = injectionPoint.getQualifiers();
+    if (qualifiers != null && !qualifiers.isEmpty()) {
+      for (final Annotation qualifier : qualifiers) {
+        if (qualifier instanceof Configured) {
+          Set<Type> types = this.configuredTypes.get(qualifiers);
+          if (types == null) {
+            types = new HashSet<>();
+            this.configuredTypes.put(qualifiers, types);
+          }
+          types.add(injectionPoint.getType());
+          break;
+        }
       }
     }
   }
@@ -238,7 +291,7 @@ public class SettingsExtension implements Extension {
             // a ParameterizedType with recursive wildcards or type
             // variables.
             final BeanAttributes<?> beanAttributes =
-              new FlexiblyTypedBeanAttributes<Object>(delegate, settingQualifiers, Collections.singleton(synthesizeLegalBeanType(type)));
+              new FlexiblyTypedBeanAttributes<Object>(delegate, settingQualifiers, Collections.singleton(synthesizeLegalBeanType(type, 1)));
             final ProducerFactory<SettingsExtension> defaultProducerFactory =
               beanManager.getProducerFactory(producerMethodTemplate, null);
             final ProducerFactory<SettingsExtension> producerFactory = new ProducerFactory<SettingsExtension>() {
@@ -263,6 +316,56 @@ public class SettingsExtension implements Extension {
     }
   }
 
+  private <T> void installConfiguredBeans(@Observes final AfterBeanDiscovery event,
+                                          final BeanManager beanManager) {
+    final Set<Entry<Set<Annotation>, Set<Type>>> entrySet = this.configuredTypes.entrySet();
+    for (final Entry<Set<Annotation>, Set<Type>> entry : entrySet) {
+      final Set<Annotation> qualifiers = entry.getKey();
+      assert qualifiers != null;
+      assert qualifiers.contains(Configured.Literal.INSTANCE);
+      final Set<Type> types = entry.getValue();
+      assert types != null;
+      for (final Type type : types) {
+        if (noBeans(beanManager, type, qualifiers)) {
+          final Set<Annotation> newQualifiers = new HashSet<>(qualifiers);
+          newQualifiers.removeIf(e -> e instanceof Configured);
+          if (newQualifiers.isEmpty()) {
+            newQualifiers.add(Default.Literal.INSTANCE);
+          }
+          final Annotation[] qualifiersArray = newQualifiers.toArray(new Annotation[newQualifiers.size()]);
+          final Set<Bean<?>> nonConfiguredBeans = beanManager.getBeans(type, qualifiersArray);
+          if (nonConfiguredBeans != null && !nonConfiguredBeans.isEmpty()) {
+            @SuppressWarnings("unchecked")
+            final Bean<T> bean = (Bean<T>)beanManager.resolve(nonConfiguredBeans);
+            assert bean.getTypes().contains(type);
+            event.<T>addBean()
+              .scope(bean.getScope())
+              .types(type)
+              .beanClass(bean.getBeanClass())
+              .qualifiers(qualifiers)
+              .createWith(cc -> {
+                  Set<Bean<?>> settingsBeans = beanManager.getBeans(Settings.class, qualifiersArray);
+                  if (settingsBeans == null || settingsBeans.isEmpty()) {
+                    settingsBeans = beanManager.getBeans(Settings.class);
+                  }
+                  final Bean<?> settingsBean = beanManager.resolve(settingsBeans);
+                  final Settings settings = (Settings)beanManager.getReference(settingsBean, Settings.class, cc);
+                  
+                  final T contextualInstance = bean.create(cc);
+                  try {
+                    settings.configure(contextualInstance, qualifiers);
+                  } catch (final IntrospectionException | ReflectiveOperationException exception) {
+                    throw new CreationException(exception.getMessage(), exception);
+                  }
+                  return contextualInstance;
+                })
+              .destroyWith((contextualInstance, cc) -> bean.destroy(contextualInstance, cc));
+          }          
+        }
+      }
+    }
+  }
+  
   private final void validate(@Observes final AfterDeploymentValidation event,
                               final BeanManager beanManager) {
     final CreationalContext<?> cc = beanManager.createCreationalContext(null);
@@ -277,6 +380,7 @@ public class SettingsExtension implements Extension {
     this.settingInjectionPoints.clear();
     this.settingQualifierSets.clear();
     this.settingsQualifierSets.clear();
+    this.configuredTypes.clear();
   }
 
 
@@ -488,9 +592,13 @@ public class SettingsExtension implements Extension {
     return synthesizeLegalBeanType(type, -1, 0);
   }
 
+  static Type synthesizeLegalBeanType(final Type type, final int depth) {
+    return synthesizeLegalBeanType(type, Math.max(0, depth), 0);
+  }
+  
   static Type synthesizeLegalBeanType(final Type type, final int depth, final int currentLevel) {
     final Type returnValue;
-    if (type instanceof Class || (depth >= 0 && currentLevel >= depth)) {
+    if (type instanceof Class || depth == 0 || (depth > 0 && currentLevel > depth)) {
       returnValue = type;
     } else if (type instanceof ParameterizedType) {
       final ParameterizedType ptype = (ParameterizedType)type;
