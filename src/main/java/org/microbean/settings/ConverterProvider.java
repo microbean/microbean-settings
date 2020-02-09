@@ -20,6 +20,19 @@ import java.lang.reflect.Type;
 
 import javax.enterprise.util.TypeLiteral;
 
+/**
+ * A provider of appropriately-typed {@link Converter} instances,
+ * given {@link Class}, {@link Type} or {@link TypeLiteral} instances.
+ *
+ * @author <a href="https://about.me/lairdnelson"
+ * target="_parent">Laird Nelson</a>
+ *
+ * @see #getConverter(Class)
+ *
+ * @see #getConverter(TypeLiteral)
+ *
+ * @see #getConverter(Type)
+ */
 @FunctionalInterface
 public interface ConverterProvider {
 

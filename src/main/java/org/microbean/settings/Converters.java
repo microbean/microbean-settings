@@ -74,6 +74,10 @@ import org.microbean.settings.converter.*;
 /**
  * A hub for the centralized conversion of {@link Value}s.
  *
+ * <p>{@link Converters} instances compute {@link Converter}s on
+ * demand in many cases and are normally used in standalone
+ * environments.</p>
+ *
  * @author <a href="https://about.me/lairdnelson"
  * target="_parent">Laird Nelson</a>
  */
@@ -324,7 +328,7 @@ public final class Converters implements ConverterProvider {
 
     } else if (Class.class.equals(type)) {
       @SuppressWarnings("unchecked")
-        final Converter<? extends T> temp = (Converter<? extends T>)new ClassConverter<Object>();
+      final Converter<? extends T> temp = (Converter<? extends T>)new ClassConverter<Object>();
       returnValue = temp;
 
     } else if (type instanceof ParameterizedType) {

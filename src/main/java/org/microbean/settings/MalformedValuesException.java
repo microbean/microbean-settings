@@ -16,22 +16,73 @@
  */
 package org.microbean.settings;
 
+import java.io.Serializable; // for javadoc only
+
+import java.util.Collection; // for javadoc only
+import java.util.Set; // for javadoc only
+
+/**
+ * A {@link SettingsException} indicating that at least one {@link
+ * Value} from a {@link Source} was malformed.
+ *
+ * @author <a href="https://about.me/lairdnelson" target="_parent">Laird Nelson</a>
+ *
+ * @see Settings#handleMalformedValues(String, Set, Collection)
+ */
 public class MalformedValuesException extends SettingsException {
 
+
+  /*
+   * Static fields.
+   */
+
+
+  /**
+   * The version of this class for {@linkplain Serializable
+   * serialization purposes}.
+   */
   private static final long serialVersionUID = 1L;
+
+
+  /*
+   * Constructors.
+   */
+
   
+  /**
+   * Creates a new {@link MalformedValuesException}.
+   */
   public MalformedValuesException() {
     super();
   }
 
+  /**
+   * Creates a new {@link MalformedValuesException}.
+   *
+   * @param message a detail message; may be {@code null}
+   */
   public MalformedValuesException(final String message) {
     super(message);
   }
 
+  /**
+   * Creates a new {@link MalformedValuesException}.
+   *
+   * @param cause the {@link Throwable} causing this {@link
+   * MalformedValuesException} to be constructed; may be {@code null}
+   */
   public MalformedValuesException(final Throwable cause) {
     super(cause);
   }
-  
+
+  /**
+   * Creates a new {@link MalformedValuesException}.
+   *
+   * @param message a detail message; may be {@code null}
+   *
+   * @param cause the {@link Throwable} causing this {@link
+   * MalformedValuesException} to be constructed; may be {@code null}
+   */
   public MalformedValuesException(final String message, final Throwable cause) {
     super(message, cause);
   }

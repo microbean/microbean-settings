@@ -60,18 +60,19 @@ public class TestTypeSynthesis {
     assertEquals(1, actualTypeArguments.length);
     final Type requiredType = actualTypeArguments[0];
     assertTrue(requiredType instanceof WildcardType);
+    assertEquals("? extends java.lang.String", requiredType.getTypeName());
 
     // Now pass that wildcard type to the
     // SettingsExtensions.synthesizeLegalBeanType() method and make
     // sure that since it is a single-bound wildcard type it can be
     // synthesized.
-    final Type type = SettingsExtension.synthesizeLegalBeanType(requiredType);
+    final Type type = SettingsExtension.synthesizeLegalBeanType(requiredType, 1);
     assertEquals(String.class, type);
   }
 
   @Test
   public void testSimpleClassSynthesis() {
-    final Type type = SettingsExtension.synthesizeLegalBeanType(String.class);
+    final Type type = SettingsExtension.synthesizeLegalBeanType(String.class, 1);
     assertEquals(String.class, type);
   }
 
@@ -80,7 +81,7 @@ public class TestTypeSynthesis {
     final TypeLiteral<T> tl = new TypeLiteral<T>() {
         private static final long serialVersionUID = 1L;
       };
-    final Type type = SettingsExtension.synthesizeLegalBeanType(tl.getType());
+    final Type type = SettingsExtension.synthesizeLegalBeanType(tl.getType(), 1);
     assertEquals(Object.class, type);
   }
 

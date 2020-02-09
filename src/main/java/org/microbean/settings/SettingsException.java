@@ -16,24 +16,73 @@
  */
 package org.microbean.settings;
 
+import java.io.Serializable; // for javadoc only
+
+/**
+ * A {@link RuntimeException} indicating a problem with an operation
+ * from, most likely, a {@link Settings} instance.
+ *
+ * @author <a href="https://about.me/lairdnelson"
+ * target="_parent">Laird Nelson</a>
+ *
+ * @see Settings
+ */
 public class SettingsException extends RuntimeException {
 
+
+  /*
+   * Static fields.
+   */
+
+
+  /**
+   * The version of this class for {@linkplain Serializable
+   * serialization purposes}.
+   */
   private static final long serialVersionUID = 1L;
-  
+
+
+  /*
+   * Constructors.
+   */
+
+
+  /**
+   * Creates a new {@link SettingsException}.
+   */
   public SettingsException() {
     super();
   }
 
+  /**
+   * Creates a new {@link SettingsException}.
+   *
+   * @param message a detail message; may be {@code null}
+   */
   public SettingsException(final String message) {
     super(message);
   }
 
+  /**
+   * Creates a new {@link SettingsException}.
+   *
+   * @param cause the {@link Throwable} causing this {@link
+   * SettingsException} to be constructed; may be {@code null}
+   */
   public SettingsException(final Throwable cause) {
     super(cause);
   }
-  
+
+  /**
+   * Creates a new {@link SettingsException}.
+   *
+   * @param message a detail message; may be {@code null}
+   *
+   * @param cause the {@link Throwable} causing this {@link
+   * SettingsException} to be constructed; may be {@code null}
+   */
   public SettingsException(final String message, final Throwable cause) {
     super(message, cause);
   }
-  
+
 }

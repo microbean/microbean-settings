@@ -42,7 +42,7 @@ import org.microbean.settings.Value;
  *
  * @see Settings
  *
- * @see Settings#get(String, Set, Class, Supplier)
+ * @see Settings#get(String, Set, Class, BiFunction)
  */
 public abstract class Source {
 

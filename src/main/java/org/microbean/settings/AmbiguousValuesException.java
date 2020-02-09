@@ -16,21 +16,85 @@
  */
 package org.microbean.settings;
 
+import java.io.Serializable; // for javadoc only
+
 import java.util.Collection;
 
+/**
+ * A {@link SettingsException} indicating that some {@link Value}
+ * instances were found to be ambiguous.
+ *
+ * @author <a href="https://about.me/lairdnelson"
+ * target="_parent">Laird Nelson</a>
+ */
 public class AmbiguousValuesException extends SettingsException {
 
+
+  /*
+   * Static fields.
+   */
+
+
+  /**
+   * The version of this class for {@linkplain Serializable
+   * serialization purposes}.
+   */
   private static final long serialVersionUID = 1L;
 
-  private Collection<Value> values;
-  
+
+  /*
+   * Instance fields.
+   */
+
+
+  /**
+   * The {@link Collection} of {@link Value} instances found to be
+   * ambiguous.
+   *
+   * @nullability This field may be {@code null} at any point.
+   */
+  private final Collection<Value> values;
+
+
+  /*
+   * Constructors.
+   */
+
+
+  /**
+   * Creates a new {@link AmbiguousValuesException}.
+   *
+   * @param values the {@link Collection} of {@link Value} instances
+   * found to be ambiguous; may be {@code null}; stored by reference
+   *
+   * @see #getValues()
+   */
   public AmbiguousValuesException(final Collection<Value> values) {
     super();
     this.values = values;
   }
 
+
+  /*
+   * Instance methods.
+   */
+
+
+  /**
+   * Returns the {@link Collection} of {@link Value} instances found
+   * to be ambiguous.
+   *
+   * @return the {@link Collection} of {@link Value} instances found
+   * to be ambiguous, or {@code null}
+   *
+   * @nullability This method and its overrides may return {@code
+   * null}.
+   *
+   * @idempotency No guarantees with respect to idempotency are made
+   * about this method or its overrides.
+   */
   public Collection<Value> getValues() {
     return this.values;
   }
-  
+
 }

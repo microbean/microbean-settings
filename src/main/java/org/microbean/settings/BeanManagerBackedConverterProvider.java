@@ -34,13 +34,13 @@ import javax.enterprise.inject.spi.BeanManager;
 import javax.enterprise.util.TypeLiteral;
 
 @Vetoed
-public class BeanManagerBackedConverterProvider implements ConverterProvider {
+final class BeanManagerBackedConverterProvider implements ConverterProvider {
 
   private final BeanManager beanManager;
 
   private final Set<Annotation> qualifiers;
 
-  public BeanManagerBackedConverterProvider(final BeanManager beanManager,
+  BeanManagerBackedConverterProvider(final BeanManager beanManager,
                                             final Set<Annotation> qualifiers) {
     super();
     this.beanManager = Objects.requireNonNull(beanManager);

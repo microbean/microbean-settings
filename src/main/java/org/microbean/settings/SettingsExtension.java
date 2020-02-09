@@ -16,10 +16,7 @@
  */
 package org.microbean.settings;
 
-import java.beans.BeanInfo;
 import java.beans.IntrospectionException;
-import java.beans.Introspector;
-import java.beans.PropertyDescriptor;
 
 import java.lang.annotation.Annotation;
 
@@ -33,7 +30,6 @@ import java.lang.reflect.TypeVariable;
 import java.lang.reflect.WildcardType;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -55,14 +51,12 @@ import javax.enterprise.event.Observes;
 import javax.enterprise.inject.Any;
 import javax.enterprise.inject.CreationException;
 import javax.enterprise.inject.Default;
-import javax.enterprise.inject.Instance;
 import javax.enterprise.inject.UnsatisfiedResolutionException;
 
 import javax.enterprise.inject.spi.AfterBeanDiscovery;
 import javax.enterprise.inject.spi.AfterDeploymentValidation;
 import javax.enterprise.inject.spi.Annotated;
 import javax.enterprise.inject.spi.AnnotatedField;
-import javax.enterprise.inject.spi.AnnotatedMember;
 import javax.enterprise.inject.spi.AnnotatedMethod;
 import javax.enterprise.inject.spi.AnnotatedParameter;
 import javax.enterprise.inject.spi.AnnotatedType;
@@ -72,19 +66,22 @@ import javax.enterprise.inject.spi.BeanManager;
 import javax.enterprise.inject.spi.DefinitionException;
 import javax.enterprise.inject.spi.Extension;
 import javax.enterprise.inject.spi.InjectionPoint;
-import javax.enterprise.inject.spi.ProcessAnnotatedType;
 import javax.enterprise.inject.spi.ProcessInjectionPoint;
-import javax.enterprise.inject.spi.ProcessProducer;
 import javax.enterprise.inject.spi.Producer;
 import javax.enterprise.inject.spi.ProducerFactory;
-import javax.enterprise.inject.spi.WithAnnotations;
 
 import javax.enterprise.util.TypeLiteral;
 
 import javax.inject.Singleton;
 
-import org.microbean.settings.converter.StringConverter;
-
+/**
+ * An {@link Extension} providing support for the {@link Setting} and
+ * {@link Configured} annotations, as well as injection of {@link
+ * Settings} instances.
+ *
+ * @author <a href="https://about.me/lairdnelson"
+ * target="_parent">Laird Nelson</a>
+ */
 public class SettingsExtension implements Extension {
 
 
@@ -109,6 +106,9 @@ public class SettingsExtension implements Extension {
    */
 
 
+  /**
+   * Creates a new {@link SettingsExtension}.
+   */
   public SettingsExtension() {
     super();
     this.configuredTypes = new HashMap<>();
@@ -316,8 +316,8 @@ public class SettingsExtension implements Extension {
     }
   }
 
-  private <T> void installConfiguredBeans(@Observes final AfterBeanDiscovery event,
-                                          final BeanManager beanManager) {
+  private final <T> void installConfiguredBeans(@Observes final AfterBeanDiscovery event,
+                                                final BeanManager beanManager) {
     final Set<Entry<Set<Annotation>, Set<Type>>> entrySet = this.configuredTypes.entrySet();
     for (final Entry<Set<Annotation>, Set<Type>> entry : entrySet) {
       final Set<Annotation> qualifiers = entry.getKey();
@@ -451,7 +451,7 @@ public class SettingsExtension implements Extension {
     return settings.get(getName(injectionPoint),
                         qualifiers,
                         injectionPoint.getType(),
-                        getDefaultValueSupplier(injectionPoint, beanManager));
+                        getDefaultValueFunction(injectionPoint, beanManager));
   }
 
   private static final Setting extractSetting(final InjectionPoint injectionPoint) {
@@ -475,14 +475,16 @@ public class SettingsExtension implements Extension {
     return returnValue;
   }
 
-  private static final Supplier<? extends String> getDefaultValueSupplier(final InjectionPoint injectionPoint,
-                                                                          final BeanManager beanManager) {
+  private static final BiFunction<? super String,
+                                  ? super Set<? extends Annotation>,
+                                  ? extends String> getDefaultValueFunction(final InjectionPoint injectionPoint,
+                                                                            final BeanManager beanManager) {
     Objects.requireNonNull(injectionPoint);
     Objects.requireNonNull(beanManager);
     final Setting setting = Objects.requireNonNull(extractSetting(injectionPoint));
-    final Supplier<? extends String> returnValue;
+    final BiFunction<? super String, ? super Set<? extends Annotation>, ? extends String> returnValue;
     if (setting.required()) {
-      returnValue = () -> {
+      returnValue = (n, qs) -> {
         final Set<Annotation> qualifiers = new HashSet<>(Objects.requireNonNull(injectionPoint.getQualifiers()));
         qualifiers.removeIf(e -> e instanceof Setting);
         if (qualifiers.isEmpty()) {
@@ -495,7 +497,7 @@ public class SettingsExtension implements Extension {
       if (defaultValue == null || defaultValue.equals(Setting.UNSET)) {
         returnValue = SettingsExtension::returnNull;
       } else {
-        returnValue = setting::defaultValue;
+        returnValue = (n, qs) -> setting.defaultValue();
       }
     }
     return returnValue;
@@ -538,7 +540,8 @@ public class SettingsExtension implements Extension {
     return name;
   }
 
-  private static final String returnNull() {
+  private static final String returnNull(final String name,
+                                         final Set<? extends Annotation> qualifiers) {
     return null;
   }
 
@@ -588,15 +591,15 @@ public class SettingsExtension implements Extension {
     return beans == null || beans.isEmpty();
   }
 
-  static Type synthesizeLegalBeanType(final Type type) {
+  private static final Type synthesizeLegalBeanType(final Type type) {
     return synthesizeLegalBeanType(type, -1, 0);
   }
 
-  static Type synthesizeLegalBeanType(final Type type, final int depth) {
+  static final Type synthesizeLegalBeanType(final Type type, final int depth) {
     return synthesizeLegalBeanType(type, Math.max(0, depth), 0);
   }
   
-  static Type synthesizeLegalBeanType(final Type type, final int depth, final int currentLevel) {
+  private static final Type synthesizeLegalBeanType(final Type type, final int depth, final int currentLevel) {
     final Type returnValue;
     if (type instanceof Class || depth == 0 || (depth > 0 && currentLevel > depth)) {
       returnValue = type;

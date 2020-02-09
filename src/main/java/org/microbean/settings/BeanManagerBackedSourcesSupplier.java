@@ -26,14 +26,17 @@ import java.util.Set;
 
 import java.util.function.BiFunction;
 
+import javax.enterprise.inject.Vetoed;
+
 import javax.enterprise.inject.spi.Bean;
 import javax.enterprise.inject.spi.BeanManager;
 
-public class BeanManagerBackedSourcesSupplier implements BiFunction<String, Set<Annotation>, Set<? extends Source>> {
+@Vetoed
+final class BeanManagerBackedSourcesSupplier implements BiFunction<String, Set<Annotation>, Set<? extends Source>> {
 
   private final BeanManager beanManager;
   
-  public BeanManagerBackedSourcesSupplier(final BeanManager beanManager) {
+  BeanManagerBackedSourcesSupplier(final BeanManager beanManager) {
     super();
     this.beanManager = Objects.requireNonNull(beanManager);
   }

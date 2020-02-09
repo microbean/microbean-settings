@@ -20,15 +20,78 @@ import java.io.Serializable;
 
 import java.util.function.Function;
 
+/**
+ * A {@link Function} that can convert a {@link Value} into some other
+ * kind of object.
+ *
+ * @param <T> the conversion type
+ *
+ * @author <a href="https://about.me/lairdnelson"
+ * target="_parent">Laird Nelson</a>
+ *
+ * @see #convert(Value)
+ */
 @FunctionalInterface
 public interface Converter<T> extends Function<Value, T>, Serializable {
 
+
+  /*
+   * Static fields.
+   */
+
+
+  /**
+   * The version of this interface for {@link Serializable
+   * serialization purposes}.
+   */
   static final long serialVersionUID = 1L;
 
+
+  /*
+   * Default methods.
+   */
+
+
+  /**
+   * Calls the {@link #convert(Value)} method and returns its result.
+   *
+   * @param value the {@link Value} to convert; may be {@code null}
+   *
+   * @return the result of the conversion (possibly {@code null})
+   *
+   * @nullability This method and its overrides may return {@code
+   * null}.
+   *
+   * @idempotency No guarantees with respect to idempotency are made
+   * about this method or its overrides.
+   *
+   * @threadsafety This method is and its overrides must be safe for
+   * concurrent use by multiple threads.
+   */
   default public T apply(final Value value) {
     return this.convert(value);
   }
-  
+
+   /**
+   * Converts the supplied {@link Value} into the appropriate kind of
+   * object and returns the result.
+   *
+   * <p>Implementations of this method must not call the {@link
+   * #apply(Value)} method.</p>
+   *
+   * @param value the {@link Value} to convert; may be {@code null}
+   *
+   * @return the result of the conversion (possibly {@code null})
+   *
+   * @nullability This method's implementations may return {@code
+   * null}.
+   *
+   * @idempotency No guarantees with respect to idempotency are made
+   * about this method's implementations.
+   *
+   * @threadsafety This method is and its overrides must be safe for
+   * concurrent use by multiple threads.
+   */
   public T convert(final Value value);
   
 }

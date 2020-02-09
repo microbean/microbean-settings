@@ -179,7 +179,7 @@
   <properties>
 
     <!-- maven-javadoc-plugin properties -->
-    <links>https://jakarta.ee/specifications/cdi/2.0/apidocs,https://jakarta.ee/specifications/dependency-injection/1.0/apidocs/,https://microbean.github.io/microbean-development-annotations/apidocs</links>
+    <links>https://jakarta.ee/specifications/cdi/2.0/apidocs,https://jakarta.ee/specifications/dependency-injection/1.0/apidocs/,https://jakarta.ee/specifications/expression-language/3.0/apidocs/,https://microbean.github.io/microbean-development-annotations/apidocs</links>
 
   </properties>
 

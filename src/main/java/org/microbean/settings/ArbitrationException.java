@@ -16,24 +16,74 @@
  */
 package org.microbean.settings;
 
+import java.io.Serializable; // for javadoc only
+
+/**
+ * A {@link SettingsException} indicating a procedural problem with
+ * {@linkplain Arbiter#arbitrate(Set, String, Set, Collection) value
+ * arbitration}.
+ *
+ * @author <a href="https://about.me/lairdnelson"
+ * target="_parent">Laird Nelson</a>
+ *
+ * @see Arbiter
+ */
 public class ArbitrationException extends SettingsException {
 
+
+  /*
+   * Static fields.
+   */
+
+
+  /**
+   * The version of this class for {@linkplain Serializable
+   * serialization purposes}.
+   */
   private static final long serialVersionUID = 1L;
-  
+
+
+  /*
+   * Constructors.
+   */
+
+
+  /**
+   * Creates a new {@link ArbitrationException}.
+   */
   public ArbitrationException() {
     super();
   }
 
+  /**
+   * Creates a new {@link ArbitrationException}.
+   *
+   * @param message a detail message; may be {@code null}
+   */
   public ArbitrationException(final String message) {
     super(message);
   }
 
+  /**
+   * Creates a new {@link ArbitrationException}.
+   *
+   * @param cause the {@link Throwable} causing this {@link
+   * ArbitrationException} to be constructed; may be {@code null}
+   */
   public ArbitrationException(final Throwable cause) {
     super(cause);
   }
-  
+
+  /**
+   * Creates a new {@link ArbitrationException}.
+   *
+   * @param message a detail message; may be {@code null}
+   *
+   * @param cause the {@link Throwable} causing this {@link
+   * ArbitrationException} to be constructed; may be {@code null}
+   */
   public ArbitrationException(final String message, final Throwable cause) {
     super(message, cause);
   }
-  
+
 }

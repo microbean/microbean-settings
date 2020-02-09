@@ -16,6 +16,8 @@
  */
 package org.microbean.settings;
 
+import java.io.Serializable;
+
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -28,6 +30,16 @@ import javax.inject.Qualifier;
 
 import org.microbean.development.annotation.Experimental;
 
+/**
+ * A {@link Qualifier} indicating that a relevant instance should be
+ * {@linkplain Settings#configure(Object, Iterable, String, Set)
+ * configured} immediately after being instantiated.
+ *
+ * @author <a href="https://about.me/lairdnelson"
+ * target="_parent">Laird Nelson</a>
+ *
+ * @see Settings#configure(Object, Iterable, String, Set)
+ */
 @Documented
 @Experimental
 @Qualifier
@@ -35,17 +47,50 @@ import org.microbean.development.annotation.Experimental;
 @Target({ ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER, ElementType.TYPE })
 public @interface Configured {
 
+  /**
+   * An {@link AnnotationLiteral} that implements the {@link
+   * Configured} interface/annotation.
+   *
+   * @author <a href="https://about.me/lairdnelson"
+   * target="_parent">Laird Nelson</a>
+   *
+   * @see Configured
+   */
   @Experimental
   public static final class Literal extends AnnotationLiteral<Configured> implements Configured {
 
+
+    /*
+     * Static fields.
+     */
+
+
+    /**
+     * The version of this class for {@linkplain Serializable
+     * serialization purposes}.
+     */
     private static final long serialVersionUID = 1L;
 
+    /**
+     * The sole instance of this class.
+     *
+     * @nullability This field is never {@code null}.
+     */
     public static final Configured INSTANCE = new Literal();
 
+
+    /*
+     * Constructors.
+     */
+
+
+    /**
+     * Creates a new {@link Literal}.
+     */
     private Literal() {
       super();
     }
-    
+
   }
 
 }

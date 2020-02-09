@@ -28,14 +28,92 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
-public final class SourceOrderArbiter extends Arbiter {
+import javax.enterprise.context.ApplicationScoped;
 
+/**
+ * A simple {@link Arbiter} implementation that performs arbitration
+ * among {@link Value}s by selecting the {@link Value} whose
+ * {@linkplain Value#getSource() affiliated <code>Source</code>}
+ * appears first in the {@link Set} of {@link Source}s supplied to the
+ * {@link #arbitrate(Set, String, Set, Collection)} method.
+ *
+ * @author <a href="https://about.me/lairdnelson"
+ * target="_parent">Laird Nelson</a>
+ *
+ * @see #arbitrate(Set, String, Set, Collection)
+ */
+@ApplicationScoped
+public class SourceOrderArbiter extends Arbiter {
+
+
+  /*
+   * Static fields.
+   */
+
+
+  /*
+   * The version of this class for {@linkplain Serializable
+   * serialization purposes}.
+   */
   private static final long serialVersionUID = 1L;
 
+
+  /*
+   * Constructors.
+   */
+
+
+  /**
+   * Creates a new {@link SourceOrderArbiter}.
+   */
   public SourceOrderArbiter() {
     super();
   }
 
+
+  /*
+   * Instance methods.
+   */
+  
+
+  /**
+   * Performs value arbitration by considering {@link Value}s'
+   * {@linkplain Value#getSource() affiliated <code>Source</code>s}
+   * such that the {@link Value} whose {@link Value#getSource()
+   * Source} appears earliest in the supplied {@code sources} {@link
+   * Set} will be selected.
+   *
+   * @param sources the {@link Set} of {@link Source}s in effect
+   * during the current value acquisition operation; must not be
+   * {@code null}; must be {@linkplain
+   * Collections#unmodifiableSet(Set) unmodifiable}; must be safe for
+   * concurrent read-only access by multiple threads
+   *
+   * @param name the name of the setting value being sought; must not
+   * be {@code null}
+   *
+   * @param qualifiers the {@link Set} of qualifier {@link
+   * Annotation}s in effect during the current value acquisition
+   * operation; must not be {@code null}; must be {@linkplain
+   * Collections#unmodifiableSet(Set) unmodifiable}; must be safe for
+   * concurrent read-only access by multiple threads
+   *
+   * @param values the {@link Collection} of {@link Value}s acquired
+   * during the current value acquisition operation that were deemed
+   * to be indistinguishable; must not be {@code null}; must be
+   * {@linkplain Collections#unmodifiableSet(Set) unmodifiable}; must
+   * be safe for concurrent read-only access by multiple threads
+   *
+   * @return the result of value arbitration as a single {@link
+   * Value}, or {@code null} if this {@link SourceOrderArbiter} could
+   * not select a single {@link Value}
+   *
+   * @exception NullPointerException if any parameter value is {@code
+   * null}
+   *
+   * @exception ArbitrationException if there was a procedural problem
+   * with arbitration
+   */
   @Override
   public Value arbitrate(final Set<? extends Source> sources,
                          final String name,
@@ -58,6 +136,12 @@ public final class SourceOrderArbiter extends Arbiter {
     return returnValue;
   }
 
+
+  /*
+   * Inner and nested classes.
+   */
+
+  
   private static final class SourceOrderComparator implements Comparator<Value>, Serializable {
 
     private static final long serialVersionUID = 1L;

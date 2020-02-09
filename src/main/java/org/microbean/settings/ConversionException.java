@@ -16,24 +16,74 @@
  */
 package org.microbean.settings;
 
+import java.io.Serializable; // for javadoc only
+
+/**
+ * A {@link SettingsException} indicating a procedural problem with
+ * {@linkplain Converter#convert(Value) conversion}.
+ *
+ * @author <a href="https://about.me/lairdnelson"
+ * target="_parent">Laird Nelson</a>
+ *
+ * @see Converter
+ */
 public class ConversionException extends SettingsException {
 
+
+  /*
+   * Static fields.
+   */
+
+
+  /**
+   * The version of this class for {@linkplain Serializable
+   * serialization purposes}.
+   */
   private static final long serialVersionUID = 1L;
-  
+
+
+  /*
+   * Constructors.
+   */
+
+
+
+  /**
+   * Creates a new {@link ConversionException}.
+   */
   public ConversionException() {
     super();
   }
 
+  /**
+   * Creates a new {@link ConversionException}.
+   *
+   * @param message a detail message; may be {@code null}
+   */
   public ConversionException(final String message) {
     super(message);
   }
 
+  /**
+   * Creates a new {@link ConversionException}.
+   *
+   * @param cause the {@link Throwable} causing this {@link
+   * ConversionException} to be constructed; may be {@code null}
+   */
   public ConversionException(final Throwable cause) {
     super(cause);
   }
-  
+
+  /**
+   * Creates a new {@link ConversionException}.
+   *
+   * @param message a detail message; may be {@code null}
+   *
+   * @param cause the {@link Throwable} causing this {@link
+   * ConversionException} to be constructed; may be {@code null}
+   */
   public ConversionException(final String message, final Throwable cause) {
     super(message, cause);
   }
-  
+
 }
