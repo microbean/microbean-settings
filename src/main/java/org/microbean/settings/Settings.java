@@ -61,6 +61,163 @@ import org.microbean.settings.converter.PropertyEditorConverter;
  * A provider of named setting values sourced from any number of
  * {@linkplain Source sources}.
  *
+
+ * <p>The bulk of the methods that belong to the {@link Settings}
+ * class can be placed into two categories:</p>
+ *
+ * <ol>
+ *
+ * <li><strong>Value acquisition methods.</strong> These methods, such
+ * as the canonical {@link #get(String, Set, Converter, BiFunction)}
+ * method and its convenience forms, such as, simply, {@link
+ * #get(String)}, acquire values from {@link Source}s, {@linkplain
+ * #arbitrate(Set, String, Set, Collection) resolve ambiguities},
+ * {@linkplain Converter#convert(Value) perform type conversion} and
+ * so on.</li>
+ *
+ * <li><strong>Configuration methods.</strong> These methods, such as
+ * the canonical {@link #configure(Object, Iterable, String, Set)}
+ * method and its convenience forms, such as, simply, {@link
+ * #configure(Object)}, fully configure Java Beans by using the value
+ * acquisition methods above in conjunction with {@link
+ * PropertyDescriptor} features from the Java Beans
+ * specification.</li>
+ *
+ * </ol>
+ *
+ * <h2>Essential Settings Terminology</h2>
+ *
+ * <h3>Setting</h3>
+ *
+ * <p>A <em>setting</em> is a non-specific conceptual entity that
+ * loosely describes something that can be configured.</p>
+ *
+ * <p>The term as commonly used is ambiguous.  Sometimes people use
+ * "setting" to mean the name of something that can be configured
+ * ("the setting that controls debug information", "what's the debug
+ * setting set to?").  Other times people use "setting" to mean a
+ * particular value of something that can be configured ("what's the
+ * setting for the debug property?").  Still other times people use "setting" to mean
+ * an environmentallly specific particular value of something that can
+ * be configured ("use the staging environment setting for debug").</p>
+ *
+ * <p>Due in part to this ambiguity, a setting (deliberately) does not
+ * have a direct representation in Java code in this project.
+ * Instead, this project carefully distinguishes between <em>setting
+ * names</em>, <em>setting values</em>, and <em>qualifiers</em>.</p>
+ *
+ * <h3>Setting Name</h3>
+ *
+ * <p>A <em>setting name</em> is fundamentally a {@link String}.  It
+ * is not hierarchical.  It is treated as a key that, together with
+ * <em>qualifiers</em>, which will be discussed later, can pick out a
+ * maximally <em>suitable</em> setting value from among many possible
+ * suitable setting values.</p>
+ *
+ * <p>For example, the setting name for a "debug" setting should be,
+ * simply, {@code debug}, even if there could be many suitable values
+ * for this setting (such as a value for the {@code debug} setting in
+ * production, a value for it in development, a value for it in a
+ * given region, and so on).  To belabor the point, and most notably
+ * in this example, the setting name would <em>not</em> be anything
+ * like {@code production.debug}, or {@code development.debug} or
+ * {@code east.debug}.  It would be, simply, {@code debug}.</p>
+ *
+ * <h3>Setting Value</h3>
+ *
+ * <p>A setting value is, fundamentally and deliberately, a {@link
+ * String}, since that is the form that most settings are stored in,
+ * and also particularly since, being configuration information,
+ * setting values are designed to be human-editable.</p>
+ *
+ * <p>Setting values conceptually are always paired with the name of
+ * the setting they are associated with, and are represented in Java
+ * code in this project by instances of the {@link Value} class.  Bear
+ * in mind, however, that <em>several potential</em> setting values
+ * may be associated with any given setting name.  Some of them may be
+ * <em>suitable</em> in one particular application but not in another.
+ * <em>Suitability</em> is covered later below.</p>
+ *
+ * <h3>Source</h3>
+ *
+ * <p>A setting value conceptually originates from a <em>source</em>,
+ * which is simply and somewhat circularly any furnisher of setting
+ * values.  Sources are represented in Java code in this project by
+ * instances of the {@link Source} class.</p>
+ * 
+ * <p>In this project, a {@link Source} is the most atomic unit of
+ * value acquisition and serves as a fa&ccedil;ade on top of systems
+ * ranging from simple text files to entire configuration subsystems.
+ * Colloquially speaking, you can {@linkplain Source#getValue(String,
+ * Set) ask} a {@link Source} for a {@link Value} that is suitable for
+ * a setting named by a particular setting name, and it will respond
+ * with zero or one of them.</p>
+ *
+ * <h3>Setting Value Acquisition</h3>
+ *
+ * <p><em>Setting value acquisition</em> is the process of acquiring a
+ * setting value given a setting name and some information about the
+ * settings space in which the acquisition is taking place.</p>
+ *
+ * <p>This settings space information is more precisely known as
+ * <em>qualifiers</em>.</p>
+ *
+ * <h4>Setting Value Request</h4>
+ *
+ * <p>A <em>setting value request</em> is the logical sending of a
+ * pair of a setting name and some qualifiers to one or more
+ * sources.</p>
+ *
+ * <p>A well-behaved source that is provided with this information
+ * will either furnish exactly one setting value for the conceptual
+ * setting identified by the setting value request, or will indicate
+ * that it can furnish no suitable setting value.</p>
+ *
+ * <p>If a source furnishes a setting value, then the value is said to
+ * be <em>suitable to some degree</em>.</p>
+ *
+ * <h4>Setting Value Response</h4>
+ *
+ * <p>A setting value response is the logical sending of a logical
+ * tuple consisting of a setting name, a suitable setting value, and a
+ * subset of the setting value request's qualifiers from which a
+ * degree of <em>suitability</em> is derived in response to the
+ * reception of a setting value request.</p>
+ *
+ * <h4>Suitability</h4>
+ *
+ * <p>A setting value response's <em>suitability</em> for its
+ * corresponding setting value request is a measure of how
+ * suited&mdash;how tailored, how specific&mdash;its associated
+ * setting value is for a given setting value request.</p>
+ *
+ * <p>Setting value response suitability is represented by the fact
+ * that a setting value response has qualifiers, in a manner similar
+ * to how a setting value request has qualifiers.  To be <em>at
+ * all</em> suitable, a setting value response's qualifiers must be
+ * either equal in kind and number to the set of qualifiers present in
+ * the corresponding setting value request, or a subset in kind and
+ * number of those qualifiers.</p>
+ *
+ * <p>Therefore, a setting value response whose qualifiers are smaller
+ * in number than the qualifiers in its corresponding value
+ * acquisition request is less suitable for the setting in question
+ * than a setting value whose qualifiers are equal in number to the
+ * qualifiers in its corresponding setting value request.</p>
+ *
+ * <p>Colloquially speaking, in other words, if a value acquisition
+ * request for a setting named {@code debug} arrives at a source with
+ * qualifiers <code>{environment=production, region=east}</code>, then
+ * a setting value response whose qualifiers are
+ * <code>{environment=production}</code> is less suitable for that
+ * setting value request than a setting value response whose
+ * qualifiers are <code>{environment=production, region=east}</code>,
+ * and a setting value response whose qualifiers are empty is the
+ * least suitable of all possible setting values for that value
+ * acquisition request.</p>
+ *
+ * 
+ *
  * @author <a href="https://about.me/lairdnelson"
  * target="_parent">Laird Nelson</a>
  *
@@ -74,7 +231,7 @@ public class Settings {
    * Static fields.
    */
 
-  
+
   private static final Comparator<Value> valueComparator = Comparator.<Value>comparingInt(v -> v.getQualifiers().size()).reversed();
 
   /**
@@ -102,7 +259,7 @@ public class Settings {
    * Instance fields.
    */
 
-  
+
   private final Set<Annotation> qualifiers;
 
   private final ConverterProvider converterProvider;
@@ -742,7 +899,7 @@ public class Settings {
    *
    * @exception AmbiguousValuesException if arbitration completed but
    * could not resolve an ambiguity between potential return values
-   *   
+   *
    * @exception MalformedValuesException if the {@link
    * #handleMalformedValues(String, Set, Collection)} method was
    * overridden and the override throws a {@link
@@ -2456,7 +2613,7 @@ public class Settings {
    * idempotency of this method.
    *
    * @see #configure(Object, Iterable, String, Set)
-   */  
+   */
   public final void configure(final Object object,
                               final BeanInfo beanInfo,
                               final Set<Annotation> qualifiers)
@@ -2848,7 +3005,7 @@ public class Settings {
             } else {
               settingName = new StringBuilder(prefix).append(name).toString();
             }
-            
+
             final Type type;
             final Object typeObject = pd.getValue("propertyType");
             if (typeObject instanceof Type) {
@@ -2875,7 +3032,7 @@ public class Settings {
             } else {
               defaultValueFunction = null;
             }
-            
+
             try {
               writeMethod.invoke(object, this.get(settingName, qualifiers, converter, defaultValueFunction));
             } catch (final NoSuchElementException noSuchElementException) {
@@ -3177,7 +3334,7 @@ public class Settings {
       MAGIC_NAMES.add("s");
       MAGIC_NAMES.add("settings");
     }
-    
+
     private final Settings settings;
 
     private final ExpressionFactory expressionFactory;
