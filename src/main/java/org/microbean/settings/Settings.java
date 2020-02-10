@@ -61,30 +61,6 @@ import org.microbean.settings.converter.PropertyEditorConverter;
  * A provider of named setting values sourced from any number of
  * {@linkplain Source sources}.
  *
-
- * <p>The bulk of the methods that belong to the {@link Settings}
- * class can be placed into two categories:</p>
- *
- * <ol>
- *
- * <li><strong>Value acquisition methods.</strong> These methods, such
- * as the canonical {@link #get(String, Set, Converter, BiFunction)}
- * method and its convenience forms, such as, simply, {@link
- * #get(String)}, acquire values from {@link Source}s, {@linkplain
- * #arbitrate(Set, String, Set, Collection) resolve ambiguities},
- * {@linkplain Converter#convert(Value) perform type conversion} and
- * so on.</li>
- *
- * <li><strong>Configuration methods.</strong> These methods, such as
- * the canonical {@link #configure(Object, Iterable, String, Set)}
- * method and its convenience forms, such as, simply, {@link
- * #configure(Object)}, fully configure Java Beans by using the value
- * acquisition methods above in conjunction with {@link
- * PropertyDescriptor} features from the Java Beans
- * specification.</li>
- *
- * </ol>
- *
  * <h2>Essential Settings Terminology</h2>
  *
  * <h3>Setting</h3>
@@ -131,11 +107,10 @@ import org.microbean.settings.converter.PropertyEditorConverter;
  * setting values are designed to be human-editable.</p>
  *
  * <p>Setting values conceptually are always paired with the name of
- * the setting they are associated with, and are represented in Java
- * code in this project by instances of the {@link Value} class.  Bear
- * in mind, however, that <em>several potential</em> setting values
- * may be associated with any given setting name.  Some of them may be
- * <em>suitable</em> in one particular application but not in another.
+ * the setting they are associated with.  Bear in mind, however, that
+ * <em>several potential</em> setting values may be associated with
+ * any given setting name.  Some of them may be <em>suitable</em> in
+ * one particular application but not in another.
  * <em>Suitability</em> is covered later below.</p>
  *
  * <h3>Source</h3>
@@ -178,11 +153,11 @@ import org.microbean.settings.converter.PropertyEditorConverter;
  *
  * <h4>Setting Value Response</h4>
  *
- * <p>A setting value response is the logical sending of a logical
- * tuple consisting of a setting name, a suitable setting value, and a
- * subset of the setting value request's qualifiers from which a
- * degree of <em>suitability</em> is derived in response to the
- * reception of a setting value request.</p>
+ * <p>A <em>setting value response</em> is the logical sending of a
+ * logical tuple consisting of a setting name, a suitable setting
+ * value, and a subset of the setting value request's qualifiers from
+ * which a degree of <em>suitability</em> is derived in response to
+ * the reception of a setting value request.</p>
  *
  * <h4>Suitability</h4>
  *
@@ -216,7 +191,30 @@ import org.microbean.settings.converter.PropertyEditorConverter;
  * least suitable of all possible setting values for that value
  * acquisition request.</p>
  *
- * 
+ * <h2>Class Organization</h2>
+ *
+ * <p>The bulk of the methods that belong to the {@link Settings}
+ * class can be placed into two categories:</p>
+ *
+ * <ol>
+ *
+ * <li><strong>Value acquisition methods.</strong> These methods, such
+ * as the canonical {@link #get(String, Set, Converter, BiFunction)}
+ * method and its convenience forms, such as, simply, {@link
+ * #get(String)}, acquire values from {@link Source}s, {@linkplain
+ * #arbitrate(Set, String, Set, Collection) resolve ambiguities},
+ * {@linkplain Converter#convert(Value) perform type conversion} and
+ * so on.</li>
+ *
+ * <li><strong>Configuration methods.</strong> These methods, such as
+ * the canonical {@link #configure(Object, Iterable, String, Set)}
+ * method and its convenience forms, such as, simply, {@link
+ * #configure(Object)}, fully configure Java Beans by using the value
+ * acquisition methods above in conjunction with {@link
+ * PropertyDescriptor} features from the Java Beans
+ * specification.</li>
+ *
+ * </ol>
  *
  * @author <a href="https://about.me/lairdnelson"
  * target="_parent">Laird Nelson</a>
