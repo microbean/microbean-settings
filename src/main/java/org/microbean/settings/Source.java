@@ -61,6 +61,9 @@ public abstract class Source {
    *
    * @exception NullPointerException if {@code name} is {@code null}
    *
+   * @exception ValueAcquisitionException if there was a procedural
+   * problem acquiring a {@link Value}
+   *
    * @nullability Implementations of this method are permitted to
    * return {@code null}.
    *

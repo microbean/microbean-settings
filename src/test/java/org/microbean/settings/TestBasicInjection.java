@@ -32,13 +32,13 @@ import javax.enterprise.inject.se.SeContainerInitializer;
 
 import javax.inject.Inject;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 @ApplicationScoped
 public class TestBasicInjection {
@@ -102,7 +102,7 @@ public class TestBasicInjection {
    */
 
 
-  @Before
+  @BeforeEach
   public void startContainer() throws Exception {
     this.stopContainer();
     System.setProperty("firstName", "Abraham");
@@ -114,7 +114,7 @@ public class TestBasicInjection {
     this.container = initializer.initialize();
   }
 
-  @After
+  @AfterEach
   public void stopContainer() throws Exception {
     if (this.container != null) {
       this.container.close();

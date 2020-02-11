@@ -249,7 +249,7 @@ public class SettingsExtension implements Extension {
             Settings.class,
             this.settingsQualifierSets,
             (e, bm, t, nq) -> e.addBean()
-              .addTransitiveTypeClosure(t)
+              .types(t)
               .scope(Singleton.class)
               .qualifiers(nq)
               .beanClass(Settings.class)

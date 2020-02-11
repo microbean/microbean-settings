@@ -18,13 +18,13 @@ package org.microbean.settings;
 
 import java.beans.IntrospectionException;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 public class TestJavaBeansConfiguration {
 
@@ -44,14 +44,14 @@ public class TestJavaBeansConfiguration {
    */
 
 
-  @Before
+  @BeforeEach
   public void startContainer() throws Exception {
     System.setProperty("abe.firstName", "Abraham");
     System.setProperty("abe.lastName", "Lincoln");
     
   }
 
-  @After
+  @AfterEach
   public void stopContainer() throws Exception {
     System.clearProperty("abe.firstName");
     System.clearProperty("abe.lastName");

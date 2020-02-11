@@ -16,12 +16,12 @@
  */
 package org.microbean.settings;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.microbean.settings.converter.StringConverter;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestConversion {
 
@@ -31,7 +31,7 @@ public class TestConversion {
     super();
   }
 
-  @Before
+  @BeforeEach
   public void setUp() {
     this.converters = new Converters();
   }

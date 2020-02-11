@@ -25,12 +25,12 @@ import javax.enterprise.event.Observes;
 
 import javax.enterprise.inject.se.SeContainerInitializer;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 @ApplicationScoped
 public class TestWithContainerEnvironment {
@@ -59,7 +59,7 @@ public class TestWithContainerEnvironment {
    */
 
 
-  @Before
+  @BeforeEach
   public void startContainer() throws Exception {
     this.stopContainer();
     final SeContainerInitializer initializer = SeContainerInitializer.newInstance();
@@ -67,7 +67,7 @@ public class TestWithContainerEnvironment {
     this.container = initializer.initialize();
   }
 
-  @After
+  @AfterEach
   public void stopContainer() throws Exception {
     if (this.container != null) {
       this.container.close();

@@ -1,25 +1,36 @@
 <body>
 
-  <p>Provides classes and interfaces that help with acquiring
-    configuration data.</p>
+  <p>
+    Provides classes and interfaces that help with acquiring
+    application settings
+    from <a href="https://jakarta.ee/specifications/cdi/2.0/apidocs/"
+    target="_parent">CDI</a>-based programs.
+  </p>
 
   <h1>microBean&trade; Settings</h1>
 
-  <p>The microBean&trade; Settings library serves as a single locus
-    from which a Java program may read <em>settings</em>:
-    deployment-time information and configuration often packaged
-    externally with respect to the program that tailors that program
-    to its runtime environment.</p>
+  <p>
+    The microBean&trade; Settings framework serves as a single locus
+    from which
+    a <a href="https://jakarta.ee/specifications/cdi/2.0/apidocs/"
+    target="_parent">CDI</a>-based Java program may
+    read <em>settings</em>: deployment-time information and
+    configuration often packaged externally with respect to the
+    program that tailors that program to its runtime environment.
+  </p>
 
   <h2>Essential Settings Terminology</h2>
 
-  <h3>Setting</h3>
+  <h3 id="setting">Setting</h3>
 
-  <p>A <em>setting</em> is a non-specific conceptual entity that
+  <p>
+    A <em>setting</em> is a non-specific conceptual entity that
     loosely and imprecisely describes an aspect of something that can
-    be externally configured.</p>
+    be externally configured.
+  </p>
 
-  <p>The term as commonly used is slippery and ambiguous.  Sometimes
+  <p>
+    The term as commonly used is slippery and ambiguous.  Sometimes
     people use "setting" to mean the <em>name</em> of a property or
     attribute that can be externally configured in some way ("the
     setting that controls debug information", "what's the {@code debug}
@@ -30,26 +41,33 @@
     other times people use "setting" to mean an environmentallly
     specific particular value of something that can be configured
     ("use the {@code staging} environment setting for {@code
-    debug}").</p>
+    debug}").
+  </p>
 
-  <p>Due in part to this ambiguity, this project deliberately does not
+  <p>
+    Due in part to this ambiguity, this project deliberately does not
     represent a setting in Java code.  Instead, this project carefully
     distinguishes between <em>setting names</em>, <em>setting
-      values</em>, and <em>qualifiers</em>.</p>
+      values</em>, and <em>qualifiers</em>.
+  </p>
 
-  <h3>Setting Name</h3>
+  <h3 id="setting_name">Setting Name</h3>
 
-  <p>A <em>setting name</em> is fundamentally a {@link
+  <p>
+    A <em>setting name</em> is fundamentally a {@link
     java.lang.String}.  It is not hierarchical.  It is treated as a
     unique key that, together with
     <em>qualifiers</em>, which will be discussed later, can pick out a
     maximally <em>suitable</em> setting value from among many possible
-    suitable setting values.</p>
+    suitable setting values.
+  </p>
 
-  <p>For example, the setting name for a hypothetical {@code debug}
+  <p>
+    For example, the setting name for a hypothetical {@code debug}
     setting should be, simply, {@code debug}, even if there could be
     many potentially suitable values for this setting.  Potentially
-    suitable (and potentially incompatible) values might include:</p>
+    suitable (and potentially incompatible) values might include:
+  </p>
 
   <ul>
 
@@ -73,36 +91,45 @@
 
   <p>…and so on.</p>
 
-  <p>To belabor the point, and most notably in this example, the
+  <p>
+    To belabor the point, and most notably in this example, the
     setting name would <em>not</em> be anything like {@code
     production.debug}, or {@code development.debug} or {@code
     east.debug}, because setting names are not hierarchical.  It would
     be, simply, {@code debug}.  The mechanism to distinguish between
     these hypothetical setting values in the absence of hierarchical
-    setting names, <em>qualifiers</em>, will be discussed below.</p>
+    setting names, <em>qualifiers</em>, will be discussed below.
+  </p>
 
-  <h3>Setting Value</h3>
+  <h3 id="setting_value">Setting Value</h3>
 
-  <p>A setting value is, fundamentally and deliberately, a {@link
-    java.lang.String}, since that is the form that most settings are
-    stored in, and also particularly since, being configuration
-    information, setting values are designed to be human-editable.</p>
+  <p>
+    A setting value is, fundamentally and deliberately, a textual
+    value, since that is the form in which most setting values are
+    stored, and also particularly since, being configuration
+    information, setting values are designed to be human-editable.
+  </p>
 
-  <p>Setting values conceptually are always paired with the name of
-    the setting they are associated with.  Bear in mind, however, that
+  <p>
+    Setting values conceptually are always paired with the setting
+    name they are associated with.  Bear in mind, however, that
     <em>several potential</em> setting values may be associated with
     any given setting name.  Some of them may be <em>suitable</em> in
     one particular application but not in another.
-    <em>Suitability</em> is covered later below.</p>
+    <em>Suitability</em> is covered later below.
+  </p>
 
-  <h3>Source</h3>
+  <h3 id="source">Source</h3>
 
-  <p>A setting value conceptually originates from a <em>source</em>,
+  <p>
+    A setting value conceptually originates from a <em>source</em>,
     which is simply and somewhat circularly any furnisher of setting
     values.  Sources are represented in Java code in this project by
-    instances of the {@link org.microbean.settings.Source} class.</p>
+    instances of the {@link org.microbean.settings.Source} class.
+  </p>
 
-  <p>In this project, a {@link org.microbean.settings.Source} is the
+  <p>
+    In this project, a {@link org.microbean.settings.Source} is the
     most atomic unit of value acquisition and serves as a fa&ccedil;ade
     on top of systems ranging from simple text files to entire
     configuration subsystems.  Colloquially speaking, you can
@@ -110,24 +137,32 @@
     java.util.Set) ask} a {@link org.microbean.settings.Source} for a
     {@link org.microbean.settings.Value} that is suitable for a setting
     named by a particular setting name, and it will respond with zero or
-    one of them.</p>
+    one of them.
+  </p>
 
-  <h3>Setting Value Acquisition</h3>
+  <h3 id="setting_value_acquisition">Setting Value Acquisition</h3>
 
-  <p><em>Setting value acquisition</em> is the process of acquiring a
+  <p>
+    <em>Setting value acquisition</em> is the process of acquiring a
     setting value given a setting name and some information about the
-    settings space in which the acquisition is taking place.</p>
+    settings space in which the acquisition is taking place.
+  </p>
 
-  <p>This settings space information is more precisely known as
-    <em>qualifiers</em>.</p>
+  <p>
+    This settings space information is more precisely known as
+    <em>qualifiers</em>.
+  </p>
 
-  <h4>Qualifiers</h4>
+  <h4 id="qualifiers">Qualifiers</h4>
 
-  <p>A <em>qualifier</em> is a conceptual pairing of an named
+  <p>
+    A <em>qualifier</em> is a conceptual pairing of an named
     environmental aspect and its value that, together, pick out a
-    coordinate in overall <em>settings space</em>.</p>
+    coordinate in overall <em>settings space</em>.
+  </p>
 
-  <p>Consider a hypothetical, deliberately simplified cloud provider
+  <p>
+    Consider a hypothetical, deliberately simplified cloud provider
     that deploys many applications across {@code east} and {@code
     west} data center {@code region}s, and places them into {@code
     development}, {@code staging} and {@code production} {@code
@@ -142,10 +177,12 @@
     region} axis ({@code region=east} or {@code region=west}), and its
     location along the {@code featureTest} axis ({@code
     featureTest=blinkTag} or {@code featureTest=autoplay} or a
-    potentially infinite number of other possibilities).</p>
+    potentially infinite number of other possibilities).
+  </p>
 
-  <p>It is extremely important to understand that <strong>qualifiers,
-      like setting names, are not inherently hierarchichal</strong>.
+  <p>
+    It is extremely important to understand that <strong>qualifiers,
+    like setting names, are not inherently hierarchichal</strong>.
     For example, given two setting values, one qualified with {@code
     environment=development} and {@code region=east}, and another
     qualified with {@code environment=development} and {@code
@@ -153,53 +190,74 @@
     {@code development} environment, running in the {@code east}
     region and undergoing the {@code blinkTag} feature test?  It is
     not immediately clear, and this is why setting names and
-    qualifiers are not expressed in terms of a hierarchical
-    namespace.</p>
+    qualifiers are not expressed in terms of a hierarchical namespace.
+  </p>
 
-  <h4>Setting Value Request</h4>
+  <p>
+    A qualifier is represented in Java code in this project by
+    instances of the {@link java.lang.annotation.Annotation} class,
+    following the lead of a similar concept
+    in <a href="https://jakarta.ee/specifications/cdi/2.0/cdi-spec-2.0.html#qualifiers">CDI</a>.
+  </p>
 
-  <p>A <em>setting value request</em> is the logical sending of a
-    pair of a setting name and some qualifiers to one or more
-    sources.</p>
+  <h4 id="setting_value_request">Setting Value Request</h4>
 
-  <p>A well-behaved source that is provided with this information
-    will either furnish exactly one setting value for the conceptual
+  <p>
+    A <em>setting value request</em> is the logical sending of a pair
+    of a setting name and some qualifiers to one or more sources.
+  </p>
+
+  <p>
+    A well-behaved source that is provided with this information will
+    either furnish exactly one setting value for the conceptual
     setting identified by the setting value request, or will indicate
-    that it can furnish no suitable setting value.</p>
+    that it can furnish no suitable setting value.
+  </p>
 
-  <p>If a source furnishes a setting value, then the value is said to
-    be <em>suitable to some degree</em>.</p>
+  <p>
+    If a source furnishes a setting value, then the value is said to
+    be <em>suitable to some degree</em>.
+  </p>
 
-  <h4>Setting Value Response</h4>
+  <h4 id="setting_value_response">Setting Value Response</h4>
 
-  <p>A <em>setting value response</em> is the logical sending of a
+  <p>
+    A <em>setting value response</em> is the logical sending of a
     logical tuple consisting of a setting name, a suitable setting
     value, and a subset of the setting value request's qualifiers from
     which a degree of <em>suitability</em> is derived in response to
-    the reception of a setting value request.</p>
+    the reception of a setting value request.
+  </p>
 
-  <h4>Suitability</h4>
+  <h4 id="suitability">Suitability</h4>
 
-  <p>A setting value response's <em>suitability</em> for its
+  <p>
+    A setting value response's <em>suitability</em> for its
     corresponding setting value request is a measure of how
     suited&mdash;how tailored, how specific&mdash;its associated
-    setting value is for a given setting value request.</p>
+    setting value is for a given setting value request.
+  </p>
 
-  <p>Setting value response suitability is represented by the fact
-    that a setting value response has qualifiers, in a manner similar
-    to how a setting value request has qualifiers.  To be <em>at
-      all</em> suitable, a setting value response's qualifiers must be
-    either equal in kind and number to the set of qualifiers present in
-    the corresponding setting value request, or a subset in kind and
-    number of those qualifiers.</p>
+  <p>
+    Setting value response suitability is represented by the fact that
+    a setting value response has qualifiers, in a manner similar to
+    how a setting value request has qualifiers.  To be <em>at all</em>
+    suitable, a setting value response's qualifiers must be either
+    equal in kind and number to the set of qualifiers present in the
+    corresponding setting value request, or a subset in kind and
+    number of those qualifiers.
+  </p>
 
-  <p>Therefore, a setting value response whose qualifiers are smaller
+  <p>
+    Therefore, a setting value response whose qualifiers are smaller
     in number than the qualifiers in its corresponding value
     acquisition request is less suitable for the setting in question
     than a setting value whose qualifiers are equal in number to the
-    qualifiers in its corresponding setting value request.</p>
+    qualifiers in its corresponding setting value request.
+  </p>
 
-  <p>Colloquially speaking, in other words, if a value acquisition
+  <p>
+    Colloquially speaking, in other words, if a value acquisition
     request for a setting named {@code debug} arrives at a source with
     qualifiers <code>{environment=production, region=east}</code>, then
     a setting value response whose qualifiers are
@@ -208,12 +266,122 @@
     qualifiers are <code>{environment=production, region=east}</code>,
     and a setting value response whose qualifiers are empty is the
     least suitable of all possible setting values for that value
-    acquisition request.</p>
+    acquisition request.
+  </p>
 
+  <h4 id="ambiguity">Ambiguity and Value Arbitration</h4>
+
+  <p>
+    When each of two sources responds to a setting value request, a
+    requester must choose between them.  Sometimes, choosing is easy:
+    if there is only one suitable setting value response, then there
+    is no question that its associated setting value is the one that
+    should be used, or if there is one setting value response that is
+    more <a href="#suitability">suitable</a> than another, then
+    obviously the more suitable one should be chosen.  But if two
+    setting value requests are equally suitable, some other mechanism
+    to disambiguate them must be used.  This is called <em>value
+    arbitration</em>.
+  </p>
+
+  <p>
+    Value arbitration is carried out by an <em>arbiter</em>.  An
+    arbiter is a notional resolver of otherwise ambiguous value
+    acquisition responses.  It receives two or more value acquisition
+    responses with equal suitability and uses whatever heuristic it
+    likes to choose between them.  Arbiters are represented in Java
+    code in this project by instances of the {@link
+    org.microbean.settings.Arbiter} class.
+  </p>
+
+  <p>
+    If an arbiter cannot arbitrate multiple ambiguous setting value
+    acquisition responses, then the overall process of value
+    acquisition fails.
+  </p>
+
+  <h3 id="interpolation">Interpolation</h3>
+
+  <p>
+    A setting value may contain references to other setting names for
+    which setting value requests should be issued.  Processing these
+    references is known as <em>interpolation</em>.
+  </p>
+
+  <p>
+    All interpolation in this project is carried out by an
+    implementation of
+    the <a href="https://jakarta.ee/specifications/expression-language/3.0/">Jakarta
+    Expression Language</a>.
+  </p>
+
+  <p>
+    For example, in this project, for a setting name of, say, {@code
+    javaHomeDescription}, a potentially suitable setting value of
+    "<code>Your java.home variable is:
+    ${settings['java.home']}</code>" will be interpreted such that
+    during setting value acquisition a setting value request will be
+    issued for a setting named {@code java.home}, and any value
+    received for <em>that</em> setting name will replace
+    "<code>${settings['java.home']}</code>".
+  </p>
+
+  <h3 id="conversion">Conversion</h3>
+
+  <p>
+    Once a setting value has been successfully acquired, it might need
+    to be converted into a suitable type.  For example, a setting
+    value of "{@code 1}"&mdash;a {@link java.lang.String}&mdash;might
+    be better represented within Java code as an {@link
+    java.lang.Integer}.  <em>Conversion</em> is the process of
+    transforming a (definitionally) textual-typed setting value (such
+    as a {@link java.lang.String}) into another data type
+    representation (such as an {@link java.lang.Integer}).
+  </p>
+
+  <h4 id="converter">Converter</h4>
+
+  <p>
+    A <em>converter</em> is a notional, preferably stateless entity
+    that can accept a (definitionally textual) setting value and
+    without changing its meaning represent it using a particular
+    programming language data type.  Converters are represented in
+    Java code in this project by implementations of the {@link
+    org.microbean.settings.Converter} interface.
+  </p>
+
+  <h2 id="essential_classes">Essential Classes</h2>
+
+  <p>
+    In this project, the {@link org.microbean.settings.Settings} class
+    encapsulates all aspects
+    of <a href="#setting_value_acquisition">setting value
+    acquisition</a> described above.  A {@link
+    org.microbean.settings.Settings} instance gathers together {@link
+    org.microbean.settings.Source}s, {@link
+    org.microbean.settings.Arbiter}s, {@link
+    org.microbean.settings.Converter}s and a pluggable implementation
+    of
+    the <a href="https://jakarta.ee/specifications/expression-language/3.0/">Jakarta
+    Expression Language</a> to provide setting value acquisition
+    services via methods like {@link
+    org.microbean.settings.Settings#get(java.lang.String,
+    java.util.Set, org.microbean.settings.Converter,
+    java.util.function.BiFunction) Settings.get(String, Set,
+    Converter, BiFunction)}.
+  </p>
 
   @author <a href="https://about.me/lairdnelson"
              target="_parent">Laird Nelson</a>
 
   @see org.microbean.settings.Settings
+
+  @see org.microbean.settings.Arbiter
+
+  @see org.microbean.settings.Converter
+
+  @see org.microbean.settings.Source
+
+  @see org.microbean.settings.Value
 
 </body>

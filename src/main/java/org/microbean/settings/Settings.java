@@ -53,7 +53,11 @@ import javax.el.PropertyNotFoundException;
 import javax.el.StandardELContext;
 import javax.el.ValueExpression;
 
+import javax.enterprise.inject.Typed;
+
 import javax.enterprise.util.TypeLiteral;
+
+import org.microbean.development.annotation.Experimental;
 
 import org.microbean.settings.converter.PropertyEditorConverter;
 
@@ -61,137 +65,11 @@ import org.microbean.settings.converter.PropertyEditorConverter;
  * A provider of named setting values sourced from any number of
  * {@linkplain Source sources}.
  *
- * <h2>Essential Settings Terminology</h2>
+ * <p>Please see the <a
+ * href="{@docRoot}/overview-summary.html#overview.description">overview</a>
+ * for necessary context.</p>
  *
- * <h3>Setting</h3>
- *
- * <p>A <em>setting</em> is a non-specific conceptual entity that
- * loosely describes something that can be configured.</p>
- *
- * <p>The term as commonly used is ambiguous.  Sometimes people use
- * "setting" to mean the name of something that can be configured
- * ("the setting that controls debug information", "what's the debug
- * setting set to?").  Other times people use "setting" to mean a
- * particular value of something that can be configured ("what's the
- * setting for the debug property?").  Still other times people use "setting" to mean
- * an environmentallly specific particular value of something that can
- * be configured ("use the staging environment setting for debug").</p>
- *
- * <p>Due in part to this ambiguity, a setting (deliberately) does not
- * have a direct representation in Java code in this project.
- * Instead, this project carefully distinguishes between <em>setting
- * names</em>, <em>setting values</em>, and <em>qualifiers</em>.</p>
- *
- * <h3>Setting Name</h3>
- *
- * <p>A <em>setting name</em> is fundamentally a {@link String}.  It
- * is not hierarchical.  It is treated as a key that, together with
- * <em>qualifiers</em>, which will be discussed later, can pick out a
- * maximally <em>suitable</em> setting value from among many possible
- * suitable setting values.</p>
- *
- * <p>For example, the setting name for a "debug" setting should be,
- * simply, {@code debug}, even if there could be many suitable values
- * for this setting (such as a value for the {@code debug} setting in
- * production, a value for it in development, a value for it in a
- * given region, and so on).  To belabor the point, and most notably
- * in this example, the setting name would <em>not</em> be anything
- * like {@code production.debug}, or {@code development.debug} or
- * {@code east.debug}.  It would be, simply, {@code debug}.</p>
- *
- * <h3>Setting Value</h3>
- *
- * <p>A setting value is, fundamentally and deliberately, a {@link
- * String}, since that is the form that most settings are stored in,
- * and also particularly since, being configuration information,
- * setting values are designed to be human-editable.</p>
- *
- * <p>Setting values conceptually are always paired with the name of
- * the setting they are associated with.  Bear in mind, however, that
- * <em>several potential</em> setting values may be associated with
- * any given setting name.  Some of them may be <em>suitable</em> in
- * one particular application but not in another.
- * <em>Suitability</em> is covered later below.</p>
- *
- * <h3>Source</h3>
- *
- * <p>A setting value conceptually originates from a <em>source</em>,
- * which is simply and somewhat circularly any furnisher of setting
- * values.  Sources are represented in Java code in this project by
- * instances of the {@link Source} class.</p>
- * 
- * <p>In this project, a {@link Source} is the most atomic unit of
- * value acquisition and serves as a fa&ccedil;ade on top of systems
- * ranging from simple text files to entire configuration subsystems.
- * Colloquially speaking, you can {@linkplain Source#getValue(String,
- * Set) ask} a {@link Source} for a {@link Value} that is suitable for
- * a setting named by a particular setting name, and it will respond
- * with zero or one of them.</p>
- *
- * <h3>Setting Value Acquisition</h3>
- *
- * <p><em>Setting value acquisition</em> is the process of acquiring a
- * setting value given a setting name and some information about the
- * settings space in which the acquisition is taking place.</p>
- *
- * <p>This settings space information is more precisely known as
- * <em>qualifiers</em>.</p>
- *
- * <h4>Setting Value Request</h4>
- *
- * <p>A <em>setting value request</em> is the logical sending of a
- * pair of a setting name and some qualifiers to one or more
- * sources.</p>
- *
- * <p>A well-behaved source that is provided with this information
- * will either furnish exactly one setting value for the conceptual
- * setting identified by the setting value request, or will indicate
- * that it can furnish no suitable setting value.</p>
- *
- * <p>If a source furnishes a setting value, then the value is said to
- * be <em>suitable to some degree</em>.</p>
- *
- * <h4>Setting Value Response</h4>
- *
- * <p>A <em>setting value response</em> is the logical sending of a
- * logical tuple consisting of a setting name, a suitable setting
- * value, and a subset of the setting value request's qualifiers from
- * which a degree of <em>suitability</em> is derived in response to
- * the reception of a setting value request.</p>
- *
- * <h4>Suitability</h4>
- *
- * <p>A setting value response's <em>suitability</em> for its
- * corresponding setting value request is a measure of how
- * suited&mdash;how tailored, how specific&mdash;its associated
- * setting value is for a given setting value request.</p>
- *
- * <p>Setting value response suitability is represented by the fact
- * that a setting value response has qualifiers, in a manner similar
- * to how a setting value request has qualifiers.  To be <em>at
- * all</em> suitable, a setting value response's qualifiers must be
- * either equal in kind and number to the set of qualifiers present in
- * the corresponding setting value request, or a subset in kind and
- * number of those qualifiers.</p>
- *
- * <p>Therefore, a setting value response whose qualifiers are smaller
- * in number than the qualifiers in its corresponding value
- * acquisition request is less suitable for the setting in question
- * than a setting value whose qualifiers are equal in number to the
- * qualifiers in its corresponding setting value request.</p>
- *
- * <p>Colloquially speaking, in other words, if a value acquisition
- * request for a setting named {@code debug} arrives at a source with
- * qualifiers <code>{environment=production, region=east}</code>, then
- * a setting value response whose qualifiers are
- * <code>{environment=production}</code> is less suitable for that
- * setting value request than a setting value response whose
- * qualifiers are <code>{environment=production, region=east}</code>,
- * and a setting value response whose qualifiers are empty is the
- * least suitable of all possible setting values for that value
- * acquisition request.</p>
- *
- * <h2>Class Organization</h2>
+ * <h1>Class Organization</h1>
  *
  * <p>The bulk of the methods that belong to the {@link Settings}
  * class can be placed into two categories:</p>
@@ -222,7 +100,8 @@ import org.microbean.settings.converter.PropertyEditorConverter;
  * @threadsafety Instances of this class are safe for concurrent use
  * by multiple threads.
  */
-public class Settings {
+@Typed({ Settings.class })
+public class Settings extends Source {
 
 
   /*
@@ -445,6 +324,8 @@ public class Settings {
    * the idempotency of this method or its overrides.
    *
    * @nullability This method may return {@code null}.
+   *
+   * @see #get(String, Set, Converter, BiFunction)
    */
   public final String get(final String name) {
     return this.get(name,
@@ -502,6 +383,8 @@ public class Settings {
    * the idempotency of this method or its overrides.
    *
    * @nullability This method may return {@code null}.
+   *
+   * @see #get(String, Set, Converter, BiFunction)
    */
   public final String get(final String name,
                           final BiFunction<? super String, ? super Set<? extends Annotation>, ? extends String> defaultValueFunction) {
@@ -554,6 +437,8 @@ public class Settings {
    * the idempotency of this method or its overrides.
    *
    * @nullability This method may return {@code null}.
+   *
+   * @see #get(String, Set, Converter, BiFunction)
    */
   public final String get(final String name,
                           final Set<Annotation> qualifiers) {
@@ -617,6 +502,8 @@ public class Settings {
    * the idempotency of this method or its overrides.
    *
    * @nullability This method may return {@code null}.
+   *
+   * @see #get(String, Set, Converter, BiFunction)
    */
   public final String get(final String name,
                           final Set<Annotation> qualifiers,
@@ -685,6 +572,8 @@ public class Settings {
    * the idempotency of this method or its overrides.
    *
    * @nullability This method may return {@code null}.
+   *
+   * @see #get(String, Set, Converter, BiFunction)
    */
   public final <T> T get(final String name,
                          final Class<T> type) {
@@ -761,6 +650,8 @@ public class Settings {
    * the idempotency of this method or its overrides.
    *
    * @nullability This method may return {@code null}.
+   *
+   * @see #get(String, Set, Converter, BiFunction)
    */
   public final <T> T get(final String name,
                          final Class<T> type,
@@ -844,6 +735,8 @@ public class Settings {
    * the idempotency of this method or its overrides.
    *
    * @nullability This method may return {@code null}.
+   *
+   * @see #get(String, Set, Converter, BiFunction)
    */
   public final <T> T get(final String name,
                          final Set<Annotation> qualifiers,
@@ -913,6 +806,8 @@ public class Settings {
    * the idempotency of this method or its overrides.
    *
    * @nullability This method may return {@code null}.
+   *
+   * @see #get(String, Set, Converter, BiFunction)
    */
   public final <T> T get(final String name,
                          final TypeLiteral<T> typeLiteral) {
@@ -990,6 +885,8 @@ public class Settings {
    * the idempotency of this method or its overrides.
    *
    * @nullability This method may return {@code null}.
+   *
+   * @see #get(String, Set, Converter, BiFunction)
    */
   public final <T> T get(final String name,
                          final TypeLiteral<T> typeLiteral,
@@ -1074,6 +971,8 @@ public class Settings {
    * the idempotency of this method or its overrides.
    *
    * @nullability This method may return {@code null}.
+   *
+   * @see #get(String, Set, Converter, BiFunction)
    */
   public final <T> T get(final String name,
                          final Set<Annotation> qualifiers,
@@ -1140,6 +1039,8 @@ public class Settings {
    * the idempotency of this method or its overrides.
    *
    * @nullability This method may return {@code null}.
+   *
+   * @see #get(String, Set, Converter, BiFunction)
    */
   public final Object get(final String name,
                           final Type type) {
@@ -1207,6 +1108,8 @@ public class Settings {
    * the idempotency of this method or its overrides.
    *
    * @nullability This method may return {@code null}.
+   *
+   * @see #get(String, Set, Converter, BiFunction)
    */
   public final Object get(final String name,
                           final Set<Annotation> qualifiers,
@@ -1281,6 +1184,8 @@ public class Settings {
    * the idempotency of this method or its overrides.
    *
    * @nullability This method may return {@code null}.
+   *
+   * @see #get(String, Set, Converter, BiFunction)
    */
   public final Object get(final String name,
                           final Type type,
@@ -1361,6 +1266,8 @@ public class Settings {
    * the idempotency of this method or its overrides.
    *
    * @nullability This method may return {@code null}.
+   *
+   * @see #get(String, Set, Converter, BiFunction)
    */
   public final Object get(final String name,
                           final Set<Annotation> qualifiers,
@@ -1432,6 +1339,8 @@ public class Settings {
    * the idempotency of this method.
    *
    * @nullability This method may return {@code null}.
+   *
+   * @see #get(String, Set, Converter, BiFunction)
    */
   public final <T> T get(final String name,
                          final Converter<? extends T> converter) {
@@ -1505,6 +1414,8 @@ public class Settings {
    * the idempotency of this method.
    *
    * @nullability This method may return {@code null}.
+   *
+   * @see #get(String, Set, Converter, BiFunction)
    */
   public final <T> T get(final String name,
                          final Set<Annotation> qualifiers,
@@ -1585,6 +1496,8 @@ public class Settings {
    * the idempotency of this method.
    *
    * @nullability This method may return {@code null}.
+   *
+   * @see #get(String, Set, Converter, BiFunction)
    */
   public final <T> T get(final String name,
                          final Converter<? extends T> converter,
@@ -1786,16 +1699,84 @@ public class Settings {
                   final BiFunction<? super String, ? super Set<? extends Annotation>, ? extends String> defaultValueFunction) {
     Objects.requireNonNull(name);
     Objects.requireNonNull(converter);
-    final Value value =
+    Value value =
       this.getValue(name,
                     qualifiers,
                     elContext,
                     expressionFactory,
                     defaultValueFunction);
+
+    final String stringToInterpolate;
+    if (value == null) {
+      if (defaultValueFunction == null) {
+        // There was no value that came up.  There's also no way to
+        // get a default one.  So the value is missing.
+        throw new NoSuchElementException(name + " (" + qualifiers + ")");
+      } else {
+        stringToInterpolate = defaultValueFunction.apply(name, qualifiers);
+      }
+    } else {
+      stringToInterpolate = value.get();
+    }
+    final String interpolatedString = this.interpolate(stringToInterpolate, elContext, expressionFactory, qualifiers);
+    if (value == null) {
+      value = new Value(null /* no Source; we synthesized this Value */, name, qualifiers, interpolatedString);
+    } else {
+      value = new Value(value, interpolatedString);
+    }
     return converter.convert(value);
   }
 
   //----------------------------------------------------------------------------
+
+  /**
+   * Implements the {@link Source#getValue(String, Set)} method so
+   * that this {@link Settings} can be conveniently used as a {@link
+   * Source} from a higher-order {@link Settings}.
+   *
+   * <p>End users should never need to call this method directly.</p>
+   *
+   * @param name the name of the setting for which a value is to be
+   * returned; must not be {@code null}
+   *
+   * @param qualifiers a {@link Set} of {@link Annotation}s to further
+   * qualify the selection of the value to be returned; may be {@code
+   * null}; if non-{@code null} then this parameter value must be safe
+   * for concurrent iteration by multiple threads
+   *
+   * @return a suitable {@link Value}, or {@code null} if no {@link
+   * Value} could be created or acquired
+   *
+   * @exception NullPointerException if {@code name} is {@code null}
+   *
+   * @exception ValueAcquisitionException if there was a procedural
+   * problem acquiring a {@link Value}
+   *
+   * @nullability This method may return {@code null}.
+   *
+   * @idempotency This method may not be idempotent.  That is, two
+   * invocations supplied with the same {@code name} and {@code
+   * qualifiers} parameter values may or may not return {@link Value}s
+   * that are identical, {@linkplain Object#equals(Object) equal} or
+   * neither.
+   *
+   * @threadsafety This method is safe for concurrent use by multiple
+   * threads.
+   *
+   * @see Source#getValue(String, Set)
+   */
+  @Experimental
+  @Override
+  public final Value getValue(final String name, final Set<Annotation> qualifiers) {
+    final ExpressionFactory expressionFactory = ExpressionFactory.newInstance();
+    final StandardELContext elContext = new StandardELContext(expressionFactory);
+    elContext.addELResolver(new SourceELResolver(this, expressionFactory, qualifiers));
+    try {
+      return this.getValue(name, qualifiers, elContext, expressionFactory, NULL);
+    } catch (final AmbiguousValuesException ambiguousValuesException) {
+      throw new ValueAcquisitionException(ambiguousValuesException.getMessage(), ambiguousValuesException);
+    }
+  }
 
   private final Value getValue(final String name,
                                Set<Annotation> qualifiers,
@@ -1829,7 +1810,7 @@ public class Settings {
     final Set<? extends Source> sources = this.sourcesFunction.apply(name, qualifiers);
     if (sources != null) {
       for (final Source source : sources) {
-        if (source != null) {
+        if (source != null && source != this) {
 
           final Value value = source.getValue(name, qualifiers);
 
@@ -2047,28 +2028,11 @@ public class Settings {
         }
       }
     }
-    valuesToArbitrate = null;
 
-    final String stringToInterpolate;
-    if (selectedValue == null) {
-      if (defaultValueFunction == null) {
-        // There was no value that came up.  There's also no way to
-        // get a default one.  So the value is missing.
-        throw new NoSuchElementException(name + " (" + qualifiers + ")");
-      } else {
-        stringToInterpolate = defaultValueFunction.apply(name, qualifiers);
-      }
-    } else {
-      stringToInterpolate = selectedValue.get();
-    }
-    final String interpolatedString = this.interpolate(stringToInterpolate, elContext, expressionFactory, qualifiers);
-    if (selectedValue == null) {
-      selectedValue = new Value(null /* no Source; we synthesized this Value */, name, qualifiers, interpolatedString);
-    } else {
-      selectedValue = new Value(selectedValue, interpolatedString);
-    }
     return selectedValue;
   }
+
+  //----------------------------------------------------------------------------
 
   /**
    * Configures the supplied Java Bean by {@linkplain #get(String,
@@ -3043,6 +3007,8 @@ public class Settings {
     }
   }
 
+  //----------------------------------------------------------------------------
+  
   /**
    * Performs <em>value arbitration</em> on a {@link Collection} of
    * {@link Value}s that this {@link Settings} instance determined
@@ -3165,7 +3131,13 @@ public class Settings {
    * @see Source#getValue(String, Set)
    */
   protected Value getValue(final Source source, final String name, final Set<Annotation> qualifiers) {
-    return source.getValue(name, qualifiers);
+    final Value returnValue;
+    if (source == this) {
+      returnValue = null;
+    } else {
+      returnValue = source.getValue(name, qualifiers);
+    }
+    return returnValue;
   }
 
   /**
