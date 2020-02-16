@@ -9,7 +9,7 @@
   <parent>
     <groupId>org.microbean</groupId>
     <artifactId>microbean-pluginmanagement-pom</artifactId>
-    <version>14</version>
+    <version>17</version>
     <relativePath />
   </parent>
 
@@ -247,35 +247,6 @@
   </dependencies>
 
   <build>
-
-    <pluginManagement>
-      <plugins>
-
-        <plugin>
-          <artifactId>maven-javadoc-plugin</artifactId>
-          <configuration>
-            <tags>
-              <tag>
-                <name>idempotency</name>
-                <placement>m</placement>
-                <head>Idempotency:</head>
-              </tag>
-              <tag>
-                <name>nullability</name>
-                <placement>cfm</placement>
-                <head>Nullability:</head>
-              </tag>
-              <tag>
-                <name>threadsafety</name>
-                <placement>fmpt</placement>
-                <head>Thread Safety:</head>
-              </tag>
-            </tags>
-          </configuration>
-        </plugin>
-
-      </plugins>
-    </pluginManagement>
 
     <plugins>
 
