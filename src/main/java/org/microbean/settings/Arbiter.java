@@ -25,9 +25,10 @@ import java.util.Collections; // for javadoc only
 import java.util.Set;
 
 /**
- * Provides value arbitration services most commonly to a {@link
- * Settings} instance in cases where setting values would otherwise be
- * indistinguishable from one another.
+ * Provides <a href="{@docRoot}/overview-summary.html#ambiguity">value
+ * arbitration services</a> most commonly to a {@link Settings}
+ * instance in cases where {@linkplain Value setting values} would
+ * otherwise be indistinguishable from one another.
  *
  * @author <a href="https://about.me/lairdnelson"
  * target="_parent">Laird Nelson</a>

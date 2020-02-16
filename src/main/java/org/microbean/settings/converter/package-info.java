@@ -16,14 +16,11 @@
  */
 
 /**
- * Provides classes and interfaces that help with acquiring <a
- * href="{@docRoot}/overview-summary.html#setting">settings</a> from
- * <a href="https://jakarta.ee/specifications/cdi/2.0/apidocs/"
- * target="_parent">CDI</a>-based programs.
+ * Provides classes and interfaces that help with <a
+ * href="{@docRoot}/overview-summary.html#conversion">settings
+ * conversion</a>.
  *
  * @author <a href="https://about.me/lairdnelson"
  * target="_parent">Laird Nelson</a>
- *
- * @see org.microbean.settings.Settings
  */
-package org.microbean.settings;
+package org.microbean.settings.converter;

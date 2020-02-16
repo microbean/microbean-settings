@@ -31,7 +31,8 @@ import java.util.Set;
 import javax.enterprise.context.ApplicationScoped;
 
 /**
- * A simple {@link Arbiter} implementation that performs arbitration
+ * A simple {@link Arbiter} implementation that performs <a
+ * href="{@docRoot}/overview-summary.html#ambiguity">arbitration</a>
  * among {@link Value}s by selecting the {@link Value} whose
  * {@linkplain Value#getSource() affiliated <code>Source</code>}
  * appears first in the {@link Set} of {@link Source}s supplied to the
@@ -41,6 +42,8 @@ import javax.enterprise.context.ApplicationScoped;
  * target="_parent">Laird Nelson</a>
  *
  * @see #arbitrate(Set, String, Set, Collection)
+ *
+ * @see Arbiter
  */
 @ApplicationScoped
 public class SourceOrderArbiter extends Arbiter {

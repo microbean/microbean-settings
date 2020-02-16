@@ -38,10 +38,12 @@ import javax.enterprise.util.Nonbinding;
 import javax.inject.Qualifier;
 
 /**
- * A {@link Qualifier} indicating that the annotated element should be
- * provided via a {@link Settings}-originated value acquisition
- * operation, such as {@link Settings#get(String, Set, Converter,
- * BiFunction)}.
+ * A {@linkplain Qualifier CDI <code>Qualifier</code>} indicating that
+ * the annotated element should be provided via a {@link
+ * Settings}-originated <a
+ * href="{@docRoot}/overview-summary.html#setting_value_acquisition">value
+ * acquisition operation</a>, such as {@link Settings#get(String, Set,
+ * Converter, BiFunction)}.
  *
  * @author <a href="https://about.me/lairdnelson"
  * target="_parent">Laird Nelson</a>
@@ -62,7 +64,8 @@ public @interface Setting {
 
   /**
    * A value indicating {@code null} for use in annotation elements,
-   * since annotation elements cannot return {@code null}.
+   * since annotation elements cannot return or be set to {@code
+   * null}.
    *
    * @see #defaultValue()
    */

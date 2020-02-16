@@ -26,10 +26,13 @@ import java.util.Set;
 import java.util.function.Supplier;
 
 /**
- * A {@link Supplier} of {@link String}s and hence an abstraction of
- * a {@link String}-typed configuration value, additionally
- * encompassing the configuration setting for which it is applicable
- * and the {@link Source} whence it originated.
+ * A {@link Supplier} of {@link String}s and hence an abstraction of a
+ * (definitionally) {@link String}-typed <a
+ * href="{@docRoot}/overview-summary.html#setting_value">setting
+ * value</a>, additionally encompassing the <a
+ * href="{@docRoot}/overview-summary.html#setting_name">setting
+ * name</a> for which it is applicable and the {@link Source} whence
+ * it originated.
  *
  * @author <a href="https://about.me/lairdnelson"
  * target="_parent">Laird Nelson</a>
@@ -130,10 +133,13 @@ public class Value implements Supplier<String> {
    * may be {@code null} to indicate that the {@link Value} was
    * synthesized
    *
-   * @param name the name of the setting for which this is a {@link
-   * Value}; must not be {@code null}
+   * @param name the <a
+   * href="{@docRoot}/overview-summary.html#setting_name">name of the
+   * setting</a> for which this is a {@link Value}; must not be {@code
+   * null}
    *
-   * @param qualifiers a {@link Set} of {@link Annotation}s qualifying
+   * @param qualifiers a {@link Set} of {@link Annotation}s <a
+   * href="{@docRoot}/overview-summary.html#qualifiers">qualifying</a>
    * this {@link Value}; may be {@code null}; will be iterated over by
    * this constructor without any extra synchronization; will be
    * copied shallowly by this constructor if it is non-{@code null}
@@ -157,10 +163,13 @@ public class Value implements Supplier<String> {
    * may be {@code null} to indicate that the {@link Value} was
    * synthesized
    *
-   * @param name the name of the setting for which this is a {@link
-   * Value}; must not be {@code null}
+   * @param name the <a
+   * href="{@docRoot}/overview-summary.html#setting_name">name of the
+   * setting</a> for which this is a {@link Value}; must not be {@code
+   * null}
    *
-   * @param qualifiers a {@link Set} of {@link Annotation}s qualifying
+   * @param qualifiers a {@link Set} of {@link Annotation}s <a
+   * href="{@docRoot}/overview-summary.html#qualifiers">qualifying</a>
    * this {@link Value}; may be {@code null}; will be iterated over by
    * this constructor without any extra synchronization; will be
    * copied shallowly by this constructor if it is non-{@code null}
@@ -187,10 +196,13 @@ public class Value implements Supplier<String> {
    * may be {@code null} to indicate that the {@link Value} was
    * synthesized
    *
-   * @param name the name of the setting for which this is a {@link
-   * Value}; must not be {@code null}
+   * @param name the <a
+   * href="{@docRoot}/overview-summary.html#setting_name">name of the
+   * setting</a> for which this is a {@link Value}; must not be {@code
+   * null}
    *
-   * @param qualifiers a {@link Set} of {@link Annotation}s qualifying
+   * @param qualifiers a {@link Set} of {@link Annotation}s <a
+   * href="{@docRoot}/overview-summary.html#qualifiers">qualifying</a>
    * this {@link Value}; may be {@code null}; will be iterated over by
    * this constructor without any extra synchronization; will be
    * copied shallowly by this constructor if it is non-{@code null}
@@ -218,10 +230,13 @@ public class Value implements Supplier<String> {
    * may be {@code null} to indicate that the {@link Value} was
    * synthesized
    *
-   * @param name the name of the setting for which this is a {@link
-   * Value}; must not be {@code null}
+   * @param name the <a
+   * href="{@docRoot}/overview-summary.html#setting_name">name of the
+   * setting</a> for which this is a {@link Value}; must not be {@code
+   * null}
    *
-   * @param qualifiers a {@link Set} of {@link Annotation}s qualifying
+   * @param qualifiers a {@link Set} of {@link Annotation}s <a
+   * href="{@docRoot}/overview-summary.html#qualifiers">qualifying</a>
    * this {@link Value}; may be {@code null}; will be iterated over by
    * this constructor without any extra synchronization; will be
    * copied shallowly by this constructor if it is non-{@code null}
@@ -319,10 +334,13 @@ public class Value implements Supplier<String> {
   }
 
   /**
-   * Returns the name of the setting for which this is a {@link Value}.
+   * Returns the <a
+   * href="{@docRoot}/overview-summary.html#setting_name">name of the
+   * setting</a> for which this is a {@link Value}.
    *
-   * @return the name of the setting for which this is a {@link
-   * Value}; never {@code null}
+   * @return the <a
+   * href="{@docRoot}/overview-summary.html#setting_name">name of the
+   * setting</a> for which this is a {@link Value}; never {@code null}
    *
    * @nullability This method never returns {@code null}.
    *
@@ -338,11 +356,15 @@ public class Value implements Supplier<String> {
   /**
    * Returns a non-{@code null}, {@linkplain
    * Collections#unmodifiableSet(Set) unmodifiable <code>Set</code>}
-   * of {@link Annotation}s qualifying this {@link Value}.
+   * of {@link Annotation}s <a
+   * href="{@docRoot}/overview-summary.html#qualifiers">qualifying</a>
+   * this {@link Value}.
    *
    * @return a non-{@code null}, {@linkplain
    * Collections#unmodifiableSet(Set) unmodifiable <code>Set</code>}
-   * of {@link Annotation}s qualifying this {@link Value}
+   * of {@link Annotation}s <a
+   * href="{@docRoot}/overview-summary.html#qualifiers">qualifying</a>
+   * this {@link Value}
    *
    * @nullability This method never returns {@code null}.
    *
