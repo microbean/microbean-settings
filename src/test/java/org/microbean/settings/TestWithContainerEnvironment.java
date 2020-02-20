@@ -84,13 +84,7 @@ public class TestWithContainerEnvironment {
     final Settings settings = new Settings((name, qualifiers) -> Collections.singleton(new SystemPropertiesSource()),
                                            new Converters(),
                                            null);
-    final String javaHome =
-      settings.get("java.home",
-                   Collections.emptySet(),
-                   String.class,
-                   null);
-    assertEquals(System.getProperty("java.home"), javaHome);
-                        
+    assertEquals(System.getProperty("java.home"), settings.get("java.home"));
   }
 
 }

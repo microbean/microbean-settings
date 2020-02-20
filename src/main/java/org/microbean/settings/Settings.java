@@ -352,9 +352,71 @@ public class Settings extends Source {
     return this.get(name,
                     this.qualifiers,
                     this.converterProvider.getConverter(String.class),
-                    null);
+                    (BiFunction<? super String, ? super Set<? extends Annotation>, ? extends String>)null);
   }
 
+  /**
+   * Returns a suitable {@link String} value for a <a
+   * href="{@docRoot}/overview-summary.html#setting_name">setting
+   * name</a>d by the supplied {@code name} and with default value
+   * semantics implemented by the optional supplied {@code
+   * defaultValueFunction}.
+   *
+   * @param name the name of the setting for which a value is to be
+   * returned; must not be {@code null}
+   *
+   * @param defaultValue a {@link String} representation of the
+   * default value to be used in case <a
+   * href="{@docRoot}/overview-summary.html#setting_value_acquisition">setting
+   * value acquisition</a> does not yield a value; may be {@code null}
+   *
+   * @return a suitable value (possibly {@code null})
+   *
+   * @exception NullPointerException if {@code name} is {@code null}
+   *
+   * @exception NoSuchElementException if {@code defaultValueFunction}
+   * was {@code null} and no value could be sourced
+   *
+   * @exception ValueAcquisitionException if there was a procedural
+   * problem acquiring a value
+   *
+   * @exception ArbitrationException if there was a problem performing
+   * value arbitration
+   *
+   * @exception AmbiguousValuesException if arbitration completed but
+   * could not resolve an ambiguity between potential return values
+   *
+   * @exception MalformedValuesException if the {@link
+   * #handleMalformedValues(String, Set, Collection)} method was
+   * overridden and the override throws a {@link
+   * MalformedValuesException}
+   *
+   * @exception ELException if there was an error related to
+   * expression language parsing or evaluation
+   *
+   * @exception ConcurrentModificationException if the {@link
+   * BiFunction} or {@link Iterable} supplied at {@linkplain
+   * #Settings(Set, BiFunction, ConverterProvider, Iterable)
+   * construction time} throws one
+   *
+   * @threadsafety This method is and its overrides must be safe for
+   * concurrent use by multiple threads.
+   *
+   * @idempotency No guarantees of any kind are made with respect to
+   * the idempotency of this method or its overrides.
+   *
+   * @nullability This method may return {@code null}.
+   *
+   * @see #get(String, Set, Converter, BiFunction)
+   */
+  public final String get(final String name,
+                          final String defaultValue) {
+    return this.get(name,
+                    this.qualifiers,
+                    this.converterProvider.getConverter(String.class),
+                    (n, qs) -> defaultValue);
+  }
+  
   /**
    * Returns a suitable {@link String} value for a <a
    * href="{@docRoot}/overview-summary.html#setting_name">setting
@@ -480,7 +542,77 @@ public class Settings extends Source {
     return this.get(name,
                     qualifiers,
                     this.converterProvider.getConverter(String.class),
-                    null);
+                    (BiFunction<? super String, ? super Set<? extends Annotation>, ? extends String>)null);
+  }
+
+    /**
+   * Returns a suitable {@link String} value for a <a
+   * href="{@docRoot}/overview-summary.html#setting_name">setting
+   * name</a>d by the supplied {@code name} and <a
+   * href="{@docRoot}/overview-summary.html#qualifiers">qualified
+   * with</a> the supplied {@code qualifiers} and with default value
+   * semantics implemented by the optional supplied {@code
+   * defaultValueFunction}.
+   *
+   * @param name the name of the setting for which a value is to be
+   * returned; must not be {@code null}
+   *
+   * @param qualifiers a {@link Set} of {@link Annotation}s to further
+   * qualify the selection of the value to be returned; may be {@code
+   * null}; if non-{@code null} then this parameter value must be safe
+   * for concurrent iteration by multiple threads
+   *
+   * @param defaultValue a {@link String} representation of the
+   * default value to be used in case <a
+   * href="{@docRoot}/overview-summary.html#setting_value_acquisition">setting
+   * value acquisition</a> does not yield a value; may be {@code null}
+   *
+   * @return a suitable value (possibly {@code null})
+   *
+   * @exception NullPointerException if {@code name} is {@code null}
+   *
+   * @exception NoSuchElementException if {@code defaultValueFunction}
+   * was {@code null} and no value could be sourced
+   *
+   * @exception ValueAcquisitionException if there was a procedural
+   * problem acquiring a value
+   *
+   * @exception ArbitrationException if there was a problem performing
+   * value arbitration
+   *
+   * @exception AmbiguousValuesException if arbitration completed but
+   * could not resolve an ambiguity between potential return values
+   *
+   * @exception MalformedValuesException if the {@link
+   * #handleMalformedValues(String, Set, Collection)} method was
+   * overridden and the override throws a {@link
+   * MalformedValuesException}
+   *
+   * @exception ELException if there was an error related to
+   * expression language parsing or evaluation
+   *
+   * @exception ConcurrentModificationException if the {@link
+   * BiFunction} or {@link Iterable} supplied at {@linkplain
+   * #Settings(Set, BiFunction, ConverterProvider, Iterable)
+   * construction time} throws one
+   *
+   * @threadsafety This method is and its overrides must be safe for
+   * concurrent use by multiple threads.
+   *
+   * @idempotency No guarantees of any kind are made with respect to
+   * the idempotency of this method or its overrides.
+   *
+   * @nullability This method may return {@code null}.
+   *
+   * @see #get(String, Set, Converter, BiFunction)
+   */
+  public final String get(final String name,
+                          final Set<Annotation> qualifiers,
+                          final String defaultValue) {
+    return this.get(name,
+                    qualifiers,
+                    this.converterProvider.getConverter(String.class),
+                    (n, qs) -> defaultValue);
   }
 
   /**
@@ -630,9 +762,91 @@ public class Settings extends Source {
     return this.get(name,
                     this.qualifiers,
                     this.converterProvider.getConverter(type),
-                    null);
+                    (BiFunction<? super String, ? super Set<? extends Annotation>, ? extends String>)null);
   }
 
+/**
+   * Returns a suitable value for a <a
+   * href="{@docRoot}/overview-summary.html#setting_name">setting
+   * name</a>d by the supplied {@code name} as {@linkplain
+   * Converter#convert(Value) converted} by the {@link Converter}
+   * {@linkplain ConverterProvider#getConverter(Class) located} using
+   * the supplied {@link Class}, and with default value semantics
+   * implemented by the optional supplied {@code
+   * defaultValueFunction}.
+   *
+   * @param <T> the type to which any value should be {@linkplain
+   * Converter#convert(Value) converted}
+   *
+   * @param name the name of the setting for which a value is to be
+   * returned; must not be {@code null}
+   *
+   * @param type a {@link Class} used to {@linkplain
+   * ConverterProvider#getConverter(Class) locate} an appropriate
+   * {@link Converter}; must not be {@code null}
+   *
+   * @param defaultValue a {@link String} representation of the
+   * default value to be used in case <a
+   * href="{@docRoot}/overview-summary.html#setting_value_acquisition">setting
+   * value acquisition</a> does not yield a value; may be {@code null}
+   *
+   * @return a suitable value (possibly {@code null})
+   *
+   * @exception NullPointerException if either {@code name} or {@code
+   * class} is {@code null}
+   *
+   * @exception IllegalArgumentException if {@linkplain
+   * Converter#convert(Value) conversion} could not occur for any
+   * reason; see {@link Converter#convert(Value)}
+   *
+   * @exception ConversionException if {@linkplain
+   * Converter#convert(Value) conversion} could not occur for any
+   * reason other than bad inputs
+   *
+   * @exception NoSuchElementException if {@code defaultValueFunction}
+   * was {@code null} and no value could be sourced
+   *
+   * @exception ValueAcquisitionException if there was a procedural
+   * problem acquiring a value
+   *
+   * @exception ArbitrationException if there was a problem performing
+   * value arbitration
+   *
+   * @exception AmbiguousValuesException if arbitration completed but
+   * could not resolve an ambiguity between potential return values
+   *
+   * @exception MalformedValuesException if the {@link
+   * #handleMalformedValues(String, Set, Collection)} method was
+   * overridden and the override throws a {@link
+   * MalformedValuesException}
+   *
+   * @exception ELException if there was an error related to
+   * expression language parsing or evaluation
+   *
+   * @exception ConcurrentModificationException if the {@link
+   * BiFunction} or {@link Iterable} supplied at {@linkplain
+   * #Settings(Set, BiFunction, ConverterProvider, Iterable)
+   * construction time} throws one
+   *
+   * @threadsafety This method is and its overrides must be safe for
+   * concurrent use by multiple threads.
+   *
+   * @idempotency No guarantees of any kind are made with respect to
+   * the idempotency of this method or its overrides.
+   *
+   * @nullability This method may return {@code null}.
+   *
+   * @see #get(String, Set, Converter, BiFunction)
+   */
+  public final <T> T get(final String name,
+                         final Class<T> type,
+                         final String defaultValue) {
+    return this.get(name,
+                    this.qualifiers,
+                    this.converterProvider.getConverter(type),
+                    (n, qs) -> defaultValue);
+  }
+  
   /**
    * Returns a suitable value for a <a
    * href="{@docRoot}/overview-summary.html#setting_name">setting
@@ -720,6 +934,96 @@ public class Settings extends Source {
                     defaultValueFunction);
   }
 
+  /**
+   * Returns a suitable value for a <a
+   * href="{@docRoot}/overview-summary.html#setting_name">setting
+   * name</a>d by the supplied {@code name} and <a
+   * href="{@docRoot}/overview-summary.html#qualifiers">qualified
+   * with</a> the supplied {@code qualifiers}, as {@linkplain
+   * Converter#convert(Value) converted} by the {@link Converter}
+   * {@linkplain ConverterProvider#getConverter(Class) located} using
+   * the supplied {@link Class}, and with default value semantics
+   * implemented by the optional supplied {@code
+   * defaultValueFunction}.
+   *
+   * @param <T> the type to which any value should be {@linkplain
+   * Converter#convert(Value) converted}
+   *
+   * @param name the name of the setting for which a value is to be
+   * returned; must not be {@code null}
+   *
+   * @param qualifiers a {@link Set} of {@link Annotation}s to further
+   * qualify the selection of the value to be returned; may be {@code
+   * null}; if non-{@code null} then this parameter value must be safe
+   * for concurrent iteration by multiple threads
+   *
+   * @param type a {@link Class} used to {@linkplain
+   * ConverterProvider#getConverter(Class) locate} an appropriate
+   * {@link Converter}; must not be {@code null}
+   *
+   * @param defaultValue a {@link String} representation of the
+   * default value to be used in case <a
+   * href="{@docRoot}/overview-summary.html#setting_value_acquisition">setting
+   * value acquisition</a> does not yield a value; may be {@code null}
+   *
+   * @return a suitable value (possibly {@code null})
+   *
+   * @exception NullPointerException if either {@code name} or {@code
+   * type} is {@code null}
+   *
+   * @exception IllegalArgumentException if {@linkplain
+   * Converter#convert(Value) conversion} could not occur for any
+   * reason; see {@link Converter#convert(Value)}
+   *
+   * @exception ConversionException if {@linkplain
+   * Converter#convert(Value) conversion} could not occur for any
+   * reason other than bad inputs
+   *
+   * @exception NoSuchElementException if {@code defaultValueFunction}
+   * was {@code null} and no value could be sourced
+   *
+   * @exception ValueAcquisitionException if there was a procedural
+   * problem acquiring a value
+   *
+   * @exception ArbitrationException if there was a problem performing
+   * value arbitration
+   *
+   * @exception AmbiguousValuesException if arbitration completed but
+   * could not resolve an ambiguity between potential return values
+   *
+   * @exception MalformedValuesException if the {@link
+   * #handleMalformedValues(String, Set, Collection)} method was
+   * overridden and the override throws a {@link
+   * MalformedValuesException}
+   *
+   * @exception ELException if there was an error related to
+   * expression language parsing or evaluation
+   *
+   * @exception ConcurrentModificationException if the {@link
+   * BiFunction} or {@link Iterable} supplied at {@linkplain
+   * #Settings(Set, BiFunction, ConverterProvider, Iterable)
+   * construction time} throws one
+   *
+   * @threadsafety This method is and its overrides must be safe for
+   * concurrent use by multiple threads.
+   *
+   * @idempotency No guarantees of any kind are made with respect to
+   * the idempotency of this method or its overrides.
+   *
+   * @nullability This method may return {@code null}.
+   *
+   * @see #get(String, Set, Converter, BiFunction)
+   */
+  public final <T> T get(final String name,
+                         final Set<Annotation> qualifiers,
+                         final Class<T> type,
+                         final String defaultValue) {
+    return this.get(name,
+                    qualifiers,
+                    this.converterProvider.getConverter(type),
+                    (n, qs) -> defaultValue);
+  }
+  
   /**
    * Returns a suitable value for a <a
    * href="{@docRoot}/overview-summary.html#setting_name">setting
@@ -887,7 +1191,89 @@ public class Settings extends Source {
     return this.get(name,
                     this.qualifiers,
                     this.converterProvider.getConverter(typeLiteral),
-                    null);
+                    (BiFunction<? super String, ? super Set<? extends Annotation>, ? extends String>)null);
+  }
+
+  /**
+   * Returns a suitable value for a <a
+   * href="{@docRoot}/overview-summary.html#setting_name">setting
+   * name</a>d by the supplied {@code name} as {@linkplain
+   * Converter#convert(Value) converted} by the {@link Converter}
+   * {@linkplain ConverterProvider#getConverter(TypeLiteral) located}
+   * using the supplied {@link TypeLiteral}, and with default value
+   * semantics implemented by the optional supplied {@code
+   * defaultValueFunction}.
+   *
+   * @param <T> the type to which any value should be {@linkplain
+   * Converter#convert(Value) converted}
+   *
+   * @param name the name of the setting for which a value is to be
+   * returned; must not be {@code null}
+   *
+   * @param typeLiteral a {@link TypeLiteral} used to {@linkplain
+   * ConverterProvider#getConverter(TypeLiteral) locate} an
+   * appropriate {@link Converter}; must not be {@code null}
+   *
+   * @param defaultValue a {@link String} representation of the
+   * default value to be used in case <a
+   * href="{@docRoot}/overview-summary.html#setting_value_acquisition">setting
+   * value acquisition</a> does not yield a value; may be {@code null}
+   *
+   * @return a suitable value (possibly {@code null})
+   *
+   * @exception NullPointerException if either {@code name} or {@code
+   * typeLiteral} is {@code null}
+   *
+   * @exception IllegalArgumentException if {@linkplain
+   * Converter#convert(Value) conversion} could not occur for any
+   * reason; see {@link Converter#convert(Value)}
+   *
+   * @exception ConversionException if {@linkplain
+   * Converter#convert(Value) conversion} could not occur for any
+   * reason other than bad inputs
+   *
+   * @exception NoSuchElementException if {@code defaultValueFunction}
+   * was {@code null} and no value could be sourced
+   *
+   * @exception ValueAcquisitionException if there was a procedural
+   * problem acquiring a value
+   *
+   * @exception ArbitrationException if there was a problem performing
+   * value arbitration
+   *
+   * @exception AmbiguousValuesException if arbitration completed but
+   * could not resolve an ambiguity between potential return values
+   *
+   * @exception MalformedValuesException if the {@link
+   * #handleMalformedValues(String, Set, Collection)} method was
+   * overridden and the override throws a {@link
+   * MalformedValuesException}
+   *
+   * @exception ELException if there was an error related to
+   * expression language parsing or evaluation
+   *
+   * @exception ConcurrentModificationException if the {@link
+   * BiFunction} or {@link Iterable} supplied at {@linkplain
+   * #Settings(Set, BiFunction, ConverterProvider, Iterable)
+   * construction time} throws one
+   *
+   * @threadsafety This method is and its overrides must be safe for
+   * concurrent use by multiple threads.
+   *
+   * @idempotency No guarantees of any kind are made with respect to
+   * the idempotency of this method or its overrides.
+   *
+   * @nullability This method may return {@code null}.
+   *
+   * @see #get(String, Set, Converter, BiFunction)
+   */
+  public final <T> T get(final String name,
+                         final TypeLiteral<T> typeLiteral,
+                         final String defaultValue) {
+    return this.get(name,
+                    this.qualifiers,
+                    this.converterProvider.getConverter(typeLiteral),
+                    (n, qs) -> defaultValue);
   }
 
   /**
@@ -1141,7 +1527,7 @@ public class Settings extends Source {
     return this.get(name,
                     this.qualifiers,
                     this.converterProvider.getConverter(type),
-                    null);
+                    (BiFunction<? super String, ? super Set<? extends Annotation>, ? extends String>)null);
   }
 
   /**
@@ -1219,7 +1605,7 @@ public class Settings extends Source {
     return this.get(name,
                     qualifiers,
                     this.converterProvider.getConverter(type),
-                    null);
+                    (BiFunction<? super String, ? super Set<? extends Annotation>, ? extends String>)null);
   }
 
   /**
@@ -1473,7 +1859,7 @@ public class Settings extends Source {
     return this.get(name,
                     this.qualifiers,
                     converter,
-                    null);
+                    (BiFunction<? super String, ? super Set<? extends Annotation>, ? extends String>)null);
   }
 
   /**
@@ -1557,7 +1943,7 @@ public class Settings extends Source {
     return this.get(name,
                     qualifiers,
                     converter,
-                    null);
+                    (BiFunction<? super String, ? super Set<? extends Annotation>, ? extends String>)null);
   }
 
   /**
@@ -1647,6 +2033,93 @@ public class Settings extends Source {
                     this.qualifiers,
                     converter,
                     defaultValueFunction);
+  }
+
+  /**
+   * Returns a suitable value for a <a
+   * href="{@docRoot}/overview-summary.html#setting_name">setting
+   * name</a>d by the supplied {@code name} and <a
+   * href="{@docRoot}/overview-summary.html#qualifiers">qualified
+   * with</a> the supplied {@code qualifiers}, as {@linkplain
+   * Converter#convert(Value) converted} by the supplied {@link
+   * Converter} and with default value semantics implemented by the
+   * optional supplied {@code defaultValueFunction}.
+   *
+   * @param <T> the type to which any value should be {@linkplain
+   * Converter#convert(Value) converted}
+   *
+   * @param name the name of the setting for which a value is to be
+   * returned; must not be {@code null}
+   *
+   * @param qualifiers a {@link Set} of {@link Annotation}s to further
+   * qualify the selection of the value to be returned; may be {@code
+   * null}; if non-{@code null} then this parameter value must be safe
+   * for concurrent iteration by multiple threads
+   *
+   * @param converter a {@link Converter} used to {@linkplain
+   * Converter#convert(Value) convert} a {@link String} value into a
+   * <a href="{@docRoot}/overview-summary.html#setting_value">setting
+   * value</a> of the appropriate type; must not be {@code null}; must
+   * either be safe for concurrent use by multiple threads or created
+   * specially for this method invocation or supplied in a context
+   * where it is known that only one thread is executing at a time
+   *
+   * @param defaultValue a {@link String} representation of the
+   * default value to be used in case <a
+   * href="{@docRoot}/overview-summary.html#setting_value_acquisition">setting
+   * value acquisition</a> does not yield a value; may be {@code null}
+   *
+   * @return a suitable value (possibly {@code null})
+   *
+   * @exception NullPointerException if either {@code name} or {@code
+   * converter} is {@code null}
+   *
+   * @exception IllegalArgumentException if {@linkplain
+   * Converter#convert(Value) conversion} could not occur for any
+   * reason; see {@link Converter#convert(Value)}
+   *
+   * @exception ConversionException if {@linkplain
+   * Converter#convert(Value) conversion} could not occur for any reason
+   * other than bad inputs
+   *
+   * @exception NoSuchElementException if {@code defaultValueFunction}
+   * was {@code null} and no value could be sourced
+   *
+   * @exception ValueAcquisitionException if there was a procedural
+   * problem acquiring a value
+   *
+   * @exception ArbitrationException if there was a problem performing
+   * value arbitration
+   *
+   * @exception AmbiguousValuesException if arbitration completed but
+   * could not resolve an ambiguity between potential return values
+   *
+   * @exception MalformedValuesException if the {@link
+   * #handleMalformedValues(String, Set, Collection)} method was
+   * overridden and the override throws a {@link
+   * MalformedValuesException}
+   *
+   * @exception ELException if there was an error related to
+   * expression language parsing or evaluation
+   *
+   * @exception ConcurrentModificationException if the {@link
+   * BiFunction} or {@link Iterable} supplied at {@linkplain
+   * #Settings(Set, BiFunction, ConverterProvider, Iterable)
+   * construction time} throws one
+   *
+   * @threadsafety This method is safe for concurrent use by multiple
+   * threads.
+   *
+   * @idempotency No guarantees of any kind are made with respect to
+   * the idempotency of this method.
+   *
+   * @nullability This method may return {@code null}.
+   */
+  public final <T> T get(final String name,
+                         final Set<Annotation> qualifiers,
+                         final Converter<? extends T> converter,
+                         final String defaultValue) {
+    return this.get(name, qualifiers, converter, (n, qs) -> defaultValue);
   }
 
   /**
