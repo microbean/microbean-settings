@@ -28,6 +28,7 @@
 
   <modules>
     <module>microbean-settings-api</module>
+    <module>microbean-settings-proxy-api</module>
   </modules>
   
   <dependencyManagement>
@@ -74,6 +75,19 @@
         <type>jar</type>
       </dependency>
 
+      <dependency>
+        <groupId>${project.groupId}</groupId>
+        <artifactId>microbean-settings-api</artifactId>
+        <version>${project.version}</version>
+        <type>jar</type>
+      </dependency>
+
+      <dependency>
+        <groupId>${project.groupId}</groupId>
+        <artifactId>microbean-settings-proxy-api</artifactId>
+        <version>${project.version}</version>
+        <type>jar</type>
+      </dependency>
 
     </dependencies>
   </dependencyManagement>

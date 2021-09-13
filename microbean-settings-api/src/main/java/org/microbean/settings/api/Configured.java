@@ -26,10 +26,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.ServiceLoader;
+import java.util.Set;
 
 import java.util.function.Supplier;
 
-public abstract class Configured<T, C extends Coordinates> {
+public abstract class Configured<T> {
 
 
   /*
@@ -39,11 +40,7 @@ public abstract class Configured<T, C extends Coordinates> {
 
   private static final ClassValue<Type> targetTypeExtractor = new TypeArgumentExtractor(Configured.class, 0);
 
-  private static final ClassValue<Type> coordinatesTypeExtractor = new TypeArgumentExtractor(Configured.class, 1);
-
-  private static final Map<Key, List<Configured<?, ?>>> cache;
-
-  private static final Coordinates coordinates;
+  private static final Map<Key, List<Configured<?>>> cache;
 
 
   /*
@@ -54,12 +51,11 @@ public abstract class Configured<T, C extends Coordinates> {
   static {
     @SuppressWarnings("rawtypes")
     final ServiceLoader<Configured> configureds = ServiceLoader.load(Configured.class);
-    final Map<Key, List<Configured<?, ?>>> map = new HashMap<>();
-    for (final Configured<?, ?> configured : configureds) {
+    final Map<Key, List<Configured<?>>> map = new HashMap<>();
+    for (final Configured<?> configured : configureds) {
       map.computeIfAbsent(new Key(configured), k -> new ArrayList<>()).add(configured);
     }
     cache = Collections.unmodifiableMap(map);
-    coordinates = ServiceLoader.load(Coordinates.class).findFirst().orElse(SystemPropertiesCoordinates.INSTANCE);
   }
 
 
@@ -112,11 +108,7 @@ public abstract class Configured<T, C extends Coordinates> {
     return targetTypeExtractor.get(this.getClass());
   }
 
-  protected final Type coordinatesType() {
-    return coordinatesTypeExtractor.get(this.getClass());
-  }
-
-  public abstract T get(final C coordinates);
+  public abstract T get(final Set<?> qualifiers);
 
   @Override // Object
   public final int hashCode() {
@@ -130,7 +122,7 @@ public abstract class Configured<T, C extends Coordinates> {
     } else if (other == null) {
       return false;
     } else if (this.getClass().equals(other.getClass())) {
-      final Configured<?, ?> her = (Configured<?, ?>)other;
+      final Configured<?> her = (Configured<?>)other;
       return
         Objects.equals(this.targetType(), her.targetType()) &&
         Objects.equals(this.discriminator, her.discriminator);
@@ -146,30 +138,30 @@ public abstract class Configured<T, C extends Coordinates> {
 
 
   public static final <T> T get(final Type targetType) {
-    return get(targetType, coordinates, (String)null);
+    return get(targetType, Set.of(), (String)null);
   }
   
   public static final <T> T get(final Type targetType, final String discriminator) {
-    return get(targetType, coordinates, discriminator);
+    return get(targetType, Set.of(), discriminator);
   }
 
-  public static final <T, C extends Coordinates> T get(final Type targetType, final C coordinates, final String discriminator) {
-    final List<Configured<?, ?>> configured = cache.get(new Key(targetType, coordinates.coordinatesType(), discriminator));
+  public static final <T> T get(final Type targetType, final Set<?> qualifiers, final String discriminator) {
+    final List<Configured<?>> configured = cache.get(new Key(targetType, discriminator));
     if (configured == null || configured.isEmpty()) {
       return null;
     } else if (configured.size() == 1) {
       @SuppressWarnings("unchecked")
-      final Configured<T, C> returnValue = (Configured<T, C>)configured.get(0);
-      return returnValue.get(coordinates);
+      final Configured<T> returnValue = (Configured<T>)configured.get(0);
+      return returnValue.get(Set.copyOf(qualifiers));
     } else {
       throw new UnsupportedOperationException();
     }
   }
 
-  private static final record Key(Type targetType, Type coordinatesType, Object discriminator) {
+  private static final record Key(Type targetType, Object discriminator) {
 
-    private Key(final Configured<?, ?> c) {
-      this(c.targetType(), c.coordinatesType(), c.discriminator);
+    private Key(final Configured<?> c) {
+      this(c.targetType(), c.discriminator);
     }
     
   }

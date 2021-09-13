@@ -14,14 +14,11 @@
  * implied.  See the License for the specific language governing
  * permissions and limitations under the License.
  */
-package org.microbean.settings.api;
 
-import java.lang.reflect.Type;
-
-public interface Coordinates {
-
-  public default Type coordinatesType() {
-    return this.getClass();
-  }
-  
-}
+/**
+ * Provides classes and interfaces for making proxies.
+ *
+ * @author <a href="https://about.me/lairdnelson"
+ * target="_parent">Laird Nelson</a>
+ */
+package org.microbean.settings.proxy.api;

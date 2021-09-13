@@ -18,6 +18,8 @@ package org.microbean.settings.api;
 
 import java.net.URL;
 
+import java.util.Set;
+
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -32,26 +34,18 @@ public final class TestConfiguredDiscovery {
   final void testConfiguredDiscovery() {
     final Bar bar = Configured.get(Bar.class);
     assertNotNull(bar);
-    System.out.println(bar.getJavaHome());
   }
 
-  public static final class Foo extends Configured<Bar, SystemPropertiesCoordinates> {
+  public static final class Foo extends Configured<Bar> {
 
     @Override
-    public final Bar get(final SystemPropertiesCoordinates coordinates) {
-      return new Bar() {
-        @Override
-        public final String getJavaHome() {
-          return coordinates.get("java.home", String.class);
-        }
-      };
+    public final Bar get(final Set<?> qualifiers) {
+      return new Bar() {};
     }    
 
   }
 
   public static interface Bar {
-
-    public String getJavaHome();
     
   }
 
