@@ -79,7 +79,7 @@ public final class TestValueFunctions {
       new ConfiguredInfo<>(Map.of("getAge", () -> 42,
                                   "getName", () -> "Fred"));
     final Configuration c;
-    final Supplier<Configuration> s = ci.valueSupplier();
+    final Supplier<? extends Configuration> s = ci.valueSupplier();
     if (s == null) {
       c =
         (Configuration)Proxy.newProxyInstance(Thread.currentThread().getContextClassLoader(),

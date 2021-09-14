@@ -30,7 +30,7 @@ import java.util.Set;
 
 import java.util.function.Supplier;
 
-public abstract class Configured<T> {
+public abstract class Configured<T> implements Supplier<T> {
 
 
   /*
@@ -104,24 +104,33 @@ public abstract class Configured<T> {
     this.discriminator = discriminator;
   }
 
-  protected final Type targetType() {
+
+  /*
+   * Instance methods.
+   */
+  
+
+  private final Type targetType() {
     return targetTypeExtractor.get(this.getClass());
   }
 
+  @Override // Supplier<T>
+  public T get() {
+    return this.get(Set.of());
+  }
+  
   public abstract T get(final Set<?> qualifiers);
 
   @Override // Object
   public final int hashCode() {
-    return this.discriminator == null ? 0 : this.discriminator.hashCode();
+    return Objects.hash(this.targetType(), this.discriminator);
   }
 
   @Override // Object
   public final boolean equals(final Object other) {
     if (other == this) {
       return true;
-    } else if (other == null) {
-      return false;
-    } else if (this.getClass().equals(other.getClass())) {
+    } else if (other != null && this.getClass().equals(other.getClass())) {
       final Configured<?> her = (Configured<?>)other;
       return
         Objects.equals(this.targetType(), her.targetType()) &&

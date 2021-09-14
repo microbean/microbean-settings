@@ -21,6 +21,7 @@ import java.lang.invoke.MethodHandle;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.lang.reflect.Type;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -37,10 +38,20 @@ public class ConfiguredInfo<T> {
 
 
   /*
+   * Static fields.
+   */
+
+
+  private static final ClassValue<Type> targetTypeExtractor = new TypeArgumentExtractor(ConfiguredInfo.class, 0);
+
+
+  /*
    * Instance fields.
    */
 
-  
+
+  private final Supplier<? extends T> valueSupplier;
+
   private final Map<String, Supplier<?>> valueSuppliers;
 
 
@@ -48,9 +59,16 @@ public class ConfiguredInfo<T> {
    * Constructors.
    */
 
-  
+
+  protected ConfiguredInfo(final Supplier<? extends T> valueSupplier) {
+    super();
+    this.valueSupplier = valueSupplier;
+    this.valueSuppliers = Map.of();
+  }
+
   protected ConfiguredInfo(final Map<? extends String, ? extends Supplier<?>> valueSuppliers) {
     super();
+    this.valueSupplier = null;
     this.valueSuppliers = Map.copyOf(valueSuppliers);
   }
 
@@ -59,15 +77,19 @@ public class ConfiguredInfo<T> {
    * Instance methods.
    */
 
-  
-  public Supplier<T> valueSupplier() {
-    return null;
+
+  private final Type targetType() {
+    return targetTypeExtractor.get(this.getClass());
+  }
+
+  public Supplier<? extends T> valueSupplier() {
+    return this.valueSupplier;
   }
 
   public final Supplier<?> valueSupplier(final String name) {
-    return this.valueSuppliers.get(name);
+    return name == null ? null : this.valueSuppliers.get(name);
   }
-  
+
   public final Supplier<?> valueSupplier(final Method m) {
     if (accept(m)) {
       return this.valueSupplier(m.getName());
