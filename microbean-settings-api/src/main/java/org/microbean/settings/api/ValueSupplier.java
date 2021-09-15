@@ -16,37 +16,10 @@
  */
 package org.microbean.settings.api;
 
-import java.net.URL;
-
 import java.util.Set;
 
-import org.junit.jupiter.api.Test;
+public interface ValueSupplier<T> {
 
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-
-public final class TestConfiguredDiscovery {
-
-  TestConfiguredDiscovery() {
-    super();
-  }
-
-  @Test
-  final void testConfiguredDiscovery() {
-    final Bar bar = Configured.get(Bar.class);
-    assertNotNull(bar);
-  }
-
-  public static final class Foo extends Configured<Bar> {
-
-    @Override // Configured<Bar>
-    public final Bar get(final Set<?> qualifiers) {
-      return new Bar() {};
-    }    
-
-  }
-
-  public static interface Bar {
-    
-  }
-
+  public T get(final Set<?> qualifiers);
+  
 }

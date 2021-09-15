@@ -59,6 +59,11 @@ public class ConfiguredInfo<T> {
    * Constructors.
    */
 
+  protected ConfiguredInfo() {
+    super();
+    this.valueSupplier = null;
+    this.valueSuppliers = Map.of();
+  }
 
   protected ConfiguredInfo(final Supplier<? extends T> valueSupplier) {
     super();
@@ -82,7 +87,7 @@ public class ConfiguredInfo<T> {
     return targetTypeExtractor.get(this.getClass());
   }
 
-  public Supplier<? extends T> valueSupplier() {
+  public final Supplier<? extends T> valueSupplier() {
     return this.valueSupplier;
   }
 

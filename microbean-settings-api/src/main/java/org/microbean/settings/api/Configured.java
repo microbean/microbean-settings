@@ -121,25 +121,6 @@ public abstract class Configured<T> implements Supplier<T> {
   
   public abstract T get(final Set<?> qualifiers);
 
-  @Override // Object
-  public final int hashCode() {
-    return Objects.hash(this.targetType(), this.discriminator);
-  }
-
-  @Override // Object
-  public final boolean equals(final Object other) {
-    if (other == this) {
-      return true;
-    } else if (other != null && this.getClass().equals(other.getClass())) {
-      final Configured<?> her = (Configured<?>)other;
-      return
-        Objects.equals(this.targetType(), her.targetType()) &&
-        Objects.equals(this.discriminator, her.discriminator);
-    } else {
-      return false;
-    }
-  }
-
 
   /*
    * Static methods.
