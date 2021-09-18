@@ -49,17 +49,11 @@ public final class Handler<T> implements Supplier<T> {
 
 
   /*
-   * Static fields.
-   */
-
-
-  private static final ConcurrentMap<Path, Object> proxies = new ConcurrentHashMap<>();
-
-
-  /*
    * Instance fields.
    */
 
+
+  private final ConcurrentMap<Path, Object> proxies;
 
   private final Path path;
 
@@ -69,8 +63,6 @@ public final class Handler<T> implements Supplier<T> {
 
   private final BiFunction<? super Path, ? super Map<?, ?>, ? extends Collection<ValueSupplier>> valueSuppliers;
 
-  // See https://github.com/openjdk/jdk/blob/2a2e9190d4e866ac1b712feb0e4bb61d08e112c7/src/java.desktop/share/classes/com/sun/beans/introspect/PropertyInfo.java#L249-L251
-  // and https://github.com/openjdk/jdk/blob/739769c8fc4b496f08a92225a12d07414537b6c0/src/jdk.dynalink/share/classes/jdk/dynalink/beans/AbstractJavaLinker.java#L157-L176
   private final BiFunction<? super String, ? super Boolean, ? extends String> pathComponentFunction;
 
   private final ClassLoader cl;
@@ -113,16 +105,16 @@ public final class Handler<T> implements Supplier<T> {
          Handler::methodName);
   }
 
-  private Handler(final Path path,
-                  final Map<?, ?> applicationQualifiers,
-                  final Supplier<? extends T> defaultTargetSupplier,
-                  final BiFunction<? super Path, ? super Map<?, ?>, ? extends Collection<ValueSupplier>> valueSuppliers)
-  {
-    this(path,
+  public Handler(final Class<T> rootType,
+                 final Map<?, ?> applicationQualifiers,
+                 final Supplier<? extends T> defaultTargetSupplier,
+                 final BiFunction<? super Path, ? super Map<?, ?>, ? extends Collection<ValueSupplier>> valueSuppliers,
+                 final BiFunction<? super String, ? super Boolean, ? extends String> pathComponentFunction) {
+    this(new Path(rootType),
          applicationQualifiers,
          defaultTargetSupplier,
          valueSuppliers,
-         Handler::methodName);
+         pathComponentFunction);
   }
 
   private Handler(final Path path,
@@ -132,6 +124,7 @@ public final class Handler<T> implements Supplier<T> {
                   final BiFunction<? super String, ? super Boolean, ? extends String> pathComponentFunction)
   {
     super();
+    this.proxies = new ConcurrentHashMap<>();
     this.path = Objects.requireNonNull(path, "path");
     this.applicationQualifiers = applicationQualifiers == null ? Map.of() : Map.copyOf(applicationQualifiers);
     if (defaultTargetSupplier == null) {
@@ -154,7 +147,7 @@ public final class Handler<T> implements Supplier<T> {
 
   @SuppressWarnings("unchecked")
   public final T get() {
-    return (T)proxies.computeIfAbsent(this.path, this::computeProxy);
+    return (T)this.proxies.computeIfAbsent(this.path, this::computeProxy);
   }
 
   private final Object computeProxy(final Path p) {
@@ -178,28 +171,40 @@ public final class Handler<T> implements Supplier<T> {
         if (isProxyable(returnType)) {
           assert path.targetClass().equals(method.getReturnType());
           return
-            proxies.computeIfAbsent(path,
-                                    p -> {
-                                      final Supplier<?> newDefaultTargetSupplier;
-                                      final Object defaultTarget = this.defaultTargetSupplier.get();
-                                      if (defaultTarget == null) {
-                                        // Later on, an UnsupportedOperationException will be thrown.
-                                        newDefaultTargetSupplier = Handler::returnNull;
-                                      } else {
-                                        newDefaultTargetSupplier = () -> {
-                                          try {
-                                            return method.invoke(defaultTarget, args);
-                                          } catch (final ReflectiveOperationException roe) {
-                                            throw new UndeclaredThrowableException(roe, roe.getMessage()); // TODO: improve exception
-                                          }
-                                        };
-                                      }
-                                      return this.computeSubProxy(newDefaultTargetSupplier, p);
-                                    });
+            this.proxies.computeIfAbsent(path,
+                                         p -> {
+                                           final Supplier<?> newDefaultTargetSupplier;
+                                           final Object defaultTarget = this.defaultTargetSupplier.get();
+                                           if (defaultTarget == null) {
+                                             // Later on, an UnsupportedOperationException will be thrown.
+                                             newDefaultTargetSupplier = Handler::returnNull;
+                                           } else {
+                                             newDefaultTargetSupplier = () -> {
+                                               try {
+                                                 return method.invoke(defaultTarget, args);
+                                               } catch (final ReflectiveOperationException roe) {
+                                                 throw new UndeclaredThrowableException(roe, roe.getMessage()); // TODO: improve exception
+                                               }
+                                             };
+                                           }
+                                           return this.computeSubProxy(newDefaultTargetSupplier, p);
+                                         });
         } else {
           final T defaultTarget = this.defaultTargetSupplier.get();
           if (defaultTarget == null) {
-            throw new UnsupportedOperationException(method.getName());
+            if (method.isDefault()) {
+              try {
+                return InvocationHandler.invokeDefault(proxy, method, args);
+              } catch (final UnsupportedOperationException | Error e) {
+                throw e;
+              } catch (final Exception everythingElse) {
+                throw new UnsupportedOperationException(method.getName(), everythingElse);
+              } catch (final Throwable e) {
+                throw new AssertionError(e.getMessage(), e);
+              }
+            } else {
+              throw new UnsupportedOperationException(method.getName());
+            }
           } else {
             return method.invoke(defaultTarget, args);
           }
@@ -273,13 +278,15 @@ public final class Handler<T> implements Supplier<T> {
   }
 
   private final boolean viable(final Map<?, ?> vsQualifiers) {
+    final boolean returnValue;
     if (this.applicationQualifiers.isEmpty()) {
-      return vsQualifiers == null || vsQualifiers.isEmpty();
+      returnValue = vsQualifiers == null || vsQualifiers.isEmpty();
     } else if (vsQualifiers == null || vsQualifiers.isEmpty()) {
-      return false;
+      returnValue = false;
     } else {
-      return applicationQualifiers.entrySet().containsAll(vsQualifiers.entrySet());
+      returnValue = this.applicationQualifiers.entrySet().containsAll(vsQualifiers.entrySet());
     }
+    return returnValue;
   }
 
 

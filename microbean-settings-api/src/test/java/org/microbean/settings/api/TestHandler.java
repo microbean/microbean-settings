@@ -37,16 +37,28 @@ final class TestHandler {
   }
 
   @Test
-  final void test() {
+  final void testWithEmptyApplicationQualifiers() {
+    test(Map.of(), "Puce");
+  }
+
+  @Test
+  final void testWithDevApplicationQualifiers() {
+    test(Map.of("dev", Boolean.TRUE), "Red");
+  }
+
+  private static final void test(final Map<?, ?> applicationQualifiers, final String expectedColorName) {
     final Car defaultCar = new CarDefaults();
-    final Handler<Car> h = new Handler<>(Car.class, () -> defaultCar, TestHandler::valueSuppliers, Handler::propertyName);
+    final Handler<Car> h =
+      new Handler<>(Car.class,
+                    applicationQualifiers,
+                    () -> defaultCar,
+                    TestHandler::valueSuppliers,
+                    Handler::propertyName);
     final Car car = h.get();
     assertNotSame(defaultCar, car);
     final Wheel wheel = car.getWheel();
     final Color color = wheel.getColor();
-    final String colorString = color.name();
-    assertNotNull(colorString);
-    System.out.println(colorString);
+    assertEquals(expectedColorName, color.name());
   }
 
   @Test
@@ -112,25 +124,19 @@ final class TestHandler {
 
   private static interface Color {
 
-    public String name();
+    public default String name() {
+      return "Puce";
+    }
     
   }
 
+  // Last ditch fallback defaults, e.g. null, 0, false, etc.
+  // Or users could throw exceptions to indicate missing data
   private static final class CarDefaults implements Car {
 
     @Override
     public Wheel getWheel() {
-      return new Wheel() {
-        @Override
-        public final Color getColor() {
-          return new Color() {
-            @Override
-            public final String name() {
-              return "Gray";
-            }
-          };
-        }
-      };
+      return null;
     }
 
     @Override
