@@ -25,6 +25,7 @@ import java.util.function.Supplier;
 
 import org.microbean.development.annotation.Convenience;
 
+@Deprecated(forRemoval = true)
 final class InvocationHandler<T> implements java.lang.reflect.InvocationHandler {
 
   private final List<ConfiguredInfo<T>> cis;

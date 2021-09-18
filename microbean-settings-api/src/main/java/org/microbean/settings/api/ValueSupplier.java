@@ -16,10 +16,27 @@
  */
 package org.microbean.settings.api;
 
-import java.util.Set;
+import java.util.Map;
+import java.util.Objects;
+
+import java.util.function.Supplier;
 
 public interface ValueSupplier<T> {
 
-  public T get(final Set<?> qualifiers);
+  public Value<T> get(final Path path, final Map<?, ?> applicationQualifiers);
+
+  public static final record Value<T>(T value, Path path, Map<?, ?> qualifiers) implements Supplier<T> {
+
+    public Value {
+      path = Objects.requireNonNull(path, "path");
+      qualifiers = qualifiers == null ? Map.of() : Map.copyOf(qualifiers);
+    }
+
+    @Override // Supplier
+    public final T get() {
+      return this.value();
+    }
+
+  }
   
 }
