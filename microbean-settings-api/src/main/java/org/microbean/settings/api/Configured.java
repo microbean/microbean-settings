@@ -48,18 +48,27 @@ import org.microbean.settings.api.ValueSupplier.Value;
 
 @Experimental
 @Incomplete
-public final class Handler<T> implements Supplier<T> {
+public final class Configured<T> implements Supplier<T> {
 
 
-  private static final ClassValue<Collection<ValueSupplier>> loadedValueSuppliers =
+  /*
+   * Static fields.
+   */
+
+
+  private static final ClassValue<List<ValueSupplier>> loadedValueSuppliers =
     new ClassValue<>() {
       @Override
-      protected final Collection<ValueSupplier> computeValue(final Class<?> c) {
-        return
-        ServiceLoader.load(ValueSupplier.class, ValueSupplier.class.getClassLoader())
-        .stream()
-        .map(ServiceLoader.Provider::get)
-        .toList();
+      protected final List<ValueSupplier> computeValue(final Class<?> c) {
+        if (ValueSupplier.class.equals(c)) {
+          return
+          ServiceLoader.load(ValueSupplier.class, ValueSupplier.class.getClassLoader())
+          .stream()
+          .map(ServiceLoader.Provider::get)
+          .toList();
+        } else {
+          return null;
+        }
       }
     };
 
@@ -89,20 +98,20 @@ public final class Handler<T> implements Supplier<T> {
    */
 
 
-  public Handler(final Class<T> rootType,
-                 final Supplier<? extends T> defaultTargetSupplier,
-                 final BiFunction<? super Path, ? super Map<?, ?>, ? extends Collection<ValueSupplier>> valueSuppliers) {
+  public Configured(final Class<T> rootType,
+                    final Supplier<? extends T> defaultTargetSupplier,
+                    final BiFunction<? super Path, ? super Map<?, ?>, ? extends Collection<ValueSupplier>> valueSuppliers) {
     this(new Path(rootType),
          Map.of(),
          defaultTargetSupplier,
          valueSuppliers,
-         Handler::methodName);
+         Configured::methodName);
   }
 
-  public Handler(final Class<T> rootType,
-                 final Supplier<? extends T> defaultTargetSupplier,
-                 final BiFunction<? super Path, ? super Map<?, ?>, ? extends Collection<ValueSupplier>> valueSuppliers,
-                 final BiFunction<? super String, ? super Boolean, ? extends String> pathComponentFunction) {
+  public Configured(final Class<T> rootType,
+                    final Supplier<? extends T> defaultTargetSupplier,
+                    final BiFunction<? super Path, ? super Map<?, ?>, ? extends Collection<ValueSupplier>> valueSuppliers,
+                    final BiFunction<? super String, ? super Boolean, ? extends String> pathComponentFunction) {
     this(new Path(rootType),
          Map.of(),
          defaultTargetSupplier,
@@ -110,22 +119,22 @@ public final class Handler<T> implements Supplier<T> {
          pathComponentFunction);
   }
 
-  public Handler(final Class<T> rootType,
-                 final Map<?, ?> applicationQualifiers,
-                 final Supplier<? extends T> defaultTargetSupplier,
-                 final BiFunction<? super Path, ? super Map<?, ?>, ? extends Collection<ValueSupplier>> valueSuppliers) {
+  public Configured(final Class<T> rootType,
+                    final Map<?, ?> applicationQualifiers,
+                    final Supplier<? extends T> defaultTargetSupplier,
+                    final BiFunction<? super Path, ? super Map<?, ?>, ? extends Collection<ValueSupplier>> valueSuppliers) {
     this(new Path(rootType),
          applicationQualifiers,
          defaultTargetSupplier,
          valueSuppliers,
-         Handler::methodName);
+         Configured::methodName);
   }
 
-  public Handler(final Class<T> rootType,
-                 final Map<?, ?> applicationQualifiers,
-                 final Supplier<? extends T> defaultTargetSupplier,
-                 final BiFunction<? super Path, ? super Map<?, ?>, ? extends Collection<ValueSupplier>> valueSuppliers,
-                 final BiFunction<? super String, ? super Boolean, ? extends String> pathComponentFunction) {
+  public Configured(final Class<T> rootType,
+                    final Map<?, ?> applicationQualifiers,
+                    final Supplier<? extends T> defaultTargetSupplier,
+                    final BiFunction<? super Path, ? super Map<?, ?>, ? extends Collection<ValueSupplier>> valueSuppliers,
+                    final BiFunction<? super String, ? super Boolean, ? extends String> pathComponentFunction) {
     this(new Path(rootType),
          applicationQualifiers,
          defaultTargetSupplier,
@@ -133,18 +142,18 @@ public final class Handler<T> implements Supplier<T> {
          pathComponentFunction);
   }
 
-  private Handler(final Path path,
-                  final Map<?, ?> applicationQualifiers,
-                  final Supplier<? extends T> defaultTargetSupplier,
-                  final BiFunction<? super Path, ? super Map<?, ?>, ? extends Collection<ValueSupplier>> valueSuppliers,
-                  final BiFunction<? super String, ? super Boolean, ? extends String> pathComponentFunction)
+  private Configured(final Path path,
+                     final Map<?, ?> applicationQualifiers,
+                     final Supplier<? extends T> defaultTargetSupplier,
+                     final BiFunction<? super Path, ? super Map<?, ?>, ? extends Collection<ValueSupplier>> valueSuppliers,
+                     final BiFunction<? super String, ? super Boolean, ? extends String> pathComponentFunction)
   {
     super();
     this.proxies = new ConcurrentHashMap<>();
     this.path = Objects.requireNonNull(path, "path");
     this.applicationQualifiers = applicationQualifiers == null ? Map.of() : Map.copyOf(applicationQualifiers);
     if (defaultTargetSupplier == null) {
-      this.defaultTargetSupplier = Handler::returnNull;
+      this.defaultTargetSupplier = Configured::returnNull;
     } else {
       this.defaultTargetSupplier = defaultTargetSupplier;
     }
@@ -154,7 +163,7 @@ public final class Handler<T> implements Supplier<T> {
       this.valueSuppliers = valueSuppliers;
     }
     if (pathComponentFunction == null) {
-      this.pathComponentFunction = Handler::methodName;
+      this.pathComponentFunction = Configured::methodName;
     } else {
       this.pathComponentFunction = pathComponentFunction;
     }
@@ -185,14 +194,13 @@ public final class Handler<T> implements Supplier<T> {
       if (value == null) {
         final Class<?> returnType = method.getReturnType();
         if (isProxyable(returnType)) {
-          assert path.targetClass().equals(method.getReturnType());
           return
             this.proxies.computeIfAbsent(path,
                                          p -> {
                                            final Supplier<?> newDefaultTargetSupplier;
                                            final Object defaultTarget = this.defaultTargetSupplier.get();
                                            if (defaultTarget == null) {
-                                             newDefaultTargetSupplier = Handler::returnNull;
+                                             newDefaultTargetSupplier = Configured::returnNull;
                                            } else {
                                              newDefaultTargetSupplier = () -> {
                                                try {
@@ -238,13 +246,13 @@ public final class Handler<T> implements Supplier<T> {
     return Proxy.newProxyInstance(p.classLoader(), new Class<?>[] { p.targetClass() }, invocationHandler);
   }
 
-  private final <U> Handler<U> butWith(final Path path, final Supplier<? extends U> defaultTargetSupplier) {
+  private final <U> Configured<U> butWith(final Path path, final Supplier<? extends U> defaultTargetSupplier) {
     return
-      new Handler<>(path,
-                    this.applicationQualifiers,
-                    defaultTargetSupplier,
-                    this.valueSuppliers,
-                    this.pathComponentFunction);
+      new Configured<>(path,
+                       this.applicationQualifiers,
+                       defaultTargetSupplier,
+                       this.valueSuppliers,
+                       this.pathComponentFunction);
   }
 
   private final Path path(final Method m) {
@@ -371,11 +379,15 @@ public final class Handler<T> implements Supplier<T> {
     }
   }
 
-  public static final Collection<ValueSupplier> loadValueSuppliers(final Path path, final Map<?, ?> applicationQualifiers) {
+  public static final List<ValueSupplier> loadValueSuppliers(final Path path, final Map<?, ?> applicationQualifiers) {
     return loadedValueSuppliers.get(ValueSupplier.class)
       .stream()
       .filter(vs -> vs.respondsFor(path, applicationQualifiers))
       .toList();
+  }
+
+  public static final void clearLoadedValueSuppliers() {
+    loadedValueSuppliers.remove(ValueSupplier.class);
   }
 
   private static final boolean isGetter(final Method m) {

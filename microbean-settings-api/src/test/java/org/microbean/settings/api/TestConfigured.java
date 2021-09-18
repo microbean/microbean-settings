@@ -28,11 +28,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 
-import static org.microbean.settings.api.Handler.propertyName;
+import static org.microbean.settings.api.Configured.propertyName;
 
-final class TestHandler {
+final class TestConfigured {
 
-  private TestHandler() {
+  private TestConfigured() {
     super();
   }
 
@@ -48,13 +48,13 @@ final class TestHandler {
 
   private static final void test(final Map<?, ?> applicationQualifiers, final String expectedColorName) {
     final Car defaultCar = new CarDefaults();
-    final Handler<Car> h =
-      new Handler<>(Car.class,
-                    applicationQualifiers,
-                    () -> defaultCar,
-                    TestHandler::valueSuppliers,
-                    Handler::propertyName);
-    final Car car = h.get();
+    final Car car =
+      new Configured<>(Car.class,
+                       applicationQualifiers,
+                       () -> defaultCar,
+                       TestConfigured::valueSuppliers,
+                       Configured::propertyName)
+      .get();
     assertNotSame(defaultCar, car);
     final Wheel wheel = car.getWheel();
     final Color color = wheel.getColor();
