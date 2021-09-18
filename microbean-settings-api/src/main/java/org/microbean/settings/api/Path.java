@@ -30,14 +30,22 @@ import org.microbean.development.annotation.Incomplete;
 @Incomplete
 public final record Path(Type rootType, Type targetType, List<String> components) {
 
-  public Path(final Type rootType) {
-    this(rootType, rootType, List.of());
+  public Path(final Type targetType) {
+    this(targetType, targetType, List.of());
   }
-  
+
   public Path {
     rawClass(rootType); // validates
     rawClass(targetType); // validates
     components = components == null ? List.of() : List.copyOf(components);
+  }
+
+  public final int length() {
+    return this.components().size();
+  }
+
+  public final boolean root() {
+    return this.components().isEmpty() && this.targetType().equals(this.rootType());
   }
 
   public final Class<?> rootClass() {
@@ -47,9 +55,13 @@ public final record Path(Type rootType, Type targetType, List<String> components
   public final Class<?> targetClass() {
     return rawClass(this.targetType());
   }
-  
+
+  public final ClassLoader classLoader() {
+    return this.targetClass().getClassLoader();
+  }
+
   public final boolean endsWith(final String s) {
-    final List<String> components = this.components();
+    final List<?> components = this.components();
     return components.isEmpty() ? false : s.equals(components.get(components.size() - 1));
   }
 
@@ -60,14 +72,15 @@ public final record Path(Type rootType, Type targetType, List<String> components
       this.targetType().equals(other.targetType()) &&
       this.components().containsAll(other.components());
   }
-  
-  public final Path plus(final String component, final Type targetType) {
+
+  public final Path plus(final Type targetType, final String component) {
     final List<String> components = this.components();
     final List<String> newList;
     if (components.isEmpty()) {
-      newList = new ArrayList<>(1);
+      newList = List.of(Objects.requireNonNull(component, "component"));
     } else {
       newList = new ArrayList<>(components);
+      newList.add(Objects.requireNonNull(component, "component"));
     }
     return new Path(this.rootType(), targetType, newList);
   }
@@ -85,5 +98,5 @@ public final record Path(Type rootType, Type targetType, List<String> components
   private static final Class<?> rawClass(final ParameterizedType type) {
     return rawClass(type.getRawType());
   }
-  
+
 }

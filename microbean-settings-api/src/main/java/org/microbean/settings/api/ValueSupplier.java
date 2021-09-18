@@ -21,9 +21,11 @@ import java.util.Objects;
 
 import java.util.function.Supplier;
 
-public interface ValueSupplier<T> {
+import org.microbean.development.annotation.Convenience;
 
-  public Value<T> get(final Path path, final Map<?, ?> applicationQualifiers);
+public interface ValueSupplier {
+
+  public <T> Value<T> get(final Path path, final Map<?, ?> applicationQualifiers);
 
   public static final record Value<T>(T value, Path path, Map<?, ?> qualifiers) implements Supplier<T> {
 
@@ -35,6 +37,12 @@ public interface ValueSupplier<T> {
     @Override // Supplier
     public final T get() {
       return this.value();
+    }
+
+    @Convenience
+    @SuppressWarnings("unchecked")
+    public final <X> Value<X> cast() {
+      return (Value<X>)this;
     }
 
   }

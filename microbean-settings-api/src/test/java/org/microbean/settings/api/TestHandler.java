@@ -24,8 +24,11 @@ import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
+
+import static org.microbean.settings.api.Handler.propertyName;
 
 final class TestHandler {
 
@@ -36,19 +39,36 @@ final class TestHandler {
   @Test
   final void test() {
     final Car defaultCar = new CarDefaults();
-    final Handler<Car> h = new Handler<>(Car.class, () -> defaultCar, TestHandler::valueSuppliers);
+    final Handler<Car> h = new Handler<>(Car.class, () -> defaultCar, TestHandler::valueSuppliers, Handler::propertyName);
     final Car car = h.get();
     assertNotSame(defaultCar, car);
     final Wheel wheel = car.getWheel();
     final Color color = wheel.getColor();
-    final String colorString = color.toString();
+    final String colorString = color.name();
     assertNotNull(colorString);
     System.out.println(colorString);
   }
 
-  private static final Collection<ValueSupplier<?>> valueSuppliers(final Path path, final Map<?, ?> applicationQualifiers) {
+  @Test
+  final void testPropertyName() {
+    assertEquals("fooBah", propertyName("getFooBah", false));
+    assertEquals("FOO", propertyName("getFOO", false));
+    assertEquals("foo", propertyName("Foo", false));
+    assertEquals("foo", propertyName("foo", false));
+    assertEquals("FOO", propertyName("FOO", false));
+    assertEquals("FOo", propertyName("FOo", false));
+    assertEquals("foO", propertyName("FoO", false));
+    assertEquals("foo", propertyName("isfoo", true));
+    assertEquals("foo", propertyName("isFoo", true));
+    assertEquals("foo", propertyName("getfoo", true));
+    assertEquals("foo", propertyName("getFoo", true));
+    assertEquals("toString", propertyName("toString", false));
+  }
+
+  private static final Collection<ValueSupplier> valueSuppliers(final Path path, final Map<?, ?> applicationQualifiers) {
     if (path.rootType().equals(Car.class) &&
-        path.components().equals(List.of("getWheel", "getColor", "toString")) &&
+        path.targetClass().equals(String.class) &&
+        path.components().equals(List.of("wheel", "color", "name")) &&
         applicationQualifiers.equals(Map.of("dev", Boolean.TRUE))) {
       return List.of(new DevWheelColorString());
     } else {
@@ -56,18 +76,19 @@ final class TestHandler {
     }
   }
       
-  private static final class DevWheelColorString implements ValueSupplier<String> {
+  private static final class DevWheelColorString implements ValueSupplier {
 
     private DevWheelColorString() {
       super();
     }
     
     @Override
-    public final Value<String> get(final Path path, final Map<?, ?> qualifiers) {
+    public final <T> Value<T> get(final Path path, final Map<?, ?> qualifiers) {
       if (path.rootType().equals(Car.class) &&
-          path.components().equals(List.of("getWheel", "getColor", "toString")) &&
+          path.targetClass().equals(String.class) &&
+          path.components().equals(List.of("wheel", "color", "name")) &&
           qualifiers.equals(Map.of("dev", Boolean.TRUE))) {
-        return new Value<>("Red", path, qualifiers);
+        return new Value<>("Red", path, qualifiers).cast();
       } else {
         return null;
       }
@@ -91,7 +112,7 @@ final class TestHandler {
 
   private static interface Color {
 
-    public String toString();
+    public String name();
     
   }
 
@@ -99,7 +120,17 @@ final class TestHandler {
 
     @Override
     public Wheel getWheel() {
-      return null;
+      return new Wheel() {
+        @Override
+        public final Color getColor() {
+          return new Color() {
+            @Override
+            public final String name() {
+              return "Gray";
+            }
+          };
+        }
+      };
     }
 
     @Override

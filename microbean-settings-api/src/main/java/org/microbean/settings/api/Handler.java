@@ -21,6 +21,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Proxy;
 import java.lang.reflect.Type;
+import java.lang.reflect.UndeclaredThrowableException;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -34,6 +35,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 import org.microbean.development.annotation.Experimental;
@@ -50,7 +52,7 @@ public final class Handler<T> implements Supplier<T> {
    * Static fields.
    */
 
-  
+
   private static final ConcurrentMap<Path, Object> proxies = new ConcurrentHashMap<>();
 
 
@@ -58,15 +60,19 @@ public final class Handler<T> implements Supplier<T> {
    * Instance fields.
    */
 
-  
+
   private final Path path;
 
   private final Map<?, ?> applicationQualifiers;
-  
+
   private final Supplier<? extends T> defaultTargetSupplier;
 
-  private final BiFunction<? super Path, ? super Map<?, ?>, ? extends Collection<ValueSupplier<?>>> valueSuppliers;
-  
+  private final BiFunction<? super Path, ? super Map<?, ?>, ? extends Collection<ValueSupplier>> valueSuppliers;
+
+  // See https://github.com/openjdk/jdk/blob/2a2e9190d4e866ac1b712feb0e4bb61d08e112c7/src/java.desktop/share/classes/com/sun/beans/introspect/PropertyInfo.java#L249-L251
+  // and https://github.com/openjdk/jdk/blob/739769c8fc4b496f08a92225a12d07414537b6c0/src/jdk.dynalink/share/classes/jdk/dynalink/beans/AbstractJavaLinker.java#L157-L176
+  private final BiFunction<? super String, ? super Boolean, ? extends String> pathComponentFunction;
+
   private final ClassLoader cl;
 
 
@@ -77,30 +83,53 @@ public final class Handler<T> implements Supplier<T> {
 
   public Handler(final Class<T> rootType,
                  final Supplier<? extends T> defaultTargetSupplier,
-                 final BiFunction<? super Path, ? super Map<?, ?>, ? extends Collection<ValueSupplier<?>>> valueSuppliers) {
+                 final BiFunction<? super Path, ? super Map<?, ?>, ? extends Collection<ValueSupplier>> valueSuppliers) {
     this(new Path(rootType),
          Map.of(),
          defaultTargetSupplier,
          valueSuppliers,
-         rootType.getClassLoader());
+         Handler::methodName);
   }
-  
+
+  public Handler(final Class<T> rootType,
+                 final Supplier<? extends T> defaultTargetSupplier,
+                 final BiFunction<? super Path, ? super Map<?, ?>, ? extends Collection<ValueSupplier>> valueSuppliers,
+                 final BiFunction<? super String, ? super Boolean, ? extends String> pathComponentFunction) {
+    this(new Path(rootType),
+         Map.of(),
+         defaultTargetSupplier,
+         valueSuppliers,
+         pathComponentFunction);
+  }
+
   public Handler(final Class<T> rootType,
                  final Map<?, ?> applicationQualifiers,
                  final Supplier<? extends T> defaultTargetSupplier,
-                 final BiFunction<? super Path, ? super Map<?, ?>, ? extends Collection<ValueSupplier<?>>> valueSuppliers) {
+                 final BiFunction<? super Path, ? super Map<?, ?>, ? extends Collection<ValueSupplier>> valueSuppliers) {
     this(new Path(rootType),
          applicationQualifiers,
          defaultTargetSupplier,
          valueSuppliers,
-         rootType.getClassLoader());
+         Handler::methodName);
   }
-  
+
   private Handler(final Path path,
                   final Map<?, ?> applicationQualifiers,
                   final Supplier<? extends T> defaultTargetSupplier,
-                  final BiFunction<? super Path, ? super Map<?, ?>, ? extends Collection<ValueSupplier<?>>> valueSuppliers,
-                  ClassLoader cl)
+                  final BiFunction<? super Path, ? super Map<?, ?>, ? extends Collection<ValueSupplier>> valueSuppliers)
+  {
+    this(path,
+         applicationQualifiers,
+         defaultTargetSupplier,
+         valueSuppliers,
+         Handler::methodName);
+  }
+
+  private Handler(final Path path,
+                  final Map<?, ?> applicationQualifiers,
+                  final Supplier<? extends T> defaultTargetSupplier,
+                  final BiFunction<? super Path, ? super Map<?, ?>, ? extends Collection<ValueSupplier>> valueSuppliers,
+                  final BiFunction<? super String, ? super Boolean, ? extends String> pathComponentFunction)
   {
     super();
     this.path = Objects.requireNonNull(path, "path");
@@ -115,22 +144,23 @@ public final class Handler<T> implements Supplier<T> {
     } else {
       this.valueSuppliers = valueSuppliers;
     }
-    this.cl = cl;
+    if (pathComponentFunction == null) {
+      this.pathComponentFunction = Handler::methodName;
+    } else {
+      this.pathComponentFunction = pathComponentFunction;
+    }
+    this.cl = path.classLoader();
   }
 
   @SuppressWarnings("unchecked")
   public final T get() {
-    return
-      (T)proxies.computeIfAbsent(this.path,
-                                 p -> Proxy.newProxyInstance(p.targetClass().getClassLoader(),
-                                                             new Class<?>[] { p.targetClass() },
-                                                             this::invoke));
+    return (T)proxies.computeIfAbsent(this.path, this::computeProxy);
   }
 
   private final Object computeProxy(final Path p) {
     return this.computeProxy(p, this::invoke);
   }
-  
+
   private final Object invoke(final Object proxy, final Method method, final Object[] args) throws ReflectiveOperationException {
     if (method.getDeclaringClass() == Object.class) {
       return
@@ -147,7 +177,25 @@ public final class Handler<T> implements Supplier<T> {
         final Class<?> returnType = method.getReturnType();
         if (isProxyable(returnType)) {
           assert path.targetClass().equals(method.getReturnType());
-          return proxies.computeIfAbsent(path, this::computeSubProxy);
+          return
+            proxies.computeIfAbsent(path,
+                                    p -> {
+                                      final Supplier<?> newDefaultTargetSupplier;
+                                      final Object defaultTarget = this.defaultTargetSupplier.get();
+                                      if (defaultTarget == null) {
+                                        // Later on, an UnsupportedOperationException will be thrown.
+                                        newDefaultTargetSupplier = Handler::returnNull;
+                                      } else {
+                                        newDefaultTargetSupplier = () -> {
+                                          try {
+                                            return method.invoke(defaultTarget, args);
+                                          } catch (final ReflectiveOperationException roe) {
+                                            throw new UndeclaredThrowableException(roe, roe.getMessage()); // TODO: improve exception
+                                          }
+                                        };
+                                      }
+                                      return this.computeSubProxy(newDefaultTargetSupplier, p);
+                                    });
         } else {
           final T defaultTarget = this.defaultTargetSupplier.get();
           if (defaultTarget == null) {
@@ -162,44 +210,48 @@ public final class Handler<T> implements Supplier<T> {
     }
   }
 
-  private final Object computeSubProxy(final Path p) {
-    return this.computeProxy(p, this.butWith(p)::invoke);
+  private final Object computeSubProxy(final Supplier<?> defaultTargetSupplier, final Path p) {
+    return this.computeProxy(p, this.butWith(p, defaultTargetSupplier)::invoke);
   }
 
   private final Object computeProxy(final Path p, final InvocationHandler invocationHandler) {
-    final Class<?> targetClass = p.targetClass();
-    final ClassLoader cl = targetClass.getClassLoader();
-    return Proxy.newProxyInstance(cl, new Class<?>[] { targetClass }, invocationHandler);
+    return Proxy.newProxyInstance(p.classLoader(), new Class<?>[] { p.targetClass() }, invocationHandler);
   }
 
-  private final Handler<T> butWith(final Path path) {
-    return new Handler<>(path, this.applicationQualifiers, this.defaultTargetSupplier, this.valueSuppliers, path.targetClass().getClassLoader());
+  private final <U> Handler<U> butWith(final Path path, final Supplier<? extends U> defaultTargetSupplier) {
+    return
+      new Handler<>(path,
+                    this.applicationQualifiers,
+                    defaultTargetSupplier,
+                    this.valueSuppliers,
+                    this.pathComponentFunction);
   }
-  
+
   private final Path path(final Method m) {
-    return this.path.plus(m.getName(), m.getGenericReturnType());
+    final Type returnType = m.getGenericReturnType();
+    return
+      this.path.plus(returnType,
+                     this.pathComponentFunction.apply(m.getName(), boolean.class == m.getReturnType()));
   }
 
   private final Value<?> value(final Path path) {
     return this.value(path, this.valueSuppliers.apply(path, this.applicationQualifiers));
   }
 
-  private final Value<?> value(final Path path, final Collection<? extends ValueSupplier<?>> valueSuppliers) {
+  private final Value<?> value(final Path path, final Collection<? extends ValueSupplier> valueSuppliers) {
     final Value<?> returnValue;
     if (valueSuppliers == null || valueSuppliers.isEmpty()) {
       returnValue = null;
     } else {
       Collection<Value<?>> bad = null;
       Value<?> candidate = null;
-      for (final ValueSupplier<?> valueSupplier : valueSuppliers) {
+      for (final ValueSupplier valueSupplier : valueSuppliers) {
         final Value<?> v = valueSupplier == null ? null : valueSupplier.get(path, this.applicationQualifiers);
         if (v != null) {
           final Map<?, ?> qualifiers = v.qualifiers();
           if (viable(qualifiers)) {
             if (candidate == null || qualifiers.size() > candidate.qualifiers().size()) {
               candidate = v;
-            } else {
-              // take no action
             }
           } else {
             if (bad == null) {
@@ -230,10 +282,72 @@ public final class Handler<T> implements Supplier<T> {
     }
   }
 
+
   /*
    * Static methods.
    */
 
+
+  private static final String methodName(final CharSequence cs, final boolean ignored) {
+    return cs.toString();
+  }
+
+  public static final String propertyName(final CharSequence cs, final boolean methodReturnsBoolean) {
+    if (cs == null) {
+      return null;
+    } else {
+      final int length = cs.length();
+      if (length <= 2) {
+        return decapitalize(cs);
+      } else if (methodReturnsBoolean) {
+        switch (cs.charAt(0)) {
+        case 'i':
+          if (cs.charAt(1) == 's') {
+            return decapitalize(cs.subSequence(2, length));
+          } else {
+            return decapitalize(cs);
+          }
+        case 'g':
+          if (length > 3 && cs.charAt(1) == 'e' && cs.charAt(2) == 't') {
+            return decapitalize(cs.subSequence(3, length));
+          } else {
+            return decapitalize(cs);
+          }
+        default:
+          return decapitalize(cs);
+        }
+      } else if (length > 3) {
+        switch (cs.charAt(0)) {
+        case 'g':
+          if (cs.charAt(1) == 'e' && cs.charAt(2) == 't') {
+            return decapitalize(cs.subSequence(3, length));
+          } else {
+            return decapitalize(cs);
+          }
+        default:
+          return decapitalize(cs);
+        }
+      } else {
+        return decapitalize(cs);
+      }
+    }
+  }
+
+  public static final String decapitalize(final CharSequence cs) {
+    if (cs == null) {
+      return null;
+    } else if (cs.isEmpty() || Character.isLowerCase(cs.charAt(0))) {
+      return cs.toString();
+    } else if (cs.length() == 1) {
+      return cs.toString().toLowerCase();
+    } else if (Character.isUpperCase(cs.charAt(1))) {
+      return cs.toString();
+    } else {
+      final char[] chars = cs.toString().toCharArray();
+      chars[0] = Character.toLowerCase(chars[0]);
+      return String.valueOf(chars);
+    }
+  }
 
   private static final boolean isGetter(final Method m) {
     if (m != null && m.getDeclaringClass() != Object.class && m.getParameterCount() == 0) {
