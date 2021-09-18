@@ -25,6 +25,10 @@ import org.microbean.development.annotation.Convenience;
 
 public interface ValueSupplier {
 
+  public default boolean respondsFor(final Path path, final Map<?, ?> applicationQualifiers) {
+    return true;
+  }
+  
   public <T> Value<T> get(final Path path, final Map<?, ?> applicationQualifiers);
 
   public static final record Value<T>(T value, Path path, Map<?, ?> qualifiers) implements Supplier<T> {

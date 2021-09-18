@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.ServiceLoader;
 import java.util.Set;
 
 import java.util.concurrent.ConcurrentHashMap;
@@ -38,6 +39,8 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import java.util.stream.Stream;
+
 import org.microbean.development.annotation.Experimental;
 import org.microbean.development.annotation.Incomplete;
 
@@ -46,6 +49,19 @@ import org.microbean.settings.api.ValueSupplier.Value;
 @Experimental
 @Incomplete
 public final class Handler<T> implements Supplier<T> {
+
+
+  private static final ClassValue<Collection<ValueSupplier>> loadedValueSuppliers =
+    new ClassValue<>() {
+      @Override
+      protected final Collection<ValueSupplier> computeValue(final Class<?> c) {
+        return
+        ServiceLoader.load(ValueSupplier.class, ValueSupplier.class.getClassLoader())
+        .stream()
+        .map(ServiceLoader.Provider::get)
+        .toList();
+      }
+    };
 
 
   /*
@@ -176,7 +192,6 @@ public final class Handler<T> implements Supplier<T> {
                                            final Supplier<?> newDefaultTargetSupplier;
                                            final Object defaultTarget = this.defaultTargetSupplier.get();
                                            if (defaultTarget == null) {
-                                             // Later on, an UnsupportedOperationException will be thrown.
                                              newDefaultTargetSupplier = Handler::returnNull;
                                            } else {
                                              newDefaultTargetSupplier = () -> {
@@ -197,8 +212,8 @@ public final class Handler<T> implements Supplier<T> {
                 return InvocationHandler.invokeDefault(proxy, method, args);
               } catch (final UnsupportedOperationException | Error e) {
                 throw e;
-              } catch (final Exception everythingElse) {
-                throw new UnsupportedOperationException(method.getName(), everythingElse);
+              } catch (final Exception e) {
+                throw new UnsupportedOperationException(method.getName(), e);
               } catch (final Throwable e) {
                 throw new AssertionError(e.getMessage(), e);
               }
@@ -233,10 +248,10 @@ public final class Handler<T> implements Supplier<T> {
   }
 
   private final Path path(final Method m) {
-    final Type returnType = m.getGenericReturnType();
     return
-      this.path.plus(returnType,
-                     this.pathComponentFunction.apply(m.getName(), boolean.class == m.getReturnType()));
+      this.path.plus(m.getGenericReturnType(),
+                     this.pathComponentFunction.apply(m.getName(),
+                                                      boolean.class == m.getReturnType()));
   }
 
   private final Value<?> value(final Path path) {
@@ -354,6 +369,13 @@ public final class Handler<T> implements Supplier<T> {
       chars[0] = Character.toLowerCase(chars[0]);
       return String.valueOf(chars);
     }
+  }
+
+  public static final Collection<ValueSupplier> loadValueSuppliers(final Path path, final Map<?, ?> applicationQualifiers) {
+    return loadedValueSuppliers.get(ValueSupplier.class)
+      .stream()
+      .filter(vs -> vs.respondsFor(path, applicationQualifiers))
+      .toList();
   }
 
   private static final boolean isGetter(final Method m) {
