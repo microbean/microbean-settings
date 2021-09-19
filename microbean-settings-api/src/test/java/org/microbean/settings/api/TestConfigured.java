@@ -16,8 +16,11 @@
  */
 package org.microbean.settings.api;
 
+import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
+import java.lang.reflect.Type;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -28,7 +31,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 
+import static java.util.Arrays.asList;
+
 import static org.microbean.settings.api.Configured.propertyName;
+import static org.microbean.settings.api.Configured.rawClass;
+import static org.microbean.settings.api.Configured.rawClasses;
 
 final class TestConfigured {
 
@@ -44,6 +51,22 @@ final class TestConfigured {
   @Test
   final void testWithDevApplicationQualifiers() {
     test(Map.of("dev", Boolean.TRUE), "Red");
+  }
+
+  @Test
+  final void testGenericThing() throws ReflectiveOperationException {
+    Type returnType = GenericThing.class.getDeclaredMethod("getThing").getGenericReturnType();
+    Class<?>[] c = rawClasses(returnType);
+    System.out.println("*** returnType rawClasses: " + asList(c));
+    returnType = GenericThing.class.getDeclaredMethod("getThing2").getGenericReturnType();
+    c = rawClasses(returnType);
+    System.out.println("*** returnType rawClasses: " + asList(c));
+  }
+
+  @Test
+  final void testGenericArraysAndRegularArrays() {
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    final List<String>[] gl = new List[] { List.of(Integer.valueOf(1)) };
   }
 
   private static final void test(final Map<?, ?> applicationQualifiers, final String expectedColorName) {
@@ -144,6 +167,22 @@ final class TestConfigured {
       return null;
     }
     
+  }
+
+  private static final class GenericThing<T extends Number & CharSequence> {
+
+    private GenericThing() {
+      super();
+    }
+
+    private final T getThing() {
+      return null;
+    }
+
+    private final <U extends T> U getThing2() {
+      return null;
+    }
+
   }
   
 }

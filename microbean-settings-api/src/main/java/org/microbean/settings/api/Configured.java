@@ -16,21 +16,28 @@
  */
 package org.microbean.settings.api;
 
+import java.lang.reflect.Array;
+import java.lang.reflect.GenericArrayType;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Proxy;
 import java.lang.reflect.Type;
+import java.lang.reflect.TypeVariable;
 import java.lang.reflect.UndeclaredThrowableException;
+import java.lang.reflect.WildcardType;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.ServiceLoader;
 import java.util.Set;
+import java.util.Spliterator;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -39,6 +46,7 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import java.util.stream.BaseStream;
 import java.util.stream.Stream;
 
 import org.microbean.development.annotation.Experimental;
@@ -54,6 +62,17 @@ public final class Configured<T> implements Supplier<T> {
   /*
    * Static fields.
    */
+
+  
+  private static final Set<Class<?>> UNPROXIABLES =
+    Set.of(BaseStream.class,
+           CharSequence.class,
+           Collection.class,
+           Iterable.class,
+           Iterator.class,
+           Map.class,
+           Number.class,
+           Spliterator.class);
 
 
   private static final ClassValue<List<ValueSupplier>> loadedValueSuppliers =
@@ -90,6 +109,8 @@ public final class Configured<T> implements Supplier<T> {
 
   private final BiFunction<? super String, ? super Boolean, ? extends String> pathComponentFunction;
 
+  private final Function<? super Type, ? extends Boolean> isProxiableFunction;
+
   private final ClassLoader cl;
 
 
@@ -105,7 +126,8 @@ public final class Configured<T> implements Supplier<T> {
          Map.of(),
          defaultTargetSupplier,
          valueSuppliers,
-         Configured::methodName);
+         Configured::methodName,
+         Configured::isProxiable);
   }
 
   public Configured(final Class<T> rootType,
@@ -116,7 +138,8 @@ public final class Configured<T> implements Supplier<T> {
          Map.of(),
          defaultTargetSupplier,
          valueSuppliers,
-         pathComponentFunction);
+         pathComponentFunction,
+         Configured::isProxiable);
   }
 
   public Configured(final Class<T> rootType,
@@ -127,7 +150,8 @@ public final class Configured<T> implements Supplier<T> {
          applicationQualifiers,
          defaultTargetSupplier,
          valueSuppliers,
-         Configured::methodName);
+         Configured::methodName,
+         Configured::isProxiable);
   }
 
   public Configured(final Class<T> rootType,
@@ -139,14 +163,16 @@ public final class Configured<T> implements Supplier<T> {
          applicationQualifiers,
          defaultTargetSupplier,
          valueSuppliers,
-         pathComponentFunction);
+         pathComponentFunction,
+         Configured::isProxiable);
   }
 
   private Configured(final Path path,
                      final Map<?, ?> applicationQualifiers,
                      final Supplier<? extends T> defaultTargetSupplier,
                      final BiFunction<? super Path, ? super Map<?, ?>, ? extends Collection<ValueSupplier>> valueSuppliers,
-                     final BiFunction<? super String, ? super Boolean, ? extends String> pathComponentFunction)
+                     final BiFunction<? super String, ? super Boolean, ? extends String> pathComponentFunction,
+                     final Function<? super Type, ? extends Boolean> isProxiableFunction)
   {
     super();
     this.proxies = new ConcurrentHashMap<>();
@@ -166,6 +192,11 @@ public final class Configured<T> implements Supplier<T> {
       this.pathComponentFunction = Configured::methodName;
     } else {
       this.pathComponentFunction = pathComponentFunction;
+    }
+    if (isProxiableFunction == null) {
+      this.isProxiableFunction = Configured::isProxiable;
+    } else {
+      this.isProxiableFunction = isProxiableFunction;
     }
     this.cl = path.classLoader();
   }
@@ -192,26 +223,9 @@ public final class Configured<T> implements Supplier<T> {
       final Path path = this.path(method);
       final Supplier<?> value = this.value(path);
       if (value == null) {
-        final Class<?> returnType = method.getReturnType();
-        if (isProxyable(returnType)) {
-          return
-            this.proxies.computeIfAbsent(path,
-                                         p -> {
-                                           final Supplier<?> newDefaultTargetSupplier;
-                                           final Object defaultTarget = this.defaultTargetSupplier.get();
-                                           if (defaultTarget == null) {
-                                             newDefaultTargetSupplier = Configured::returnNull;
-                                           } else {
-                                             newDefaultTargetSupplier = () -> {
-                                               try {
-                                                 return method.invoke(defaultTarget, args);
-                                               } catch (final ReflectiveOperationException roe) {
-                                                 throw new UndeclaredThrowableException(roe, roe.getMessage()); // TODO: improve exception
-                                               }
-                                             };
-                                           }
-                                           return this.computeSubProxy(newDefaultTargetSupplier, p);
-                                         });
+        final Type returnType = method.getGenericReturnType();
+        if (this.isProxiableFunction.apply(returnType)) {
+          return this.proxies.computeIfAbsent(path, p -> this.computeSubProxy(this.newDefaultTargetSupplier(method, args), p));
         } else {
           final T defaultTarget = this.defaultTargetSupplier.get();
           if (defaultTarget == null) {
@@ -238,6 +252,23 @@ public final class Configured<T> implements Supplier<T> {
     }
   }
 
+  private final Supplier<?> newDefaultTargetSupplier(final Method method, final Object[] args) {
+    final Supplier<?> newDefaultTargetSupplier;
+    final Object defaultTarget = this.defaultTargetSupplier.get();
+    if (defaultTarget == null) {
+      newDefaultTargetSupplier = Configured::returnNull;
+    } else {
+      newDefaultTargetSupplier = () -> {
+        try {
+          return method.invoke(defaultTarget, args);
+        } catch (final ReflectiveOperationException roe) {
+          throw new UndeclaredThrowableException(roe, roe.getMessage()); // TODO: improve exception
+        }
+      };
+    }
+    return newDefaultTargetSupplier;
+  }
+
   private final Object computeSubProxy(final Supplier<?> defaultTargetSupplier, final Path p) {
     return this.computeProxy(p, this.butWith(p, defaultTargetSupplier)::invoke);
   }
@@ -252,7 +283,8 @@ public final class Configured<T> implements Supplier<T> {
                        this.applicationQualifiers,
                        defaultTargetSupplier,
                        this.valueSuppliers,
-                       this.pathComponentFunction);
+                       this.pathComponentFunction,
+                       this.isProxiableFunction);
   }
 
   private final Path path(final Method m) {
@@ -379,14 +411,14 @@ public final class Configured<T> implements Supplier<T> {
     }
   }
 
-  public static final List<ValueSupplier> loadValueSuppliers(final Path path, final Map<?, ?> applicationQualifiers) {
+  public static final List<ValueSupplier> valueSupplierServices(final Path path, final Map<?, ?> applicationQualifiers) {
     return loadedValueSuppliers.get(ValueSupplier.class)
       .stream()
       .filter(vs -> vs.respondsFor(path, applicationQualifiers))
       .toList();
   }
 
-  public static final void clearLoadedValueSuppliers() {
+  public static final void clearValueSupplierServices() {
     loadedValueSuppliers.remove(ValueSupplier.class);
   }
 
@@ -399,31 +431,144 @@ public final class Configured<T> implements Supplier<T> {
     }
   }
 
-  private static final boolean isProxyable(final Class<?> c) {
+  private static final boolean isProxiable(final Type genericReturnType) {
+    final Class<?> c = rawClass(genericReturnType);
     if (c != null && c.isInterface()) {
+      for (final Class<?> unproxiable : UNPROXIABLES) {
+        if (unproxiable.isAssignableFrom(c)) {
+          return false;
+        }
+      }
       for (final Method m : c.getMethods()) {
         if (isGetter(m)) {
           return true;
         }
       }
-      return false;
+    }
+    return false;
+  }
+
+  public static final Class<?>[] rawClasses(final Type type) {
+    if (type == null) {
+      return null;
+    } else if (type instanceof TypeVariable<?> tv) {
+      return rawClasses(tv);
     } else {
-      return false;
+      final Class<?> c = rawClass(type);
+      return c == null ? null : new Class<?>[] { c };
     }
   }
 
-  private static final Class<?> rawClass(final Type type) {
+  public static final Class<?>[] rawClasses(final TypeVariable<?> tv) {
+    if (tv == null) {
+      return null;
+    } else {
+      final Type[] bounds = tv.getBounds();
+      if (bounds.length == 1) {
+        return rawClasses(bounds[0]);
+      } else {
+        assert bounds.length > 0;
+        final Class<?>[] classes = new Class<?>[bounds.length];
+        for (int i = 0; i < bounds.length; i++) {
+          // If a TypeVariable has more than one bound, then all bounds
+          // are guaranteed not to be TypeVariables. See
+          // https://docs.oracle.com/javase/specs/jls/se17/html/jls-4.html#jls-TypeBound.
+          assert !(bounds[i] instanceof TypeVariable);
+          classes[i] = rawClass(bounds[i]);
+        }
+        return classes;
+      }
+    }
+  }
+
+  public static final Class<?> rawClass(final Type type) {
     if (type instanceof Class<?> c) {
       return c;
     } else if (type instanceof ParameterizedType ptype) {
       return rawClass(ptype);
+    } else if (type instanceof TypeVariable<?> tv) {
+      return rawClass(tv);
+    } else if (type instanceof GenericArrayType gat) {
+      return rawClass(gat);
+    } else if (type instanceof WildcardType wt) {
+      return rawClass(wt);
     } else {
-      throw new IllegalArgumentException("type: " + type);
+      return null;
     }
   }
 
-  private static final Class<?> rawClass(final ParameterizedType type) {
-    return rawClass(type.getRawType());
+  public static final Class<?> rawClass(final ParameterizedType type) {
+    return type == null ? null : rawClass(type.getRawType());
+  }
+
+  public static final Class<?> rawClass(final TypeVariable<?> typeVariable) {
+    if (typeVariable != null) {
+      final Type[] bounds = typeVariable.getBounds();
+      assert bounds.length > 0;
+      if (bounds.length == 1) {
+        final Type soleBound = bounds[0];
+        if (soleBound instanceof TypeVariable<?> soleTypeVariableBound) {
+          // The sole bound is a TypeVariable itself, which may have
+          // multiple bounds.
+          final Class<?>[] rawClasses = rawClasses(soleTypeVariableBound);
+          if (rawClasses != null && rawClasses.length == 1) {
+            return rawClasses[0];
+          }
+        } else {
+          // The Java language guarantees that a TypeVariable with
+          // multiple bounds will not have a TypeVariable among its
+          // bounds. See
+          // https://docs.oracle.com/javase/specs/jls/se17/html/jls-4.html#jls-TypeBound.
+          assert !(soleBound instanceof TypeVariable);
+          return rawClass(soleBound);
+        }
+      }
+    }
+    return null;
+  }
+
+  public static final Class<?> rawClass(final GenericArrayType genericArrayType) {
+    if (genericArrayType == null) {
+      return null;
+    } else {
+      final Type componentType = genericArrayType.getGenericComponentType();
+      if (componentType instanceof TypeVariable<?> tv) {
+        final Class<?>[] rawClasses = rawClasses(tv);
+        if (rawClasses == null || rawClasses.length > 1) {
+          return null;
+        }
+      }
+      final Class<?> c = rawClass(componentType);
+      return c == null ? null : Array.newInstance(c, 0).getClass();
+    }
+  }
+
+  public static final Class<?> rawClass(final WildcardType wildcardType) {
+    if (wildcardType != null) {
+      // Despite the presence of array-typed bounds accessors for both
+      // upper and lower bounds, the Java language specification as of
+      // version 17 states that a WildcardType may have a maximum of
+      // one upper bound and one lower bound, and, additionally, when
+      // a lower bound (super) is specified, then the upper bound will
+      // be Object.  See also
+      // https://docs.oracle.com/javase/specs/jls/se17/html/jls-4.html#jls-WildcardBounds
+      // and https://stackoverflow.com/a/6645454/208288 and
+      // https://github.com/openjdk/jdk/blob/7c9868c0b3c9bd3d305e71f91596190813cdccce/src/java.base/share/classes/java/lang/reflect/WildcardType.java#L77-L79
+      // and
+      // https://github.com/AdoptOpenJDK/openjdk-jdk8u-backup-06-sep-2018/blob/90e5951446532bbb7ca07ba524267fb028c63abe/jdk/src/share/classes/java/lang/reflect/WildcardType.java#L80-L82
+      final Type[] upperBounds = wildcardType.getUpperBounds();
+      assert upperBounds.length >= 1;
+      if (upperBounds.length == 1) {
+        final Type[] lowerBounds = wildcardType.getLowerBounds();
+        if (lowerBounds.length == 0 || Arrays.equals(upperBounds, lowerBounds)) {
+          final Class<?>[] rawClasses = rawClasses(upperBounds[0]);
+          if (rawClasses != null && rawClasses.length == 1) {
+            return rawClasses[0];
+          }
+        }
+      }
+    }
+    return null;
   }
 
   private static final <T> T returnNull() {
