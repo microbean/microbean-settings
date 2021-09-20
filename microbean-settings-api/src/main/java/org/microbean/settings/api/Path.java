@@ -20,8 +20,10 @@ import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.StringJoiner;
 
 import org.microbean.development.annotation.Experimental;
 import org.microbean.development.annotation.Incomplete;
@@ -37,7 +39,21 @@ public final record Path(Type rootType, Type targetType, List<String> components
   public Path {
     Types.rawClass(rootType); // validates
     Types.rawClass(targetType); // validates
-    components = components == null ? List.of() : List.copyOf(components);
+    if (components == null || components.isEmpty()) {
+      components = List.of();
+    } else {
+      final List<String> newComponents = new ArrayList<>(components.size());
+      for (final String component : components) {
+        if (component != null && !component.isEmpty()) {
+          newComponents.add(component);
+        }
+      }
+      if (newComponents.isEmpty()) {
+        components = List.of();
+      } else {
+        components = Collections.unmodifiableList(newComponents);
+      }
+    }
   }
 
   public final boolean root() {
@@ -67,6 +83,19 @@ public final record Path(Type rootType, Type targetType, List<String> components
       newList.add(Objects.requireNonNull(component, "component"));
     }
     return new Path(this.rootType(), targetType, newList);
+  }
+
+  public final String componentsString() {
+    final List<String> components = this.components();
+    if (components.isEmpty()) {
+      return "";
+    } else if (components.size() == 1) {
+      return components.get(0);
+    } else {
+      final StringJoiner sj = new StringJoiner(".");
+      components.forEach(sj::add);
+      return sj.toString();
+    }
   }
 
 }
