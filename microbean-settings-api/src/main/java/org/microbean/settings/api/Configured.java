@@ -30,6 +30,7 @@ import java.lang.reflect.WildcardType;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -75,16 +76,17 @@ public final class Configured<T> implements Supplier<T> {
            Spliterator.class);
 
 
-  private static final ClassValue<List<ValueSupplier>> loadedValueSuppliers =
-    new ClassValue<>() {
+  private static final ClassValue<List<ValueSupplier>> loadedValueSuppliers = new ClassValue<>() {
       @Override
       protected final List<ValueSupplier> computeValue(final Class<?> c) {
         if (ValueSupplier.class.equals(c)) {
-          return
-          ServiceLoader.load(ValueSupplier.class, ValueSupplier.class.getClassLoader())
+          final List<ValueSupplier> list = ServiceLoader.load(ValueSupplier.class, ValueSupplier.class.getClassLoader())
           .stream()
           .map(ServiceLoader.Provider::get)
           .toList();
+          Collections.sort(list, Prioritized.COMPARATOR_DESCENDING);
+          // TODO: add last ditch ListValueSupplier, MapValueSupplier, etc.          
+          return list;
         } else {
           return null;
         }
@@ -448,6 +450,35 @@ public final class Configured<T> implements Supplier<T> {
     return false;
   }
 
+  /**
+   * Returns an array of {@link Class}es representing upper bounds
+   * each element of which is a {@link Class} of which an object
+   * bearing the supplied {@link Type} {@link Class#isInstance(Object)
+   * is an instance}, or {@code null} if the calculation of these
+   * bounds is impossible or would yield an ambiguous result.
+   *
+   * <p>This method may return {@code null} to indicate that
+   * calculation of these bounds is impossible or would yield an
+   * ambiguous result.</p>
+   *
+   * @param type a {@link Type}; may be {@code null} in which case
+   * {@code null} will be returned
+   *
+   * @return an array of {@link Class}es representing upper bounds
+   * each element of which is a {@link Class} of which an object
+   * bearing the supplied {@link Type} {@link Class#isInstance(Object)
+   * is an instance}, or {@code null} if the calculation of these
+   * bounds is impossible or would yield an ambiguous result
+   *
+   * @nullability This method may return {@code null}.
+   *
+   * @threadsafety This method is safe for concurrent use by multiple
+   * threads, provided that operations on normally JDK-supplied {@link
+   * Type} instances are also safe for concurrent use by multiple
+   * threads.
+   *
+   * @idempotency This method is idempotent and deterministic.
+   */
   public static final Class<?>[] rawClasses(final Type type) {
     if (type == null) {
       return null;
@@ -557,8 +588,8 @@ public final class Configured<T> implements Supplier<T> {
       // and
       // https://github.com/AdoptOpenJDK/openjdk-jdk8u-backup-06-sep-2018/blob/90e5951446532bbb7ca07ba524267fb028c63abe/jdk/src/share/classes/java/lang/reflect/WildcardType.java#L80-L82
       final Type[] upperBounds = wildcardType.getUpperBounds();
-      assert upperBounds.length >= 1;
-      if (upperBounds.length == 1) {
+      switch (upperBounds.length) {
+      case 1:
         final Type[] lowerBounds = wildcardType.getLowerBounds();
         if (lowerBounds.length == 0 || Arrays.equals(upperBounds, lowerBounds)) {
           final Class<?>[] rawClasses = rawClasses(upperBounds[0]);
@@ -566,6 +597,11 @@ public final class Configured<T> implements Supplier<T> {
             return rawClasses[0];
           }
         }
+        break;
+      case 0:
+        throw new AssertionError();
+      default:
+        throw new IllegalArgumentException("WildcardType instances with multiple upper bounds are not supported");
       }
     }
     return null;
