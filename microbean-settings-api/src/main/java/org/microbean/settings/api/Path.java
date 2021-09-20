@@ -35,25 +35,17 @@ public final record Path(Type rootType, Type targetType, List<String> components
   }
 
   public Path {
-    rawClass(rootType); // validates
-    rawClass(targetType); // validates
+    Types.rawClass(rootType); // validates
+    Types.rawClass(targetType); // validates
     components = components == null ? List.of() : List.copyOf(components);
-  }
-
-  public final int length() {
-    return this.components().size();
   }
 
   public final boolean root() {
     return this.components().isEmpty() && this.targetType().equals(this.rootType());
   }
 
-  public final Class<?> rootClass() {
-    return rawClass(this.rootType());
-  }
-
   public final Class<?> targetClass() {
-    return rawClass(this.targetType());
+    return Types.rawClass(this.targetType());
   }
 
   public final ClassLoader classLoader() {
@@ -63,14 +55,6 @@ public final record Path(Type rootType, Type targetType, List<String> components
   public final boolean endsWith(final String s) {
     final List<?> components = this.components();
     return components.isEmpty() ? false : s.equals(components.get(components.size() - 1));
-  }
-
-  public final boolean contains(final Path other) {
-    return
-      other != null &&
-      this.rootType().equals(other.rootType()) &&
-      this.targetType().equals(other.targetType()) &&
-      this.components().containsAll(other.components());
   }
 
   public final Path plus(final Type targetType, final String component) {
@@ -83,20 +67,6 @@ public final record Path(Type rootType, Type targetType, List<String> components
       newList.add(Objects.requireNonNull(component, "component"));
     }
     return new Path(this.rootType(), targetType, newList);
-  }
-
-  private static final Class<?> rawClass(final Type type) {
-    if (type instanceof Class<?> c) {
-      return c;
-    } else if (type instanceof ParameterizedType ptype) {
-      return rawClass(ptype);
-    } else {
-      throw new IllegalArgumentException("Unhandled type: " + type);
-    }
-  }
-
-  private static final Class<?> rawClass(final ParameterizedType type) {
-    return rawClass(type.getRawType());
   }
 
 }

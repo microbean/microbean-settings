@@ -34,8 +34,6 @@ import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static java.util.Arrays.asList;
 
 import static org.microbean.settings.api.Configured.propertyName;
-import static org.microbean.settings.api.Configured.rawClass;
-import static org.microbean.settings.api.Configured.rawClasses;
 
 final class TestConfigured {
 
@@ -56,10 +54,10 @@ final class TestConfigured {
   @Test
   final void testGenericThing() throws ReflectiveOperationException {
     Type returnType = GenericThing.class.getDeclaredMethod("getThing").getGenericReturnType();
-    Class<?>[] c = rawClasses(returnType);
+    Class<?>[] c = Types.rawClasses(returnType);
     System.out.println("*** returnType rawClasses: " + asList(c));
     returnType = GenericThing.class.getDeclaredMethod("getThing2").getGenericReturnType();
-    c = rawClasses(returnType);
+    c = Types.rawClasses(returnType);
     System.out.println("*** returnType rawClasses: " + asList(c));
   }
 
