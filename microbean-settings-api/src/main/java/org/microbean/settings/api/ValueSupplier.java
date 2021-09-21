@@ -16,9 +16,12 @@
  */
 package org.microbean.settings.api;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Map;
 import java.util.Objects;
 
+import java.util.function.BiFunction;
 import java.util.function.Supplier;
 
 import org.microbean.development.annotation.Convenience;
@@ -29,7 +32,60 @@ public interface ValueSupplier {
     return true;
   }
   
-  public <T> Value<T> get(final Path path, final Map<?, ?> applicationQualifiers);
+  public <T> Value<T> get(final Path path,
+                          final Map<?, ?> applicationQualifiers,
+                          final BiFunction<? super Path, ? super Map<?, ?>, ? extends Collection<ValueSupplier>> valueSuppliers);
+
+  public static Value<?> resolve(final Collection<? extends ValueSupplier> valueSuppliers,
+                                 final Path path,
+                                 final Map<?, ?> applicationQualifiers,
+                                 final BiFunction<? super Path, ? super Map<?, ?>, ? extends Collection<ValueSupplier>> valueSuppliersFunction) {
+    final Value<?> returnValue;
+    if (valueSuppliers == null || valueSuppliers.isEmpty()) {
+      returnValue = null;
+    } else {
+      Collection<Value<?>> bad = null;
+      Value<?> candidate = null;
+      for (final ValueSupplier valueSupplier : valueSuppliers) {
+        if (valueSupplier != null && valueSupplier.respondsFor(path, applicationQualifiers)) {
+          final Value<?> v = valueSupplier.get(path, applicationQualifiers, valueSuppliersFunction);
+          if (v != null) {
+            final Map<?, ?> qualifiers = v.qualifiers();
+            if (viable(applicationQualifiers, qualifiers)) {
+              if (candidate == null || qualifiers.size() > candidate.qualifiers().size()) {
+                candidate = v;
+              }
+            } else {
+              if (bad == null) {
+                bad = new ArrayList<>(5);
+                if (candidate != null) {
+                  bad.add(candidate);
+                }
+              }
+              bad.add(v);
+            }
+          }
+        }
+      }
+      if (bad != null) {
+        throw new IllegalStateException("bad or conflicting ValueSuppliers: " + bad);
+      }
+      returnValue = candidate;
+    }
+    return returnValue;
+  }
+
+  private static boolean viable(final Map<?, ?> applicationQualifiers, final Map<?, ?> vsQualifiers) {
+    final boolean returnValue;
+    if (applicationQualifiers.isEmpty()) {
+      returnValue = vsQualifiers == null || vsQualifiers.isEmpty();
+    } else if (vsQualifiers == null || vsQualifiers.isEmpty()) {
+      returnValue = false;
+    } else {
+      returnValue = applicationQualifiers.entrySet().containsAll(vsQualifiers.entrySet());
+    }
+    return returnValue;
+  }
 
   public static final record Value<T>(T value, Path path, Map<?, ?> qualifiers) implements Supplier<T> {
 

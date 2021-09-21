@@ -25,6 +25,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
+import java.util.function.BiFunction;
+
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -116,7 +118,9 @@ final class TestConfigured {
     }
     
     @Override
-    public final <T> Value<T> get(final Path path, final Map<?, ?> qualifiers) {
+    public final <T> Value<T> get(final Path path,
+                                  final Map<?, ?> qualifiers,
+                                  final BiFunction<? super Path, ? super Map<?, ?>, ? extends Collection<ValueSupplier>> valueSuppliers) {
       if (path.rootType().equals(Car.class) &&
           path.targetClass().equals(String.class) &&
           path.components().equals(List.of("wheel", "color", "name")) &&

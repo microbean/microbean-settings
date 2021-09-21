@@ -57,7 +57,7 @@ import org.microbean.settings.api.ValueSupplier.Value;
 
 @Experimental
 @Incomplete
-public final class Configured<T> implements Supplier<T> {
+public final class Configured<T> implements QualifiedPath, Supplier<T> {
 
 
   /*
@@ -65,17 +65,6 @@ public final class Configured<T> implements Supplier<T> {
    */
 
   
-  private static final Set<Class<?>> UNPROXIABLES =
-    Set.of(BaseStream.class,
-           CharSequence.class,
-           Collection.class,
-           Iterable.class,
-           Iterator.class,
-           Map.class,
-           Number.class,
-           Spliterator.class);
-
-
   private static final ClassValue<List<ValueSupplier>> loadedValueSuppliers = new ClassValue<>() {
       @Override
       protected final List<ValueSupplier> computeValue(final Class<?> c) {
@@ -208,6 +197,16 @@ public final class Configured<T> implements Supplier<T> {
     return (T)this.proxies.computeIfAbsent(this.path, this::computeProxy);
   }
 
+  @Override // QualifiedPath
+  public final Path path() {
+    return this.path;
+  }
+
+  @Override // QualifiedPath
+  public final Map<?, ?> applicationQualifiers() {
+    return this.applicationQualifiers;
+  }
+
   private final Object computeProxy(final Path p) {
     return this.computeProxy(p, this::invoke);
   }
@@ -292,6 +291,10 @@ public final class Configured<T> implements Supplier<T> {
                        this.isProxiableFunction);
   }
 
+  private final MethodHandler methodHandler(final Method m) {
+    return null; // TODO implement
+  }
+  
   private final Path path(final Method m) {
     return
       this.path.plus(m.getGenericReturnType(),
@@ -304,51 +307,7 @@ public final class Configured<T> implements Supplier<T> {
   }
 
   private final Value<?> value(final Path path, final Collection<? extends ValueSupplier> valueSuppliers) {
-    final Value<?> returnValue;
-    if (valueSuppliers == null || valueSuppliers.isEmpty()) {
-      returnValue = null;
-    } else {
-      Collection<Value<?>> bad = null;
-      Value<?> candidate = null;
-      for (final ValueSupplier valueSupplier : valueSuppliers) {
-        if (valueSupplier != null && valueSupplier.respondsFor(path, this.applicationQualifiers)) {
-          final Value<?> v = valueSupplier.get(path, this.applicationQualifiers);
-          if (v != null) {
-            final Map<?, ?> qualifiers = v.qualifiers();
-            if (viable(qualifiers)) {
-              if (candidate == null || qualifiers.size() > candidate.qualifiers().size()) {
-                candidate = v;
-              }
-            } else {
-              if (bad == null) {
-                bad = new ArrayList<>(5);
-                if (candidate != null) {
-                  bad.add(candidate);
-                }
-              }
-              bad.add(v);
-            }
-          }
-        }
-      }
-      if (bad != null) {
-        throw new IllegalStateException("bad or conflicting ValueSuppliers: " + bad);
-      }
-      returnValue = candidate;
-    }
-    return returnValue;
-  }
-
-  private final boolean viable(final Map<?, ?> vsQualifiers) {
-    final boolean returnValue;
-    if (this.applicationQualifiers.isEmpty()) {
-      returnValue = vsQualifiers == null || vsQualifiers.isEmpty();
-    } else if (vsQualifiers == null || vsQualifiers.isEmpty()) {
-      returnValue = false;
-    } else {
-      returnValue = this.applicationQualifiers.entrySet().containsAll(vsQualifiers.entrySet());
-    }
-    return returnValue;
+    return ValueSupplier.resolve(valueSuppliers, path, this.applicationQualifiers, this.valueSuppliers);
   }
 
 
@@ -361,6 +320,34 @@ public final class Configured<T> implements Supplier<T> {
     return cs.toString();
   }
 
+  /**
+   * Given a {@link CharSequence} normally representing the name of a
+   * "getter" method, and a {@code boolean} indicating whether the
+   * method in question returns a {@code boolean}, applies the rules
+   * declared by the Java Beans specification to the name and yields
+   * the result.
+   *
+   * @param cs a {@link CharSequence} naming a "getter" method; may be
+   * {@code null} in which case {@code null} will be returned
+   *
+   * @param methodReturnsBoolean {@code true} if the method named by
+   * the supplied {@link CharSequence} has {@code boolean} as its
+   * return type
+   *
+   * @return the property name corresponding to the supplied method
+   * name, according to the rules of the Java Beans specification
+   *
+   * @nullability This method may return {@code null} but only when
+   * {@code cs} is {@code null}.
+   *
+   * @threadsafety This method is safe for concurrent use by multiple
+   * threads.
+   *
+   * @idempotency This method is idempotent and deterministic.
+   *
+   * @see #decapitalize(CharSequence)
+   */
+  @SuppressWarnings("fallthrough")
   public static final String propertyName(final CharSequence cs, final boolean methodReturnsBoolean) {
     if (cs == null) {
       return null;
@@ -373,14 +360,10 @@ public final class Configured<T> implements Supplier<T> {
         case 'i':
           if (cs.charAt(1) == 's') {
             return decapitalize(cs.subSequence(2, length));
-          } else {
-            return decapitalize(cs);
           }
         case 'g':
           if (length > 3 && cs.charAt(1) == 'e' && cs.charAt(2) == 't') {
             return decapitalize(cs.subSequence(3, length));
-          } else {
-            return decapitalize(cs);
           }
         default:
           return decapitalize(cs);
@@ -390,8 +373,6 @@ public final class Configured<T> implements Supplier<T> {
         case 'g':
           if (cs.charAt(1) == 'e' && cs.charAt(2) == 't') {
             return decapitalize(cs.subSequence(3, length));
-          } else {
-            return decapitalize(cs);
           }
         default:
           return decapitalize(cs);
@@ -402,6 +383,23 @@ public final class Configured<T> implements Supplier<T> {
     }
   }
 
+  /**
+   * Decapitalizes the supplied {@link CharSequence} according to the
+   * rules of the Java Beans specification.
+   *
+   * @param cs the {@link CharSequence} to decapitalize; may be {@code
+   * null} in which case {@code null} will be returned
+   *
+   * @return the decapitalized {@link String} or {@code null}
+   *
+   * @nullability This method may return {@code null} but only when
+   * {@code cs} is {@code null}.
+   *
+   * @threadsafety This method is safe for concurrent use by multiple
+   * threads.
+   *
+   * @idempotency This method is idempotent and deterministic.
+   */
   public static final String decapitalize(final CharSequence cs) {
     if (cs == null) {
       return null;
@@ -441,11 +439,6 @@ public final class Configured<T> implements Supplier<T> {
   private static final boolean isProxiable(final Type genericReturnType) {
     final Class<?> c = Types.rawClass(genericReturnType);
     if (c != null && c.isInterface()) {
-      for (final Class<?> unproxiable : UNPROXIABLES) {
-        if (unproxiable.isAssignableFrom(c)) {
-          return false;
-        }
-      }
       for (final Method m : c.getMethods()) {
         if (isGetter(m)) {
           return true;
