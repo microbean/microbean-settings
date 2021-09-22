@@ -105,7 +105,7 @@ final class TestConfigured {
     final Map<?, ?> applicationQualifiers = qualifiedPath.applicationQualifiers();
     if (path.rootType().equals(Car.class) &&
         path.targetClass().equals(String.class) &&
-        path.components().equals(List.of("wheel", "color", "name")) &&
+        path.names().equals(List.of("wheel", "color", "name")) &&
         applicationQualifiers.equals(Map.of("dev", Boolean.TRUE))) {
       return List.of(new DevWheelColorString());
     } else {
@@ -126,7 +126,7 @@ final class TestConfigured {
       final Map<?, ?> qualifiers = qualifiedPath.applicationQualifiers();
       if (path.rootType().equals(Car.class) &&
           path.targetClass().equals(String.class) &&
-          path.components().equals(List.of("wheel", "color", "name")) &&
+          path.names().equals(List.of("wheel", "color", "name")) &&
           qualifiers.equals(Map.of("dev", Boolean.TRUE))) {
         return new Value<>("Red", path, qualifiers).cast();
       } else {

@@ -297,9 +297,9 @@ public final class Configured<T> implements QualifiedPath, Supplier<T> {
   
   private final Path path(final Method m) {
     return
-      this.path.plus(m.getGenericReturnType(),
-                     this.pathComponentFunction.apply(m.getName(),
-                                                      boolean.class == m.getReturnType()));
+      this.path.plus(this.pathComponentFunction.apply(m.getName(),
+                                                      boolean.class == m.getReturnType()),
+                     m.getGenericReturnType());
   }
 
   private final Value<?> value(final Path path) {

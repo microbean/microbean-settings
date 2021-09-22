@@ -16,48 +16,54 @@
  */
 package org.microbean.settings.api;
 
-import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 
-import java.util.ArrayList;
-import java.util.Collections;
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.Iterator;
 import java.util.List;
+import java.util.ListIterator;
+import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.StringJoiner;
 
-import org.microbean.development.annotation.Experimental;
-import org.microbean.development.annotation.Incomplete;
+public final record Path(Path parent, String name, Type targetType) {
 
-@Experimental
-@Incomplete
-public final record Path(Type rootType, Type targetType, List<String> components) {
+  public Path() {
+    this((Path)null, "", Object.class);
+  }
 
+  // Creates a new root
   public Path(final Type targetType) {
-    this(targetType, targetType, List.of());
+    this((Path)null, "", targetType);
+  }
+
+  public Path(final Type parentRootType, final String name, final Type targetType) {
+    this(new Path(parentRootType), name, targetType);
   }
 
   public Path {
-    Types.rawClass(rootType); // validates
-    Types.rawClass(targetType); // validates
-    if (components == null || components.isEmpty()) {
-      components = List.of();
-    } else {
-      final List<String> newComponents = new ArrayList<>(components.size());
-      for (final String component : components) {
-        if (component != null && !component.isEmpty()) {
-          newComponents.add(component);
-        }
+    Objects.requireNonNull(targetType, "targetType");
+    if (parent == null) {
+      if (!name.isEmpty()) {
+        throw new IllegalArgumentException("name: " + name);
       }
-      if (newComponents.isEmpty()) {
-        components = List.of();
-      } else {
-        components = Collections.unmodifiableList(newComponents);
-      }
+    } else if (name.isEmpty()) {
+      throw new IllegalArgumentException("empty name; non-null parent: " + parent);
     }
   }
 
-  public final boolean root() {
-    return this.components().isEmpty() && this.targetType().equals(this.rootType());
+  public final List<Path> all() {
+    final Deque<Path> kids = new ArrayDeque<>(5);
+    Path path = this;
+    Path parent = this.parent();
+    while (parent != null) {
+      kids.addFirst(path);
+      path = parent;
+      parent = parent.parent();
+    }
+    kids.addFirst(path);
+    return List.copyOf(kids);
   }
 
   public final Class<?> targetClass() {
@@ -68,47 +74,225 @@ public final record Path(Type rootType, Type targetType, List<String> components
     return this.targetClass().getClassLoader();
   }
 
-  public final boolean endsWith(final String s) {
-    final List<?> components = this.components();
-    return components.isEmpty() ? false : s.equals(components.get(components.size() - 1));
+  public final Path plus(final String name, final Type targetType) {
+    return new Path(this, name, targetType);
   }
 
-  public final String lastComponent() {
-    final List<String> components = this.components();
-    return components.isEmpty() ? "" : components.get(components.size() - 1);
-  }
-
-  public final Path with(final Type targetType) {
-    return new Path(this.rootType(), targetType, this.components());
-  }
-
-  public final Path plus(final String component) {
-    return this.plus(Object.class, component);
-  }
-  
-  public final Path plus(final Type targetType, final String component) {
-    final List<String> components = this.components();
-    final List<String> newList;
-    if (components.isEmpty()) {
-      newList = List.of(Objects.requireNonNull(component, "component"));
-    } else {
-      newList = new ArrayList<>(components);
-      newList.add(Objects.requireNonNull(component, "component"));
+  public final Path root() {
+    Path path = this;
+    Path parent = path.parent();
+    while (parent != null) {
+      path = parent;
+      parent = parent.parent();
     }
-    return new Path(this.rootType(), targetType, newList);
+    return path;
   }
 
-  public final String componentsString() {
-    final List<String> components = this.components();
-    if (components.isEmpty()) {
-      return "";
-    } else if (components.size() == 1) {
-      return components.get(0);
+  public final boolean isRoot() {
+    return this.isRoot(Object.class);
+  }
+
+  public final boolean isRoot(final Type type) {
+    if (this.parent == null) {
+      assert this.name.isEmpty();
+      return this.targetType().equals(type);
     } else {
-      final StringJoiner sj = new StringJoiner(".");
-      components.forEach(sj::add);
-      return sj.toString();
+      return false;
     }
+  }
+
+  public final Path trailingPath(final Type startingType, final List<String> names) {
+    Objects.requireNonNull(startingType, "startingType");
+    if (names.isEmpty()) {
+      if (this.parent == null && this.targetType().equals(startingType)) {
+        assert this.name.isEmpty();
+        return this;
+      } else {
+        return null;
+      }
+    }
+    final ListIterator<String> listIterator = names.listIterator(names.size());
+    Path path = this;
+    Path parent = path.parent();
+    while (listIterator.hasPrevious() && parent != null) {
+      if (!listIterator.previous().equals(path.name())) {
+        return null;
+      }
+      path = parent;
+      parent = parent.parent();
+    }
+    return path.targetType().equals(startingType) ? path : null;
+  }
+
+  public final boolean endsWith(final Type startingType, final List<String> names) {
+    return trailingPath(startingType, names) != null;
+  }
+
+  public final Path leadingPath(final Type startingType) {
+    return this.leadingPath(startingType, List.of());
+  }
+
+  public final Path leadingPath(final Type startingType, final List<String> names) {
+    Objects.requireNonNull(startingType, "startingType");
+    final Deque<Path> kids = new ArrayDeque<>(5);
+    Path path = this;
+    Path parent = this.parent();
+    while (parent != null) {
+      kids.addFirst(path);
+      path = parent;
+      parent = parent.parent();
+    }
+    if (path.targetType().equals(startingType)) {
+      if (!names.isEmpty()) {
+        path = null;
+        final Iterator<Path> kidIterator = kids.iterator();
+        for (final String name : names) {
+          if (name.isEmpty()) {
+            throw new IllegalArgumentException("names: " + names);
+          }
+          if (kidIterator.hasNext()) {
+            final Path kid = kidIterator.next();
+            final String kidName = kid.name();
+            if (kidName.isEmpty()) {
+              // Skip the root
+              assert kid.parent() == null;
+            } else if (kidName.equals(name)) {
+              path = kid;
+            } else {
+              path = null;
+              break;
+            }
+          } else {
+            path = null;
+            break;
+          }
+        }
+      }
+      return path;
+    } else {
+      return null;
+    }
+  }
+
+  public final boolean startsWith(final Type startingType) {
+    return this.leadingPath(startingType) != null;
+  }
+
+  public final Type parentType() {
+    final Path parent = this.parent();
+    return parent == null ? this.targetType() : parent.targetType();
+  }
+
+  public final Class<?> parentClass() {
+    return Types.rawClass(this.parentType());
+  }
+
+  public final String parentName() {
+    final Path parent = this.parent();
+    return parent == null ? "" : parent.name();
+  }
+
+  public final Type rootType() {
+    return this.root().targetType();
+  }
+
+  public final Class<?> rootClass() {
+    return Types.rawClass(this.rootType());
+  }
+
+  public final String pathString() {
+    return this.pathString(".");
+  }
+
+  public final String pathString(final CharSequence separator) {
+    final StringJoiner sj = new StringJoiner(separator);
+    this.names().forEach(sj::add);
+    return sj.toString();
+  }
+
+  public final List<String> names() {
+    final Deque<String> dq = new ArrayDeque<>(5);
+    Path path = this;
+    Path parent = path.parent();
+    while (parent != null) {
+      dq.addFirst(path.name());
+      path = parent;
+      parent = parent.parent();
+    }
+    return List.copyOf(dq);
+  }
+
+  public final int length() {
+    Path path = this;
+    Path parent = path.parent();
+    int size = 1;
+    while (parent != null) {
+      path = parent;
+      parent = parent.parent();
+      size++;
+    }
+    return size;
+  }
+
+  public static final Path of(final Type rootType,
+                               final String name0, final Type type0) {
+    return new Path(rootType).plus(name0, type0);
+  }
+
+  public static final Path of(final Type rootType,
+                               final String name0, final Type type0,
+                               final String name1, final Type type1) {
+    return
+      new Path(rootType)
+      .plus(name0, type0)
+      .plus(name1, type1);
+  }
+
+  public static final Path of(final Type rootType,
+                               final String name0, final Type type0,
+                               final String name1, final Type type1,
+                               final String name2, final Type type2) {
+    return
+      new Path(rootType)
+      .plus(name0, type0)
+      .plus(name1, type1)
+      .plus(name2, type2);
+  }
+
+  public static final Path of(final Type rootType,
+                               final String name0, final Type type0,
+                               final String name1, final Type type1,
+                               final String name2, final Type type2,
+                               final String name3, final Type type3) {
+    return
+      new Path(rootType)
+      .plus(name0, type0)
+      .plus(name1, type1)
+      .plus(name2, type2)
+      .plus(name3, type3);
+  }
+
+  public static final Path of(final Type rootType, final Object... components) {
+    Path path = new Path(rootType);
+    if (components != null && components.length > 0) {
+      String name = null;
+      for (int i = 0; i < components.length; i++) {
+        if (i % 2 == 0) {
+          if (components[i] instanceof String s) {
+            assert name == null;
+            name = s;
+          } else {
+            throw new IllegalArgumentException("components; components[" + i + "]: " + components[i]);
+          }
+        } else if (components[i] instanceof Type type) {
+          path = path.plus(name, type);
+          name = null;
+        } else {
+          throw new IllegalArgumentException("components; components[" + i + "]: " + components[i]);
+        }
+      }
+    }
+    return path;
   }
 
 }
