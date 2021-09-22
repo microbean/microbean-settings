@@ -21,25 +21,23 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.Objects;
 
-import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 import org.microbean.development.annotation.Convenience;
 
 public interface ValueSupplier {
 
-  public default boolean respondsFor(final Path path, final Map<?, ?> applicationQualifiers) {
+  public default boolean respondsFor(final QualifiedPath qualifiedPath) {
     return true;
   }
   
-  public <T> Value<T> get(final Path path,
-                          final Map<?, ?> applicationQualifiers,
-                          final BiFunction<? super Path, ? super Map<?, ?>, ? extends Collection<ValueSupplier>> valueSuppliers);
+  public <T> Value<T> get(final QualifiedPath path,
+                          final Function<? super QualifiedPath, ? extends Collection<ValueSupplier>> valueSuppliers);
 
   public static Value<?> resolve(final Collection<? extends ValueSupplier> valueSuppliers,
-                                 final Path path,
-                                 final Map<?, ?> applicationQualifiers,
-                                 final BiFunction<? super Path, ? super Map<?, ?>, ? extends Collection<ValueSupplier>> valueSuppliersFunction) {
+                                 final QualifiedPath qualifiedPath,
+                                 final Function<? super QualifiedPath, ? extends Collection<ValueSupplier>> valueSuppliersFunction) {
     final Value<?> returnValue;
     if (valueSuppliers == null || valueSuppliers.isEmpty()) {
       returnValue = null;
@@ -47,11 +45,11 @@ public interface ValueSupplier {
       Collection<Value<?>> bad = null;
       Value<?> candidate = null;
       for (final ValueSupplier valueSupplier : valueSuppliers) {
-        if (valueSupplier != null && valueSupplier.respondsFor(path, applicationQualifiers)) {
-          final Value<?> v = valueSupplier.get(path, applicationQualifiers, valueSuppliersFunction);
+        if (valueSupplier != null && valueSupplier.respondsFor(qualifiedPath)) {
+          final Value<?> v = valueSupplier.get(qualifiedPath, valueSuppliersFunction);
           if (v != null) {
             final Map<?, ?> qualifiers = v.qualifiers();
-            if (viable(applicationQualifiers, qualifiers)) {
+            if (viable(qualifiedPath.applicationQualifiers(), qualifiers)) {
               if (candidate == null || qualifiers.size() > candidate.qualifiers().size()) {
                 candidate = v;
               }

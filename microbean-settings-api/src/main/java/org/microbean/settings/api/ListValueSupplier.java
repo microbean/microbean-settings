@@ -21,59 +21,60 @@ import java.lang.reflect.Type;
 
 import java.util.AbstractList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Objects;
 
-import java.util.function.BiFunction;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
-public class ListValueSupplier implements ValueSupplier {
+public class ListValueSupplier extends AbstractValueSupplier {
 
+  private final Map<Path, Supplier<List<?>>> map;
+
+  private final Function<? super QualifiedPath, ? extends Map<?, ?>> qualifiersFunction;
+
+  public ListValueSupplier(final Path path, final Supplier<List<?>> supplier) {
+    this(Map.of(Objects.requireNonNull(path, "path"), supplier),
+         qp -> qp.applicationQualifiers());
+  }
+  
+  public ListValueSupplier(final Map<? extends Path, ? extends Supplier<List<?>>> map,
+                           final Function<? super QualifiedPath, ? extends Map<?, ?>> qualifiersFunction) {
+    super();
+    if (map == null || map.isEmpty()) {
+      this.map = Map.of();
+    } else {
+      for (final Path path : map.keySet()) {
+        if (!List.class.equals(path.targetClass())) {
+          throw new IllegalArgumentException("map: " + map);
+        }
+      }
+      this.map = Map.copyOf(map);
+    }
+    this.qualifiersFunction = Objects.requireNonNull(qualifiersFunction, "qualifiersFunction");
+  }
+  
   @Override // ValueSupplier
-  public boolean respondsFor(final Path path, final Map<?, ?> applicationQualifiers) {
-    return path != null && path.targetClass() == List.class;
+  public boolean respondsFor(final QualifiedPath qualifiedPath) {
+    if (qualifiedPath != null) {
+      final Path path = qualifiedPath.path();
+      return path != null && this.map.containsKey(path) && this.qualifiersFunction.apply(qualifiedPath) != null;
+    } else {
+      return false;
+    }
   }
 
   @Override // ValueSupplier
-  public <T> Value<T> get(final Path path,
-                          final Map<?, ?> applicationQualifiers,
-                          final BiFunction<? super Path, ? super Map<?, ?>, ? extends Collection<ValueSupplier>> valueSuppliers) {
-    final Value<T> value;
-    final Type targetType = path.targetType();
-    if (path == null || Types.rawClass(targetType) != List.class) {
-      value = null;
-    } else {
-      final Type listType = ((ParameterizedType)targetType).getRawType();
-      // The path is something like a.b.frobs; frobs is a List<WhoKnows>
-      // anyIndexPath will be a.b.frobs.*
-      final Path anyIndexPath = path.plus(listType, Path.ANY);
-      final Collection<ValueSupplier> relevantValueSuppliers = valueSuppliers.apply(anyIndexPath, applicationQualifiers);
-      final List<ValueSupplier> vsList = relevantValueSuppliers == null || relevantValueSuppliers.isEmpty() ? List.of() : List.copyOf(relevantValueSuppliers);
-      final List<Object> l = new AbstractList<>() {
-          @Override // AbstractList<Object>
-          public final Object get(final int index) {
-            // indexPath will be, e.g. a.b.frobs.3
-            final Path indexPath = path.plus(index);
-            final Collection<ValueSupplier> relevantValueSuppliers = valueSuppliers.apply(indexPath, applicationQualifiers);
-            if (relevantValueSuppliers == null || relevantValueSuppliers.isEmpty()) {
-              return null;
-            } else {
-              // TODO: qualifier matching logic/resolution; see Configured
-              throw new UnsupportedOperationException();
-            }
-          }
-          @Override
-          public final boolean isEmpty() {
-            return vsList.isEmpty();
-          }
-          @Override
-          public final int size() {
-            // TODO: this isn't quite right; maybe throw UnsupportedOperationException instead and deal with Iterators
-            return vsList.size();
-          }
-        };
-      throw new UnsupportedOperationException(); // TODO implement
-    }
-    return value;
+  @SuppressWarnings("unchecked")
+  public <T> Value<T> get(final QualifiedPath qualifiedPath,
+                          final Function<? super QualifiedPath, ? extends Collection<ValueSupplier>> valueSuppliers) {
+    final Path path = qualifiedPath.path();    
+    final Supplier<List<?>> listSupplier = path == null ? null : this.map.get(path);
+    return listSupplier == null ? null : new Value<>((T)listSupplier.get(), path, this.qualifiersFunction.apply(qualifiedPath));
   }
   
 }

@@ -32,8 +32,6 @@ import org.microbean.development.annotation.Incomplete;
 @Incomplete
 public final record Path(Type rootType, Type targetType, List<String> components) {
 
-  public static final String ANY = "*";
-  
   public Path(final Type targetType) {
     this(targetType, targetType, List.of());
   }
@@ -80,12 +78,8 @@ public final record Path(Type rootType, Type targetType, List<String> components
     return components.isEmpty() ? "" : components.get(components.size() - 1);
   }
 
-  public final Path plus(final int component) {
-    return this.plus(Object.class, Integer.toString(component));
-  }    
-  
-  public final Path plus(final Type targetType, final int component) {
-    return this.plus(targetType, Integer.toString(component));
+  public final Path with(final Type targetType) {
+    return new Path(this.rootType(), targetType, this.components());
   }
 
   public final Path plus(final String component) {

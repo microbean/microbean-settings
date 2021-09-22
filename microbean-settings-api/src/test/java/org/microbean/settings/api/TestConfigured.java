@@ -25,7 +25,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
-import java.util.function.BiFunction;
+import java.util.function.Function;
 
 import org.junit.jupiter.api.Test;
 
@@ -72,11 +72,11 @@ final class TestConfigured {
   private static final void test(final Map<?, ?> applicationQualifiers, final String expectedColorName) {
     final Car defaultCar = new CarDefaults();
     final Car car =
-      new Configured<>(Car.class,
-                       applicationQualifiers,
-                       () -> defaultCar,
-                       TestConfigured::valueSuppliers,
-                       Configured::propertyName)
+      new Configured<Car>(Car.class,
+                          applicationQualifiers,
+                          () -> defaultCar,
+                          TestConfigured::valueSuppliers,
+                          Configured::propertyName)
       .get();
     assertNotSame(defaultCar, car);
     final Wheel wheel = car.getWheel();
@@ -100,7 +100,9 @@ final class TestConfigured {
     assertEquals("toString", propertyName("toString", false));
   }
 
-  private static final Collection<ValueSupplier> valueSuppliers(final Path path, final Map<?, ?> applicationQualifiers) {
+  private static final Collection<ValueSupplier> valueSuppliers(final QualifiedPath qualifiedPath) {
+    final Path path = qualifiedPath.path();
+    final Map<?, ?> applicationQualifiers = qualifiedPath.applicationQualifiers();
     if (path.rootType().equals(Car.class) &&
         path.targetClass().equals(String.class) &&
         path.components().equals(List.of("wheel", "color", "name")) &&
@@ -118,9 +120,10 @@ final class TestConfigured {
     }
     
     @Override
-    public final <T> Value<T> get(final Path path,
-                                  final Map<?, ?> qualifiers,
-                                  final BiFunction<? super Path, ? super Map<?, ?>, ? extends Collection<ValueSupplier>> valueSuppliers) {
+    public final <T> Value<T> get(final QualifiedPath qualifiedPath,
+                                  final Function<? super QualifiedPath, ? extends Collection<ValueSupplier>> valueSuppliers) {
+      final Path path = qualifiedPath.path();
+      final Map<?, ?> qualifiers = qualifiedPath.applicationQualifiers();
       if (path.rootType().equals(Car.class) &&
           path.targetClass().equals(String.class) &&
           path.components().equals(List.of("wheel", "color", "name")) &&

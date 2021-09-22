@@ -16,22 +16,10 @@
  */
 package org.microbean.settings.api;
 
-import java.util.Map;
-import java.util.Objects;
+public abstract class AbstractValueSupplier implements ValueSupplier {
 
-public interface QualifiedPath {
-
-  public Path path();
-
-  public Map<?, ?> applicationQualifiers();
-
-  public static record Record(Path path, Map<?, ?> applicationQualifiers) implements QualifiedPath {
-
-    public Record {
-      Objects.requireNonNull(path, "path");
-      applicationQualifiers = applicationQualifiers == null ? Map.of() : Map.copyOf(applicationQualifiers);
-    }
-    
+  protected AbstractValueSupplier() {
+    super();
   }
   
 }

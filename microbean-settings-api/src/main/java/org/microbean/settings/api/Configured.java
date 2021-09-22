@@ -96,7 +96,7 @@ public final class Configured<T> implements QualifiedPath, Supplier<T> {
 
   private final Supplier<? extends T> defaultTargetSupplier;
 
-  private final BiFunction<? super Path, ? super Map<?, ?>, ? extends Collection<ValueSupplier>> valueSuppliers;
+  private final Function<? super QualifiedPath, ? extends Collection<ValueSupplier>> valueSuppliers;
 
   private final BiFunction<? super String, ? super Boolean, ? extends String> pathComponentFunction;
 
@@ -112,7 +112,7 @@ public final class Configured<T> implements QualifiedPath, Supplier<T> {
 
   public Configured(final Class<T> rootType,
                     final Supplier<? extends T> defaultTargetSupplier,
-                    final BiFunction<? super Path, ? super Map<?, ?>, ? extends Collection<ValueSupplier>> valueSuppliers) {
+                    final Function<? super QualifiedPath, ? extends Collection<ValueSupplier>> valueSuppliers) {
     this(new Path(rootType),
          Map.of(),
          defaultTargetSupplier,
@@ -123,7 +123,7 @@ public final class Configured<T> implements QualifiedPath, Supplier<T> {
 
   public Configured(final Class<T> rootType,
                     final Supplier<? extends T> defaultTargetSupplier,
-                    final BiFunction<? super Path, ? super Map<?, ?>, ? extends Collection<ValueSupplier>> valueSuppliers,
+                    final Function<? super QualifiedPath, ? extends Collection<ValueSupplier>> valueSuppliers,
                     final BiFunction<? super String, ? super Boolean, ? extends String> pathComponentFunction) {
     this(new Path(rootType),
          Map.of(),
@@ -136,7 +136,7 @@ public final class Configured<T> implements QualifiedPath, Supplier<T> {
   public Configured(final Class<T> rootType,
                     final Map<?, ?> applicationQualifiers,
                     final Supplier<? extends T> defaultTargetSupplier,
-                    final BiFunction<? super Path, ? super Map<?, ?>, ? extends Collection<ValueSupplier>> valueSuppliers) {
+                    final Function<? super QualifiedPath, ? extends Collection<ValueSupplier>> valueSuppliers) {
     this(new Path(rootType),
          applicationQualifiers,
          defaultTargetSupplier,
@@ -148,7 +148,7 @@ public final class Configured<T> implements QualifiedPath, Supplier<T> {
   public Configured(final Class<T> rootType,
                     final Map<?, ?> applicationQualifiers,
                     final Supplier<? extends T> defaultTargetSupplier,
-                    final BiFunction<? super Path, ? super Map<?, ?>, ? extends Collection<ValueSupplier>> valueSuppliers,
+                    final Function<? super QualifiedPath, ? extends Collection<ValueSupplier>> valueSuppliers,
                     final BiFunction<? super String, ? super Boolean, ? extends String> pathComponentFunction) {
     this(new Path(rootType),
          applicationQualifiers,
@@ -161,7 +161,7 @@ public final class Configured<T> implements QualifiedPath, Supplier<T> {
   private Configured(final Path path,
                      final Map<?, ?> applicationQualifiers,
                      final Supplier<? extends T> defaultTargetSupplier,
-                     final BiFunction<? super Path, ? super Map<?, ?>, ? extends Collection<ValueSupplier>> valueSuppliers,
+                     final Function<? super QualifiedPath, ? extends Collection<ValueSupplier>> valueSuppliers,
                      final BiFunction<? super String, ? super Boolean, ? extends String> pathComponentFunction,
                      final Function<? super Type, ? extends Boolean> isProxiableFunction)
   {
@@ -175,7 +175,7 @@ public final class Configured<T> implements QualifiedPath, Supplier<T> {
       this.defaultTargetSupplier = defaultTargetSupplier;
     }
     if (valueSuppliers == null) {
-      this.valueSuppliers = (p, q) -> List.of();
+      this.valueSuppliers = qp -> List.of();
     } else {
       this.valueSuppliers = valueSuppliers;
     }
@@ -303,11 +303,11 @@ public final class Configured<T> implements QualifiedPath, Supplier<T> {
   }
 
   private final Value<?> value(final Path path) {
-    return this.value(path, this.valueSuppliers.apply(path, this.applicationQualifiers));
+    return this.value(path, this.valueSuppliers.apply(new QualifiedPath.Record(path, this.applicationQualifiers)));
   }
 
   private final Value<?> value(final Path path, final Collection<? extends ValueSupplier> valueSuppliers) {
-    return ValueSupplier.resolve(valueSuppliers, path, this.applicationQualifiers, this.valueSuppliers);
+    return ValueSupplier.resolve(valueSuppliers, new QualifiedPath.Record(path, this.applicationQualifiers), this.valueSuppliers);
   }
 
 
@@ -416,10 +416,10 @@ public final class Configured<T> implements QualifiedPath, Supplier<T> {
     }
   }
 
-  public static final List<ValueSupplier> valueSupplierServices(final Path path, final Map<?, ?> applicationQualifiers) {
+  public static final List<ValueSupplier> valueSupplierServices(final QualifiedPath qualifiedPath) {
     return loadedValueSuppliers.get(ValueSupplier.class)
       .stream()
-      .filter(vs -> vs.respondsFor(path, applicationQualifiers))
+      .filter(vs -> vs.respondsFor(qualifiedPath))
       .toList();
   }
 
