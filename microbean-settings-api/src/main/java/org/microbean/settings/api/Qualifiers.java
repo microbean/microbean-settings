@@ -18,6 +18,8 @@ package org.microbean.settings.api;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.ServiceLoader;
 
 import java.util.function.Supplier;
@@ -78,6 +80,28 @@ public class Qualifiers implements Supplier<Map<?, ?>> {
     return this.qualifiers;
   }
 
+  @Override // Object
+  public int hashCode() {
+    return this.qualifiers.hashCode();
+  }
+
+  @Override
+  public boolean equals(final Object other) {
+    if (other == this) {
+      return true;
+    } else if (other != null && this.getClass().equals(other.getClass())) {
+      final Qualifiers her = (Qualifiers)other;
+      return Objects.equals(this.get(), her.get());
+    } else {
+      return false;
+    }
+  }
+
+  @Override
+  public String toString() {
+    return this.get().toString();
+  }
+
 
   /*
    * Static methods.
@@ -88,18 +112,74 @@ public class Qualifiers implements Supplier<Map<?, ?>> {
     return loadedQualifiers.get(Qualifiers.class).get();
   }
 
-  public static boolean viable(final Map<?, ?> applicationQualifiers, final Map<?, ?> qualifiers) {
+  // TODO: this is almost certainly wrong
+  public static boolean isAssignable(final Map<?, ?> lhs, final Map<?, ?> rhs) {
+    /*
+      Let's treat this like CDI.
+
+      In CDI, if the lhs is empty, then it is @Default.
+
+      If there is exactly one rhs, then it too has @Default,
+      explicitly or implicitly.
+
+      If the lhs has @Something, then a rhs with @Default won't match.
+
+      So suppose lhs.isEmpty() means @Default.
+
+      And suppose rhs.isEmpty() means @Default.
+
+      Now suppose we want to add: on the rhs, if there is a non-empty
+      Map (i.e. NOT @Default), then it is assignable if and only if
+      the lhs is equal to it.
+
+      So if the lhs says, only, env=test, then the rhs, to be
+      assignable, must also have, only, env=test.  If the rhs also
+      has, say, datacenter=east, that's "too specific" and will not
+      assign.  (It is exactly as if the lhs had implicitly specified
+      datacenter=default.)
+
+      We also want to say that if the rhs is empty, then it is
+      assignable to any lhs.  Maybe in the ValueSuppliers.resolve()
+      method, we want to say "take the most-specific rhs you can, but
+      otherwise go ahead and use the empty one".
+     */
     final boolean returnValue;
-    if (applicationQualifiers.isEmpty()) {
-      returnValue = qualifiers == null || qualifiers.isEmpty();
-    } else if (qualifiers == null || qualifiers.isEmpty()) {
-      returnValue = false;
+    if (lhs == null) {
+      returnValue = rhs == null || rhs.isEmpty();
+    } else if (rhs == null) {
+      returnValue = true;
     } else {
-      returnValue = applicationQualifiers.entrySet().containsAll(qualifiers.entrySet());
+      final int lhsSize = lhs.size();
+      final int rhsSize = rhs.size();
+      if (lhsSize == 0) {
+        returnValue = rhsSize == 0;
+      } else if (rhsSize == 0) {
+        // An empty rhs is assignable to any lhs.
+        returnValue = true;
+      } else if (lhsSize < rhsSize) {
+        returnValue = false;
+      } else {
+        boolean temp = true;
+        for (final Entry<?, ?> lhsEntry : lhs.entrySet()) {
+          final Object lhsKey = lhsEntry.getKey();
+          final Object lhsValue = lhsEntry.getValue();
+          for (final Entry<?, ?> rhsEntry : rhs.entrySet()) {
+            if (lhsKey.equals(rhsEntry.getKey())) {
+              // The right-hand-side contains the key, so it has a
+              // particular opinion.
+              if (!lhsValue.equals(rhsEntry.getValue())) {
+                // The right-hand-side's value for that key didn't
+                // match.
+                temp = false;
+                break;
+              }
+            }
+          }
+        }
+        returnValue = temp;
+      }
     }
     return returnValue;
   }
-
-
 
 }

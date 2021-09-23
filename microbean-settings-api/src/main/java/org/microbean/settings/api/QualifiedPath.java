@@ -28,7 +28,7 @@ public interface QualifiedPath {
   public Map<?, ?> applicationQualifiers();
 
   public default boolean isAssignable(final Map<?, ?> qualifiers) {
-    return Qualifiers.viable(this.applicationQualifiers(), qualifiers);
+    return Qualifiers.isAssignable(this.applicationQualifiers(), qualifiers);
   }
   
   public default Type type() {

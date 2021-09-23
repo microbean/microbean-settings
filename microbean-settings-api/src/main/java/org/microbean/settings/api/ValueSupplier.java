@@ -61,7 +61,7 @@ public interface ValueSupplier {
           final Value<?> v = valueSupplier.get(qualifiedPath, valueSuppliersFunction);
           if (v != null) {
             final Map<?, ?> qualifiers = v.qualifiers();
-            if (Qualifiers.viable(qualifiedPath.applicationQualifiers(), qualifiers)) {
+            if (Qualifiers.isAssignable(qualifiedPath.applicationQualifiers(), qualifiers)) {
               if (candidate == null || qualifiers.size() > candidate.qualifiers().size()) {
                 candidate = v;
               }

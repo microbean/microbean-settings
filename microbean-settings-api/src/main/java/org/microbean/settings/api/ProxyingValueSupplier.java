@@ -41,7 +41,7 @@ import org.microbean.settings.api.ValueSupplier.Value;
 
 @Experimental
 @Incomplete
-public abstract class ProxyingValueSupplier<T> implements ValueSupplier {
+public abstract class ProxyingValueSupplier<T> implements Prioritized, ValueSupplier {
 
 
   /*
@@ -315,20 +315,20 @@ public abstract class ProxyingValueSupplier<T> implements ValueSupplier {
 
   private static final class Handler implements InvocationHandler {
 
-    private final QualifiedPath qualifiedPath;
+    private final QualifiedPath qp;
 
     private final Supplier<?> defaultTargetSupplier;
 
     private final BiFunction<? super String, ? super Boolean, ? extends String> pathComponentFunction;
 
-    private final Function<? super QualifiedPath, ? extends Collection<ValueSupplier>> valueSuppliers;
+    private final Function<? super QualifiedPath, ? extends Collection<ValueSupplier>> vsf;
 
-    private Handler(final QualifiedPath qualifiedPath,
+    private Handler(final QualifiedPath qp,
                     final Supplier<?> defaultTargetSupplier,
                     final BiFunction<? super String, ? super Boolean, ? extends String> pathComponentFunction,
-                    final Function<? super QualifiedPath, ? extends Collection<ValueSupplier>> valueSuppliers) {
+                    final Function<? super QualifiedPath, ? extends Collection<ValueSupplier>> vsf) {
       super();
-      this.qualifiedPath = Objects.requireNonNull(qualifiedPath, "qualifiedPath");
+      this.qp = Objects.requireNonNull(qp, "qp");
       if (defaultTargetSupplier == null) {
         this.defaultTargetSupplier = ProxyingValueSupplier::returnNull;
       } else {
@@ -339,17 +339,19 @@ public abstract class ProxyingValueSupplier<T> implements ValueSupplier {
       } else {
         this.pathComponentFunction = pathComponentFunction;
       }
-      if (valueSuppliers == null) {
-        this.valueSuppliers = ValueSupplier::loadedValueSuppliers;
+      if (vsf == null) {
+        this.vsf = ValueSupplier::loadedValueSuppliers;
       } else {
-        this.valueSuppliers = valueSuppliers;
+        this.vsf = vsf;
       }
     }
 
-    public final Object invoke(final Object proxy, final Method method, final Object[] args) throws ReflectiveOperationException {
-      if (method.getDeclaringClass() == Object.class) {
-        return
-          switch (method.getName()) {
+    @Override // InvocationHandler
+    public final Object invoke(final Object proxy, final Method m, final Object[] args) throws ReflectiveOperationException {
+      final Object returnValue;
+      if (m.getDeclaringClass() == Object.class) {
+        returnValue =
+          switch (m.getName()) {
           case "hashCode" -> System.identityHashCode(proxy);
           case "equals" -> proxy == args[0];
           case "toString" -> proxy.getClass().getName() + "@" + Integer.toHexString(System.identityHashCode(proxy));
@@ -357,42 +359,42 @@ public abstract class ProxyingValueSupplier<T> implements ValueSupplier {
           };
       } else {
         final QualifiedPath newQualifiedPath =
-          new QualifiedPath.Record(this.qualifiedPath.path().plus(this.pathComponentFunction.apply(method.getName(),
-                                                                                                   boolean.class == method.getReturnType()),
-                                                                  method.getGenericReturnType()),
-                                   this.qualifiedPath.applicationQualifiers());
-        final Value<?> value =
-          ValueSupplier.resolve(this.valueSuppliers.apply(newQualifiedPath), newQualifiedPath, this.valueSuppliers);
+          new QualifiedPath.Record(this.qp.path().plus(this.pathComponentFunction.apply(m.getName(),
+                                                                                        boolean.class == m.getReturnType()),
+                                                                  m.getGenericReturnType()),
+                                   this.qp.applicationQualifiers());
+        final Value<?> value = ValueSupplier.resolve(this.vsf.apply(newQualifiedPath), newQualifiedPath, this.vsf);
         if (value != null) {
           // If there's an explicit ValueSupplier for this method, use
           // it.  The ValueSupplier might of course be us.  The return
           // value of value.get() might very well be null and that's
           // fine.
-          return value.get();
+          returnValue = value.get();
         } else {
           final Object defaultTarget = this.defaultTargetSupplier.get();
           if (defaultTarget != null) {
             // If the default target supplier supplies a default target,
             // then invoke the method on it.
-            return method.invoke(defaultTarget, args);
-          } else if (method.isDefault()) {
+            returnValue = m.invoke(defaultTarget, args);
+          } else if (m.isDefault()) {
             try {
               // If the current method is a default method of the
               // proxied interface, invoke it.
-              return InvocationHandler.invokeDefault(proxy, method, args);
+              returnValue = InvocationHandler.invokeDefault(proxy, m, args);
             } catch (final UnsupportedOperationException | Error e) {
               throw e;
             } catch (final Exception e) {
-              throw new UnsupportedOperationException(method.getName(), e);
+              throw new UnsupportedOperationException(m.getName(), e);
             } catch (final Throwable e) {
               throw new AssertionError(e.getMessage(), e);
             }
           } else {
             // We have no recourse.
-            throw new UnsupportedOperationException(method.getName());
+            throw new UnsupportedOperationException(m.getName());
           }
         }
       }
+      return returnValue;
     }
 
   }
