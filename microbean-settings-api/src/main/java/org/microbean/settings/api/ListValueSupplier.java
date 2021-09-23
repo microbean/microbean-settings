@@ -69,12 +69,11 @@ public class ListValueSupplier extends AbstractValueSupplier {
   }
 
   @Override // ValueSupplier
-  @SuppressWarnings("unchecked")
-  public <T> Value<T> get(final QualifiedPath qualifiedPath,
-                          final Function<? super QualifiedPath, ? extends Collection<ValueSupplier>> valueSuppliers) {
+  public Value<?> get(final QualifiedPath qualifiedPath,
+                      final Function<? super QualifiedPath, ? extends Collection<ValueSupplier>> valueSuppliers) {
     final Path path = qualifiedPath.path();    
     final Supplier<List<?>> listSupplier = path == null ? null : this.map.get(path);
-    return listSupplier == null ? null : new Value<>((T)listSupplier.get(), path, this.qualifiersFunction.apply(qualifiedPath));
+    return listSupplier == null ? null : new Value<>(listSupplier.get(), path, this.qualifiersFunction.apply(qualifiedPath));
   }
   
 }

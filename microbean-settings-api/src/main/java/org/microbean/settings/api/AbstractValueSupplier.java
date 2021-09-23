@@ -16,8 +16,27 @@
  */
 package org.microbean.settings.api;
 
+import java.util.List;
+import java.util.ServiceLoader;
+
 public abstract class AbstractValueSupplier implements ValueSupplier {
 
+  private static final ClassValue<List<ValueSupplier>> loadedValueSuppliers = new ClassValue<>() {
+      @Override
+      protected final List<ValueSupplier> computeValue(final Class<?> c) {
+        if (ValueSupplier.class.equals(c)) {
+          return ServiceLoader.load(ValueSupplier.class, ValueSupplier.class.getClassLoader())
+          .stream()
+          .map(ServiceLoader.Provider::get)
+          .sorted(Prioritized.COMPARATOR_DESCENDING)
+          .toList();
+        } else {
+          return null;
+        }
+      }
+    };
+  
+  
   protected AbstractValueSupplier() {
     super();
   }

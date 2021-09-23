@@ -118,17 +118,27 @@ final class TestConfigured {
     private DevWheelColorString() {
       super();
     }
+
+    @Override
+    public final boolean respondsFor(final QualifiedPath qualifiedPath) {
+      final Path path = qualifiedPath.path();
+      return
+        path.rootType().equals(Car.class) &&
+        path.targetClass().equals(String.class) &&
+        path.names().equals(List.of("wheel", "color", "name")) &&
+        qualifiedPath.applicationQualifiers().equals(Map.of("dev", Boolean.TRUE));
+    }
     
     @Override
-    public final <T> Value<T> get(final QualifiedPath qualifiedPath,
-                                  final Function<? super QualifiedPath, ? extends Collection<ValueSupplier>> valueSuppliers) {
+    public final Value<?> get(final QualifiedPath qualifiedPath,
+                              final Function<? super QualifiedPath, ? extends Collection<ValueSupplier>> valueSuppliers) {
       final Path path = qualifiedPath.path();
       final Map<?, ?> qualifiers = qualifiedPath.applicationQualifiers();
       if (path.rootType().equals(Car.class) &&
           path.targetClass().equals(String.class) &&
           path.names().equals(List.of("wheel", "color", "name")) &&
           qualifiers.equals(Map.of("dev", Boolean.TRUE))) {
-        return new Value<>("Red", path, qualifiers).cast();
+        return new Value<>("Red", path, qualifiers);
       } else {
         return null;
       }

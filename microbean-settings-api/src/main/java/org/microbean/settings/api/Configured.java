@@ -65,24 +65,6 @@ public final class Configured<T> implements QualifiedPath, Supplier<T> {
    */
 
   
-  private static final ClassValue<List<ValueSupplier>> loadedValueSuppliers = new ClassValue<>() {
-      @Override
-      protected final List<ValueSupplier> computeValue(final Class<?> c) {
-        if (ValueSupplier.class.equals(c)) {
-          final List<ValueSupplier> list = ServiceLoader.load(ValueSupplier.class, ValueSupplier.class.getClassLoader())
-          .stream()
-          .map(ServiceLoader.Provider::get)
-          .toList();
-          Collections.sort(list, Prioritized.COMPARATOR_DESCENDING);
-          // TODO: add last ditch ListValueSupplier, MapValueSupplier, etc.          
-          return list;
-        } else {
-          return null;
-        }
-      }
-    };
-
-
   /*
    * Instance fields.
    */
@@ -417,14 +399,10 @@ public final class Configured<T> implements QualifiedPath, Supplier<T> {
   }
 
   public static final List<ValueSupplier> valueSupplierServices(final QualifiedPath qualifiedPath) {
-    return loadedValueSuppliers.get(ValueSupplier.class)
+    return ValueSupplier.loadedValueSuppliers()
       .stream()
       .filter(vs -> vs.respondsFor(qualifiedPath))
       .toList();
-  }
-
-  public static final void clearValueSupplierServices() {
-    loadedValueSuppliers.remove(ValueSupplier.class);
   }
 
   private static final boolean isGetter(final Method m) {

@@ -16,6 +16,8 @@
  */
 package org.microbean.settings.api;
 
+import java.lang.annotation.Annotation;
+
 import java.lang.reflect.AnnotatedElement;
 
 import java.util.Comparator;
@@ -39,14 +41,18 @@ public interface Prioritized {
   public static final Comparator<Object> COMPARATOR_DESCENDING = COMPARATOR_ASCENDING.reversed();
 
   public static int priority(final Object o) {
-    if (o instanceof Prioritized p) {
+    if (o == null) {
+      return 0;
+    } else if (o instanceof Prioritized p) {
       return p.priority();
     } else if (o instanceof Priority p) {
       return p.value();
+    } else if (o instanceof Annotation a) {
+      return priority(a.annotationType());
     } else if (o instanceof AnnotatedElement c) {
       return priority(c.getAnnotation(Priority.class));
     } else {
-      return 0;
+      return priority(o.getClass()); 
     }
   }
 

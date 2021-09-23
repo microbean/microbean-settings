@@ -16,6 +16,8 @@
  */
 package org.microbean.settings.api;
 
+import java.lang.reflect.Type;
+
 import java.util.Map;
 import java.util.Objects;
 
@@ -24,6 +26,14 @@ public interface QualifiedPath {
   public Path path();
 
   public Map<?, ?> applicationQualifiers();
+
+  public default boolean isAssignable(final Map<?, ?> qualifiers) {
+    return Qualifiers.viable(this.applicationQualifiers(), qualifiers);
+  }
+  
+  public default Type type() {
+    return this.path().targetType();
+  }
 
   public static record Record(Path path, Map<?, ?> applicationQualifiers) implements QualifiedPath {
 

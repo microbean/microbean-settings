@@ -23,21 +23,24 @@ import java.util.Deque;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
-import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.StringJoiner;
 
+import org.microbean.development.annotation.Convenience;
+
 public final record Path(Path parent, String name, Type targetType) {
 
+  @Convenience
   public Path() {
     this((Path)null, "", Object.class);
   }
 
-  // Creates a new root
+  @Convenience
   public Path(final Type targetType) {
     this((Path)null, "", targetType);
   }
 
+  @Convenience
   public Path(final Type parentRootType, final String name, final Type targetType) {
     this(new Path(parentRootType), name, targetType);
   }
@@ -54,16 +57,16 @@ public final record Path(Path parent, String name, Type targetType) {
   }
 
   public final List<Path> all() {
-    final Deque<Path> kids = new ArrayDeque<>(5);
+    final Deque<Path> dq = new ArrayDeque<>(5);
     Path path = this;
     Path parent = this.parent();
     while (parent != null) {
-      kids.addFirst(path);
+      dq.addFirst(path);
       path = parent;
-      parent = parent.parent();
+      parent = path.parent();
     }
-    kids.addFirst(path);
-    return List.copyOf(kids);
+    dq.addFirst(path);
+    return List.copyOf(dq);
   }
 
   public final Class<?> targetClass() {
@@ -83,7 +86,7 @@ public final record Path(Path parent, String name, Type targetType) {
     Path parent = path.parent();
     while (parent != null) {
       path = parent;
-      parent = parent.parent();
+      parent = path.parent();
     }
     return path;
   }
@@ -101,15 +104,14 @@ public final record Path(Path parent, String name, Type targetType) {
     }
   }
 
+  public final Path trailingPath(final Type startingType) {
+    return this.targetType().equals(Objects.requireNonNull(startingType, "startingType")) ? this : null;
+  }
+  
   public final Path trailingPath(final Type startingType, final List<String> names) {
     Objects.requireNonNull(startingType, "startingType");
     if (names.isEmpty()) {
-      if (this.parent == null && this.targetType().equals(startingType)) {
-        assert this.name.isEmpty();
-        return this;
-      } else {
-        return null;
-      }
+      return this.targetType().equals(startingType) ? this : null;
     }
     final ListIterator<String> listIterator = names.listIterator(names.size());
     Path path = this;
@@ -119,11 +121,15 @@ public final record Path(Path parent, String name, Type targetType) {
         return null;
       }
       path = parent;
-      parent = parent.parent();
+      parent = path.parent();
     }
     return path.targetType().equals(startingType) ? path : null;
   }
 
+  public final boolean endsWith(final Type startingType) {
+    return this.targetType().equals(Objects.requireNonNull(startingType, "startingType"));
+  }
+  
   public final boolean endsWith(final Type startingType, final List<String> names) {
     return trailingPath(startingType, names) != null;
   }
@@ -134,30 +140,30 @@ public final record Path(Path parent, String name, Type targetType) {
 
   public final Path leadingPath(final Type startingType, final List<String> names) {
     Objects.requireNonNull(startingType, "startingType");
-    final Deque<Path> kids = new ArrayDeque<>(5);
+    final Deque<Path> dq = new ArrayDeque<>(5);
     Path path = this;
-    Path parent = this.parent();
+    Path parent = path.parent();
     while (parent != null) {
-      kids.addFirst(path);
+      dq.addFirst(path);
       path = parent;
-      parent = parent.parent();
+      parent = path.parent();
     }
     if (path.targetType().equals(startingType)) {
       if (!names.isEmpty()) {
         path = null;
-        final Iterator<Path> kidIterator = kids.iterator();
+        final Iterator<Path> iterator = dq.iterator();
         for (final String name : names) {
           if (name.isEmpty()) {
             throw new IllegalArgumentException("names: " + names);
           }
-          if (kidIterator.hasNext()) {
-            final Path kid = kidIterator.next();
-            final String kidName = kid.name();
-            if (kidName.isEmpty()) {
+          if (iterator.hasNext()) {
+            final Path p = iterator.next();
+            final String pName = p.name();
+            if (pName.isEmpty()) {
               // Skip the root
-              assert kid.parent() == null;
-            } else if (kidName.equals(name)) {
-              path = kid;
+              assert p.parent() == null;
+            } else if (pName.equals(name)) {
+              path = p;
             } else {
               path = null;
               break;
@@ -175,7 +181,11 @@ public final record Path(Path parent, String name, Type targetType) {
   }
 
   public final boolean startsWith(final Type startingType) {
-    return this.leadingPath(startingType) != null;
+    return this.leadingPath(startingType, List.of()) != null;
+  }
+
+  public final boolean startsWith(final Type startingType, final List<String> names) {
+    return this.leadingPath(startingType, names) != null;
   }
 
   public final Type parentType() {
@@ -217,7 +227,7 @@ public final record Path(Path parent, String name, Type targetType) {
     while (parent != null) {
       dq.addFirst(path.name());
       path = parent;
-      parent = parent.parent();
+      parent = path.parent();
     }
     return List.copyOf(dq);
   }
@@ -228,7 +238,7 @@ public final record Path(Path parent, String name, Type targetType) {
     int size = 1;
     while (parent != null) {
       path = parent;
-      parent = parent.parent();
+      parent = path.parent();
       size++;
     }
     return size;
