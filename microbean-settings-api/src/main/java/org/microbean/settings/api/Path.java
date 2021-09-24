@@ -49,10 +49,10 @@ public final record Path(Path parent, String name, Type targetType) {
     Objects.requireNonNull(targetType, "targetType");
     if (parent == null) {
       if (!name.isEmpty()) {
-        throw new IllegalArgumentException("name: " + name);
+        throw new IllegalArgumentException("null parent with non-empty name: " + name);
       }
     } else if (name.isEmpty()) {
-      throw new IllegalArgumentException("empty name; non-null parent: " + parent);
+      throw new IllegalArgumentException("empty name with non-null parent: " + parent);
     }
   }
 
@@ -105,9 +105,10 @@ public final record Path(Path parent, String name, Type targetType) {
   }
 
   public final Path trailingPath(final Type startingType) {
+    // Kind of a pathological :-) case
     return this.targetType().equals(Objects.requireNonNull(startingType, "startingType")) ? this : null;
   }
-  
+
   public final Path trailingPath(final Type startingType, final List<String> names) {
     Objects.requireNonNull(startingType, "startingType");
     if (names.isEmpty()) {
@@ -127,9 +128,10 @@ public final record Path(Path parent, String name, Type targetType) {
   }
 
   public final boolean endsWith(final Type startingType) {
+    // Kind of a pathological :-) case; i.e. no names
     return this.targetType().equals(Objects.requireNonNull(startingType, "startingType"));
   }
-  
+
   public final boolean endsWith(final Type startingType, final List<String> names) {
     return trailingPath(startingType, names) != null;
   }
@@ -188,15 +190,18 @@ public final record Path(Path parent, String name, Type targetType) {
     return this.leadingPath(startingType, names) != null;
   }
 
+  @Convenience
   public final Type parentType() {
     final Path parent = this.parent();
     return parent == null ? this.targetType() : parent.targetType();
   }
 
+  @Convenience
   public final Class<?> parentClass() {
     return Types.rawClass(this.parentType());
   }
 
+  @Convenience
   public final String parentName() {
     final Path parent = this.parent();
     return parent == null ? "" : parent.name();
@@ -244,24 +249,29 @@ public final record Path(Path parent, String name, Type targetType) {
     return size;
   }
 
+  @Convenience
   public static final Path of(final Type rootType,
-                               final String name0, final Type type0) {
-    return new Path(rootType).plus(name0, type0);
+                              final String name0, final Type type0) {
+    return
+      new Path(rootType)
+      .plus(name0, type0);
   }
 
+  @Convenience
   public static final Path of(final Type rootType,
-                               final String name0, final Type type0,
-                               final String name1, final Type type1) {
+                              final String name0, final Type type0,
+                              final String name1, final Type type1) {
     return
       new Path(rootType)
       .plus(name0, type0)
       .plus(name1, type1);
   }
 
+  @Convenience
   public static final Path of(final Type rootType,
-                               final String name0, final Type type0,
-                               final String name1, final Type type1,
-                               final String name2, final Type type2) {
+                              final String name0, final Type type0,
+                              final String name1, final Type type1,
+                              final String name2, final Type type2) {
     return
       new Path(rootType)
       .plus(name0, type0)
@@ -269,11 +279,12 @@ public final record Path(Path parent, String name, Type targetType) {
       .plus(name2, type2);
   }
 
+  @Convenience
   public static final Path of(final Type rootType,
-                               final String name0, final Type type0,
-                               final String name1, final Type type1,
-                               final String name2, final Type type2,
-                               final String name3, final Type type3) {
+                              final String name0, final Type type0,
+                              final String name1, final Type type1,
+                              final String name2, final Type type2,
+                              final String name3, final Type type3) {
     return
       new Path(rootType)
       .plus(name0, type0)
@@ -282,6 +293,41 @@ public final record Path(Path parent, String name, Type targetType) {
       .plus(name3, type3);
   }
 
+  @Convenience
+  public static final Path of(final Type rootType,
+                              final String name0, final Type type0,
+                              final String name1, final Type type1,
+                              final String name2, final Type type2,
+                              final String name3, final Type type3,
+                              final String name4, final Type type4) {
+    return
+      new Path(rootType)
+      .plus(name0, type0)
+      .plus(name1, type1)
+      .plus(name2, type2)
+      .plus(name3, type3)
+      .plus(name4, type4);
+  }
+
+  @Convenience
+  public static final Path of(final Type rootType,
+                              final String name0, final Type type0,
+                              final String name1, final Type type1,
+                              final String name2, final Type type2,
+                              final String name3, final Type type3,
+                              final String name4, final Type type4,
+                              final String name5, final Type type5) {
+    return
+      new Path(rootType)
+      .plus(name0, type0)
+      .plus(name1, type1)
+      .plus(name2, type2)
+      .plus(name3, type3)
+      .plus(name4, type4)
+      .plus(name5, type5);
+  }
+
+  @Convenience
   public static final Path of(final Type rootType, final Object... components) {
     Path path = new Path(rootType);
     if (components != null && components.length > 0) {
@@ -295,6 +341,7 @@ public final record Path(Path parent, String name, Type targetType) {
             throw new IllegalArgumentException("components; components[" + i + "]: " + components[i]);
           }
         } else if (components[i] instanceof Type type) {
+          assert name != null;
           path = path.plus(name, type);
           name = null;
         } else {

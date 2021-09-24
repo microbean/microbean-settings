@@ -31,6 +31,7 @@ import java.util.concurrent.ConcurrentMap;
 
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 import org.microbean.development.annotation.Convenience;
@@ -41,12 +42,7 @@ import org.microbean.settings.api.ValueSupplier.Value;
 
 @Experimental
 @Incomplete
-public abstract class ProxyingValueSupplier<T> implements Prioritized, ValueSupplier {
-
-
-  /*
-   * Static fields.
-   */
+public class ProxyingValueSupplier implements ValueSupplier {
 
 
   /*
@@ -81,8 +77,12 @@ public abstract class ProxyingValueSupplier<T> implements Prioritized, ValueSupp
   // Do NOT get clever and try to change this to ConcurrentMap<Path, Object>.
   private final ConcurrentMap<QualifiedPath.Record, Object> proxies;
 
+  private final int basePriority;
+
   // e.g. this guy's for env=test
   private final Map<?, ?> qualifiers;
+
+  private final Predicate<? super QualifiedPath> mayHandlePredicate;
 
   // This Function accepts a Path on purpose: the Supplier is for
   // defaults, i.e. independent of qualifiers, so there's no need for
@@ -101,23 +101,34 @@ public abstract class ProxyingValueSupplier<T> implements Prioritized, ValueSupp
    */
 
 
-  protected ProxyingValueSupplier() {
-    this(null, null, null, null, null);
+  public ProxyingValueSupplier() {
+    this(-1000, null, null, null, null, null, null);
   }
 
-  protected ProxyingValueSupplier(final Map<?, ?> qualifiers) {
-    this(qualifiers, null, null, null, null);
+  public ProxyingValueSupplier(final Map<?, ?> qualifiers) {
+    this(-1000, qualifiers, null, null, null, null, null);
   }
 
-  protected ProxyingValueSupplier(final Map<?, ?> qualifiers,
-                                  final Function<? super Path, ? extends Supplier<?>> defaultTargetSupplierFunction,
-                                  final Function<? super QualifiedPath, ? extends Collection<ValueSupplier>> valueSuppliers,
-                                  final BiFunction<? super String, ? super Boolean, ? extends String> pathComponentFunction,
-                                  final Function<? super Type, ? extends Boolean> isProxiableFunction)
-  {
-    super();
+  public ProxyingValueSupplier(final Supplier<?> defaultTargetSupplier) {
+    this(-1000, null, null, p -> defaultTargetSupplier, null, null, null);
+  }
+
+  public ProxyingValueSupplier(final int basePriority,
+                               final Map<?, ?> qualifiers,
+                               final Predicate<? super QualifiedPath> mayHandlePredicate,
+                               final Function<? super Path, ? extends Supplier<?>> defaultTargetSupplierFunction,
+                               final Function<? super QualifiedPath, ? extends Collection<ValueSupplier>> valueSuppliers,
+                               final BiFunction<? super String, ? super Boolean, ? extends String> pathComponentFunction,
+                               final Function<? super Type, ? extends Boolean> isProxiableFunction) {
+    super();    
     this.proxies = new ConcurrentHashMap<>();
+    this.basePriority = basePriority;
     this.qualifiers = qualifiers == null ? Map.of() : Map.copyOf(qualifiers);
+    if (mayHandlePredicate == null) {
+      this.mayHandlePredicate = qp -> true;
+    } else {
+      this.mayHandlePredicate = mayHandlePredicate;
+    }
     this.defaultTargetSupplierFunction =
       defaultTargetSupplierFunction == null ? ProxyingValueSupplier::noDefaultTargetSupplier : defaultTargetSupplierFunction;
     if (valueSuppliers == null) {
@@ -137,37 +148,58 @@ public abstract class ProxyingValueSupplier<T> implements Prioritized, ValueSupp
     }
   }
 
-  @Override // ValueSupplier
-  public boolean respondsFor(final QualifiedPath qualifiedPath) {
-    return this.isProxiableFunction.apply(qualifiedPath.type()) && qualifiedPath.isAssignable(this.qualifiers);
+
+  /*
+   * Instance methods.
+   */
+
+
+  public final Map<?, ?> qualifiers() {
+    return this.qualifiers;
+  }
+
+  @Override // Prioritized
+  public int priority() {
+    return this.basePriority + this.qualifiers().size();
   }
 
   @Override // ValueSupplier
-  public final Value<?> get(final QualifiedPath qp,
-                            final Function<? super QualifiedPath, ? extends Collection<ValueSupplier>> valueSuppliers) {
-    if (this.respondsFor(qp)) {
+  public final boolean mayHandle(final QualifiedPath qualifiedPath) {
+    return
+      this.isProxiableFunction.apply(qualifiedPath.type()) &&
+      qualifiedPath.isAssignable(this.qualifiers) &&
+      this.mayHandlePredicate.test(qualifiedPath);
+  }
+
+  @Override // ValueSupplier
+  public Value<?> get(final QualifiedPath qp,
+                      final Function<? super QualifiedPath, ? extends Collection<ValueSupplier>> valueSuppliers) {
+    if (this.mayHandle(qp)) {
       // Ensure the incoming QualiifedPath implementation is
       // immutable.
       final QualifiedPath.Record qpr =
         qp instanceof QualifiedPath.Record r ? r : new QualifiedPath.Record(qp.path(), qp.applicationQualifiers());
       return
-        new Value<>(this.proxies.computeIfAbsent(qpr, this::computeProxy),
+        new Value<>(this.proxies.computeIfAbsent(qpr, k -> this.computeProxy(k, valueSuppliers)),
                     qpr.path(),
-                    this.qualifiers);
+                    this.qualifiers,
+                    this.priority(qpr));
     } else {
       return null;
     }
   }
 
-  private final Object computeProxy(final QualifiedPath.Record qpr) {
+  private final Object computeProxy(final QualifiedPath.Record qpr,
+                                    final Function<? super QualifiedPath, ? extends Collection<ValueSupplier>> valueSuppliers) {
     final Path path = qpr.path();
+    final Class<?> targetClass = path.targetClass();
     return
-      Proxy.newProxyInstance(path.classLoader(),
-                             new Class<?>[] { path.targetClass() },
+      Proxy.newProxyInstance(targetClass.getClassLoader(),
+                             new Class<?>[] { targetClass },
                              new Handler(qpr,
                                          this.defaultTargetSupplierFunction.apply(path),
                                          this.pathComponentFunction,
-                                         this.valueSuppliers));
+                                         valueSuppliers));
   }
 
 
@@ -196,7 +228,8 @@ public abstract class ProxyingValueSupplier<T> implements Prioritized, ValueSupp
    * return type
    *
    * @return the property name corresponding to the supplied method
-   * name, according to the rules of the Java Beans specification
+   * name, according to the rules of the Java Beans specification, or
+   * {@code null} (only if {@code cs} is {@code null})
    *
    * @nullability This method may return {@code null} but only when
    * {@code cs} is {@code null}.
@@ -278,6 +311,14 @@ public abstract class ProxyingValueSupplier<T> implements Prioritized, ValueSupp
     }
   }
 
+  private static final boolean isProxiable(final QualifiedPath qp) {
+    return isProxiable(qp.type());
+  }
+  
+  private static final boolean isProxiable(final Path path) {
+    return isProxiable(path.targetType());
+  }
+  
   private static final boolean isProxiable(final Type genericReturnType) {
     final Class<?> c = Types.rawClass(genericReturnType);
     if (c != null && c.isInterface()) {
@@ -329,21 +370,9 @@ public abstract class ProxyingValueSupplier<T> implements Prioritized, ValueSupp
                     final Function<? super QualifiedPath, ? extends Collection<ValueSupplier>> vsf) {
       super();
       this.qp = Objects.requireNonNull(qp, "qp");
-      if (defaultTargetSupplier == null) {
-        this.defaultTargetSupplier = ProxyingValueSupplier::returnNull;
-      } else {
-        this.defaultTargetSupplier = defaultTargetSupplier;
-      }
-      if (pathComponentFunction == null) {
-        this.pathComponentFunction = ProxyingValueSupplier::identity;
-      } else {
-        this.pathComponentFunction = pathComponentFunction;
-      }
-      if (vsf == null) {
-        this.vsf = ValueSupplier::loadedValueSuppliers;
-      } else {
-        this.vsf = vsf;
-      }
+      this.defaultTargetSupplier = defaultTargetSupplier == null ? ProxyingValueSupplier::returnNull : defaultTargetSupplier;
+      this.pathComponentFunction = pathComponentFunction == null ? ProxyingValueSupplier::identity : pathComponentFunction;
+      this.vsf = vsf == null ? ValueSupplier::loadedValueSuppliers : vsf;
     }
 
     @Override // InvocationHandler
@@ -355,7 +384,7 @@ public abstract class ProxyingValueSupplier<T> implements Prioritized, ValueSupp
           case "hashCode" -> System.identityHashCode(proxy);
           case "equals" -> proxy == args[0];
           case "toString" -> proxy.getClass().getName() + "@" + Integer.toHexString(System.identityHashCode(proxy));
-          default -> throw new AssertionError();
+          default -> throw new AssertionError("method: " + m);
           };
       } else {
         final QualifiedPath newQualifiedPath =

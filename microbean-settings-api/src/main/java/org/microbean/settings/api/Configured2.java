@@ -19,102 +19,62 @@ package org.microbean.settings.api;
 import java.lang.reflect.Type;
 
 import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
 import java.util.Map;
-import java.util.Optional;
-import java.util.ServiceLoader;
 
-import java.util.function.Function;
 import java.util.function.Supplier;
 
-// The "top level" ValueSupplier.
-public abstract class Configured2<T> extends AbstractValueSupplier implements Supplier<T> {
+import org.microbean.settings.api.ValueSupplier.Value;
 
-
-  /*
-   * Static fields.
-   */
-
-  
-  private static final TypeArgumentExtractor typeArgumentExtractor = new TypeArgumentExtractor(Configured2.class, 0);
-
-
-  /*
-   * Instance fields.
-   */
-
-  
-  private final Map<?, ?> qualifiers;
+public final class Configured2 {
 
 
   /*
    * Constructors.
    */
 
-  
-  protected Configured2(final Map<?, ?> qualifiers) {
+
+  private Configured2() {
     super();
-    this.qualifiers = qualifiers == null ? Map.of() : Map.copyOf(qualifiers);
-  }
-
-
-  /*
-   * Instance methods.
-   */
-  
-
-  public final Map<?, ?> qualifiers() {
-    return this.qualifiers;
-  }
-  
-  @Override // ValueSupplier
-  public boolean respondsFor(final QualifiedPath qualifiedPath) {
-    return
-      qualifiedPath.path().isRoot(typeArgumentExtractor.get(this.getClass())) &&
-      qualifiedPath.applicationQualifiers().equals(this.qualifiers());
-  }
-
-  @Override // ValueSupplier
-  public final Value<T> get(final QualifiedPath qualifiedPath,
-                            final Function<? super QualifiedPath, ? extends Collection<ValueSupplier>> valueSuppliers) {
-    if (this.respondsFor(qualifiedPath)) {
-      return new Value<>(this.get(), qualifiedPath.path(), this.qualifiers());
-    } else {
-      return null;
-    }
   }
 
 
   /*
    * Static methods.
    */
-  
 
-  public static final <T> T get(final Type type) {
-    return get(type, null);
+
+  public static final <T> T of(final Type type) {
+    return of(new QualifiedPath.Record(new Path(type), Qualifiers.application()), null);
   }
-  
-  public static final <T> T get(final Type type, final Supplier<? extends T> defaultTargetSupplier) {
-    final QualifiedPath qp = new QualifiedPath.Record(new Path(type), Qualifiers.application());
-    final Supplier<?> value;
+
+  public static final <T> T of(final Type type, final Supplier<? extends T> defaultTargetSupplier) {
+    return of(new QualifiedPath.Record(new Path(type), Qualifiers.application()), defaultTargetSupplier);
+  }
+
+  public static final <T> T of(final Path path) {
+    return of(new QualifiedPath.Record(path, Qualifiers.application()), null);
+  }
+
+  public static final <T> T of(final Path path, final Supplier<? extends T> defaultTargetSupplier) {
+    return of(new QualifiedPath.Record(path, Qualifiers.application()), defaultTargetSupplier);
+  }
+
+  public static final <T> T of(final QualifiedPath qp, final Supplier<? extends T> defaultTargetSupplier) {
+    final T returnValue;
     final Collection<ValueSupplier> valueSuppliers = ValueSupplier.loadedValueSuppliers(qp);
     if (valueSuppliers.isEmpty()) {
-      final ValueSupplier valueSupplier = useProxyBasedMechanism(qp, defaultTargetSupplier);
-      if (valueSupplier == null) {
+      if (defaultTargetSupplier == null) {
         throw new UnsupportedOperationException();
+      } else {
+        returnValue = defaultTargetSupplier.get();
       }
-      value = valueSupplier.get(qp, ValueSupplier::loadedValueSuppliers);
     } else {
-      value = ValueSupplier.resolve(valueSuppliers, qp, ValueSupplier::loadedValueSuppliers);
+      final Value<?> value = ValueSupplier.resolve(valueSuppliers, qp, ValueSupplier::loadedValueSuppliers);
+      @SuppressWarnings("unchecked")
+      final T rv = value == null ? null : (T)value.get();
+      returnValue = rv;
     }
-    @SuppressWarnings("unchecked")
-    final T rv = value == null ? null : (T)value.get();
-    return rv;
+    return returnValue;
   }
 
-  private static final <T> ValueSupplier useProxyBasedMechanism(final QualifiedPath qp, Supplier<? extends T> defaultTargetSupplier) {
-    return null; // TODO: implement
-  }
-  
 }

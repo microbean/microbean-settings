@@ -21,16 +21,23 @@ import java.lang.reflect.Type;
 import java.util.Map;
 import java.util.Objects;
 
+import org.microbean.development.annotation.OverridingDiscouraged;
+import org.microbean.development.annotation.OverridingEncouraged;
+
 public interface QualifiedPath {
 
   public Path path();
 
-  public Map<?, ?> applicationQualifiers();
+  @OverridingEncouraged
+  public default Map<?, ?> applicationQualifiers() {
+    return Map.of();
+  }
 
+  @OverridingDiscouraged
   public default boolean isAssignable(final Map<?, ?> qualifiers) {
     return Qualifiers.isAssignable(this.applicationQualifiers(), qualifiers);
   }
-  
+
   public default Type type() {
     return this.path().targetType();
   }
@@ -41,7 +48,7 @@ public interface QualifiedPath {
       Objects.requireNonNull(path, "path");
       applicationQualifiers = applicationQualifiers == null ? Map.of() : Map.copyOf(applicationQualifiers);
     }
-    
+
   }
-  
+
 }

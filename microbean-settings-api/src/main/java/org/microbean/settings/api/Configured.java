@@ -401,7 +401,7 @@ public final class Configured<T> implements QualifiedPath, Supplier<T> {
   public static final List<ValueSupplier> valueSupplierServices(final QualifiedPath qualifiedPath) {
     return ValueSupplier.loadedValueSuppliers()
       .stream()
-      .filter(vs -> vs.respondsFor(qualifiedPath))
+      .filter(vs -> vs.mayHandle(qualifiedPath))
       .toList();
   }
 

@@ -120,7 +120,7 @@ final class TestConfigured {
     }
 
     @Override
-    public final boolean respondsFor(final QualifiedPath qualifiedPath) {
+    public final boolean mayHandle(final QualifiedPath qualifiedPath) {
       final Path path = qualifiedPath.path();
       return
         path.rootType().equals(Car.class) &&
@@ -138,7 +138,7 @@ final class TestConfigured {
           path.targetClass().equals(String.class) &&
           path.names().equals(List.of("wheel", "color", "name")) &&
           qualifiers.equals(Map.of("dev", Boolean.TRUE))) {
-        return new Value<>("Red", path, qualifiers);
+        return new Value<>("Red", path, qualifiers, this.priority(qualifiedPath));
       } else {
         return null;
       }

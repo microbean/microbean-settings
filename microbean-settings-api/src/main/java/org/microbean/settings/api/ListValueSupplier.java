@@ -59,7 +59,7 @@ public class ListValueSupplier extends AbstractValueSupplier {
   }
   
   @Override // ValueSupplier
-  public boolean respondsFor(final QualifiedPath qualifiedPath) {
+  public boolean mayHandle(final QualifiedPath qualifiedPath) {
     if (qualifiedPath != null) {
       final Path path = qualifiedPath.path();
       return path != null && this.map.containsKey(path) && this.qualifiersFunction.apply(qualifiedPath) != null;
@@ -73,7 +73,11 @@ public class ListValueSupplier extends AbstractValueSupplier {
                       final Function<? super QualifiedPath, ? extends Collection<ValueSupplier>> valueSuppliers) {
     final Path path = qualifiedPath.path();    
     final Supplier<List<?>> listSupplier = path == null ? null : this.map.get(path);
-    return listSupplier == null ? null : new Value<>(listSupplier.get(), path, this.qualifiersFunction.apply(qualifiedPath));
+    return
+      listSupplier == null ? null : new Value<>(listSupplier.get(),
+                                                path,
+                                                this.qualifiersFunction.apply(qualifiedPath),
+                                                this.priority(qualifiedPath));
   }
   
 }
