@@ -48,11 +48,11 @@ public interface Prioritized {
     } else if (o instanceof Priority p) {
       return p.value();
     } else if (o instanceof Annotation a) {
-      return priority(a.annotationType());
+      return priority(a.annotationType()); // recursive
     } else if (o instanceof AnnotatedElement c) {
-      return priority(c.getAnnotation(Priority.class));
+      return priority(c.getAnnotation(Priority.class)); // recursive
     } else {
-      return priority(o.getClass()); 
+      return priority(o.getClass()); // recursive
     }
   }
 

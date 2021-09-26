@@ -58,10 +58,25 @@ final class TestPath {
   }
 
   @Test
-  final void testMustHaveEmptyNameInRootPath() {
-    assertThrows(IllegalArgumentException.class, () -> {
-        new Path((Path)null, "foo", Object.class);
-      });
+  final void testAbsolute() {
+    final Path path = new Path();
+    assertNull(path.parent());
+    assertTrue(path.name().isEmpty());
+    assertTrue(path.absolute());
+    final Path fragment = new Path("test", Number.class);
+    assertNull(fragment.parent());
+    assertEquals("test", fragment.name());
+    assertFalse(fragment.absolute());
+
+
+  }
+  
+  @Test
+  final void testNonEmptyNameAndNullParent() {
+    final Path path = new Path((Path)null, "foo", Number.class);
+    assertNull(path.parent());
+    assertEquals("foo", path.name());
+    assertSame(Number.class, path.targetType());
   }
 
   @Test
@@ -80,9 +95,26 @@ final class TestPath {
   }
 
   @Test
+  final void testTrailingPath() {
+    final Path path =
+      Path.of(Number.class,
+              "a", Object.class,
+              "b", Number.class,
+              "c", String.class);
+    assertNotNull(path);
+    assertSame(String.class, path.targetType());
+    final Path trailingPath = path.trailingPath(Object.class, List.of("b", "c"));
+    assertNotNull(trailingPath);
+    System.out.println("*** trailing path: " + trailingPath); // TODO: er, wait, isn't this leading?
+    System.out.println("    leading path: " + path.leadingPath(Object.class, List.of("b", "c")));
+    System.out.println("    targetType: " + trailingPath.targetType()); // TODO: shouldn't this be
+  }
+
+  @Test
   final void testEndsWith() {
     final Path path = Path.of(Number.class, "a", Object.class, "b", Number.class, "c", String.class);
     assertNotNull(path);
+    assertSame(String.class, path.targetType());
     assertTrue(path.endsWith(Object.class, List.of("b", "c")));
     final Path root = new Path();
     assertTrue(root.endsWith(Object.class, List.of()));
@@ -122,7 +154,11 @@ final class TestPath {
 
   @Test
   final void testAll() {
-    final Path path = Path.of(Number.class, "a", Object.class, "b", Number.class, "c", String.class);
+    final Path path =
+      Path.of(Number.class,
+              "a", Object.class,
+              "b", Number.class,
+              "c", String.class);
     final List<Path> all = path.all();
     assertNotNull(all);
     assertEquals(4, all.size());
