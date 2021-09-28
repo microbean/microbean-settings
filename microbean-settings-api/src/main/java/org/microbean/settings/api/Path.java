@@ -38,7 +38,13 @@ import org.microbean.development.annotation.Convenience;
 
 public final record Path(Path parent, String name, Type targetType) {
 
-  // Creates an absolue path
+
+  /*
+   * Constructors.
+   */
+
+
+  // Creates an absolute path
   @Convenience
   public Path() {
     this((Path)null, "", Object.class);
@@ -70,14 +76,18 @@ public final record Path(Path parent, String name, Type targetType) {
   @Convenience
   public Path(final Path path) {
     this(path.parent(), path.name(), path.targetType());
-    assert this.equals(path);    
+    assert this.equals(path);
   }
 
   public Path {
     Objects.requireNonNull(targetType, "targetType");
     Objects.requireNonNull(name, "name");
-    if (parent != null && name.isEmpty()) {
-      throw new IllegalArgumentException("non-null parent with empty name: " + parent);
+    if (name.isEmpty()) {
+      if (parent != null) {
+        throw new IllegalArgumentException("non-null parent with empty name: " + parent);
+      }
+    } else if (name.equals("*")) {
+      throw new IllegalArgumentException("name: " + name);
     }
   }
 
@@ -103,7 +113,7 @@ public final record Path(Path parent, String name, Type targetType) {
   public final Path withTargetType(final Type targetType) {
     return Objects.equals(this.targetType(), targetType) ? this : new Path(this.parent(), this.name(), targetType);
   }
-  
+
   public final boolean absolute() {
     final Path path = this.root();
     assert path.parent() == null;
@@ -169,12 +179,16 @@ public final record Path(Path parent, String name, Type targetType) {
   }
 
   public final Path firstMatching(final Type startingType) {
-    return this.firstMatching(startingType, null);
+    return this.firstMatching(startingType, null, null);
   }
 
   public final Path firstMatching(final Type startingType, final List<? extends String> names) {
+    return this.firstMatching(startingType, names, null);
+  }
+  
+  public final Path firstMatching(final Type startingType, final List<? extends String> names, final Type targetType) {
     final Predicate<Path> firstMatchingFilter =
-      new FirstMatchingFilter(startingType, names == null ? null : names.iterator());
+      new FirstMatchingFilter(startingType, names == null ? null : names.iterator(), targetType);
     return this.downstream()
       .filter(firstMatchingFilter)
       .reduce(Path::last)
@@ -412,7 +426,7 @@ public final record Path(Path parent, String name, Type targetType) {
   private static final Path last(final Path p0, final Path p1) {
     return p1;
   }
-  
+
   private static final Path returnParent(final Path path, final Path parent) {
     assert Objects.equals(path.parent(), parent);
     return parent;
@@ -429,9 +443,9 @@ public final record Path(Path parent, String name, Type targetType) {
   private static final class AncestorIterator implements Iterator<Path> {
 
     private Path parent;
-    
+
     private Path p;
-    
+
     private AncestorIterator(final Path p) {
       super();
       this.p = p;
@@ -448,19 +462,24 @@ public final record Path(Path parent, String name, Type targetType) {
       this.p = p.parent();
       return p;
     }
-    
+
   }
-  
+
   private static final class FirstMatchingFilter implements Predicate<Path> {
 
-    private Type targetType;
+    private Type startingType;
 
     private final Iterator<? extends String> nameIterator;
-    
-    private FirstMatchingFilter(final Type targetType, final Iterator<? extends String> nameIterator) {
+
+    private final Type targetType;
+
+    private FirstMatchingFilter(final Type startingType,
+                                final Iterator<? extends String> nameIterator,
+                                final Type targetType) {
       super();
-      this.targetType = Objects.requireNonNull(targetType, "targetType");
+      this.startingType = Objects.requireNonNull(startingType, "startingType");
       this.nameIterator = nameIterator;
+      this.targetType = targetType;
     }
 
     @Override
@@ -468,18 +487,34 @@ public final record Path(Path parent, String name, Type targetType) {
       final boolean returnValue;
       if (p == null) {
         returnValue = false;
-      } else if (this.targetType == null) {
-        // There was a match already
-        returnValue = this.nameIterator == null || (this.nameIterator.hasNext() && Objects.equals(p.name(), this.nameIterator.next()));
-      } else if (Objects.equals(p.targetType(), this.targetType)) {
-        this.targetType = null;
+      } else if (this.startingType == null) {
+        // (We set it to null to indicate that we matched a starting type already; see below.)
+        if (this.nameIterator == null) {
+          // No names to check
+          if (this.targetType == null) {
+            // No target type to check
+            returnValue = true;
+          } else {
+            returnValue = Objects.equals(p.targetType(), this.targetType);
+          }
+        } else if (this.nameIterator.hasNext()) {
+          returnValue = Objects.equals(p.name(), this.nameIterator.next());
+        } else if (this.targetType != null) {
+          returnValue = Objects.equals(p.targetType(), this.targetType);
+        } else {
+          // Yes, false: we exhausted the names so everything
+          // afterwards gets rejected
+          returnValue = false;
+        }
+      } else if (Objects.equals(p.targetType(), this.startingType)) {
+        this.startingType = null; // record that a match took place
         returnValue = true;
       } else {
         returnValue = false;
       }
       return returnValue;
     }
-    
+
   }
 
   private static final class LastMatchingFilter implements Predicate<Path> {
@@ -506,7 +541,7 @@ public final record Path(Path parent, String name, Type targetType) {
       }
       return returnValue;
     }
-    
+
   }
 
 }
