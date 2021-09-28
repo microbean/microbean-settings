@@ -158,12 +158,20 @@ public final record Path(Path parent, String name, Type targetType) {
   }
 
   public final Path lastMatching(final Type startingType) {
-    return this.lastMatching(startingType, null);
+    return this.lastMatching(startingType, null, null);
   }
 
   public final Path lastMatching(final Type startingType, final List<String> names) {
+    return this.lastMatching(startingType, names, null);
+  }
+
+  public final Path lastMatching(final Type startingType,
+                                 final List<String> names,
+                                 final Type targetType) {
     final Predicate<Path> lastMatchingFilter =
-      new LastMatchingFilter(startingType, names == null || names.isEmpty() ? null : names.listIterator(names.size()));
+      new LastMatchingFilter(startingType,
+                             names == null || names.isEmpty() ? null : names.listIterator(names.size()),
+                             targetType);
     return this.upstream()
       .filter(lastMatchingFilter)
       .findFirst()
@@ -519,14 +527,19 @@ public final record Path(Path parent, String name, Type targetType) {
 
   private static final class LastMatchingFilter implements Predicate<Path> {
 
-    private final Type targetType;
+    private final Type startingType;
 
     private final ListIterator<? extends String> nameIterator;
 
-    private LastMatchingFilter(final Type targetType, final ListIterator<? extends String> nameIterator) {
+    private Type targetType;
+
+    private LastMatchingFilter(final Type startingType,
+                               final ListIterator<? extends String> nameIterator,
+                               final Type targetType) {
       super();
-      this.targetType = Objects.requireNonNull(targetType, "targetType");
-      this.nameIterator = nameIterator;
+      this.startingType = Objects.requireNonNull(startingType, "startingType");
+      this.nameIterator = nameIterator == null ? List.<String>of().listIterator() : nameIterator;
+      this.targetType = targetType;
     }
 
     @Override
@@ -534,10 +547,17 @@ public final record Path(Path parent, String name, Type targetType) {
       final boolean returnValue;
       if (p == null) {
         returnValue = false;
-      } else if (nameIterator == null || !nameIterator.hasPrevious()) {
-        returnValue = Objects.equals(p.targetType(), this.targetType);
+      } else if (this.targetType != null) {
+        if (Objects.equals(p.targetType(), this.targetType)) {
+          this.targetType = null; // signal a match
+          returnValue = true;
+        } else {
+          returnValue = false;
+        }
+      } else if (!this.nameIterator.hasPrevious()) {
+        returnValue = Objects.equals(p.targetType(), this.startingType);
       } else {
-        returnValue = Objects.equals(p.name(), nameIterator.previous());
+        returnValue = Objects.equals(p.name(), this.nameIterator.previous());
       }
       return returnValue;
     }
