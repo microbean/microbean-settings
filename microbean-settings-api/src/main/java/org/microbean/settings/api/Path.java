@@ -19,6 +19,7 @@ package org.microbean.settings.api;
 import java.lang.reflect.Type;
 
 import java.util.ArrayDeque;
+import java.util.Collection;
 import java.util.Deque;
 import java.util.Iterator;
 import java.util.List;
@@ -31,9 +32,11 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
+import java.util.stream.Stream;
+
 import org.microbean.development.annotation.Convenience;
 
-public final record Path(Path parent, String name, Type targetType) implements Cloneable {
+public final record Path(Path parent, String name, Type targetType) {
 
   // Creates an absolue path
   @Convenience
@@ -64,16 +67,17 @@ public final record Path(Path parent, String name, Type targetType) implements C
   }
 
   // Copy constructor
+  @Convenience
   public Path(final Path path) {
     this(path.parent(), path.name(), path.targetType());
-    assert this.equals(path);
+    assert this.equals(path);    
   }
 
   public Path {
     Objects.requireNonNull(targetType, "targetType");
     Objects.requireNonNull(name, "name");
     if (parent != null && name.isEmpty()) {
-      throw new IllegalArgumentException("empty name with non-null parent: " + parent);
+      throw new IllegalArgumentException("non-null parent with empty name: " + parent);
     }
   }
 
@@ -83,34 +87,37 @@ public final record Path(Path parent, String name, Type targetType) implements C
    */
 
 
+  @Convenience
+  public final Path detach() {
+    return this.parent() == null ? this : this.withParent(null);
+  }
+
+  public final Path withParent(final Path parent) {
+    return Objects.equals(this.parent(), parent) ? this : new Path(parent, this.name(), this.targetType());
+  }
+
+  public final Path withName(final String name) {
+    return Objects.equals(this.name(), name) ? this : new Path(this.parent(), name, this.targetType());
+  }
+
+  public final Path withTargetType(final Type targetType) {
+    return Objects.equals(this.targetType(), targetType) ? this : new Path(this.parent(), this.name(), targetType);
+  }
+  
   public final boolean absolute() {
     final Path path = this.root();
     assert path.parent() == null;
     return path.name().isEmpty();
   }
 
-  @Override // Cloneable
-  public final Path clone() {
-    return new Path(this);
+  @Convenience // see all(Predicate)
+  public final List<Path> all() {
+    return this.all(Path::notNull);
   }
 
-  public final List<Path> all() {
-    return
-      this.traverse((Path p, Deque<Path> dq) -> {
-          if (dq == null) {
-            dq = new ArrayDeque<>(5);
-          }
-          dq.addFirst(p);
-          return dq;
-        },
-        (p, dq) -> {
-          if (dq == null || dq.isEmpty()) {
-            return List.of(p);
-          } else {
-            dq.addFirst(p);
-            return List.copyOf(dq);
-          }
-        });
+  @Convenience // see downstream(Predicate)
+  public final List<Path> all(final Predicate<? super Path> predicate) {
+    return this.downstream(predicate).toList();
   }
 
   public final Class<?> targetClass() {
@@ -126,96 +133,61 @@ public final record Path(Path parent, String name, Type targetType) implements C
   }
 
   public final Path root() {
-    return this.traverse(Path::returnPath, Path::returnPath);
+    return this.upstream()
+      .reduce(Path::returnParent)
+      .orElseThrow();
   }
 
-  public final boolean isRoot() {
-    return this.isRoot(Object.class);
-  }
-
-  public final boolean isRoot(final Type type) {
-    if (this.parent == null) {
+  public final boolean root(final Type type) {
+    if (this.parent() == null) {
       assert this.name.isEmpty();
-      return this.targetType().equals(type);
+      return Objects.equals(this.targetType(), type);
     } else {
       return false;
     }
   }
 
-  public final Path trailingPath(final Type startingType) {
-    // Kind of a pathological :-) case. This means a Path starting
-    // with startingType, followed by no names…which is just this
-    // Path, assuming the type is right.
-    return this.targetType().equals(Objects.requireNonNull(startingType, "startingType")) ? this : null;
+  public final Path lastMatching(final Type startingType) {
+    return this.lastMatching(startingType, null);
   }
 
-  public final Path trailingPath(final Type startingType, final List<String> names) {
-    Objects.requireNonNull(startingType, "startingType");
-    if (names.isEmpty()) {
-      return this.targetType().equals(startingType) ? this : null;
-    }
-    final ListIterator<String> listIterator = names.listIterator(names.size());
-    return
-      this.traverse(p -> listIterator.hasPrevious(),
-                    (p, x) -> listIterator.previous().equals(p.name()) ? p : null,
-                    (p, x) -> p.targetType().equals(startingType) ? p : null);
+  public final Path lastMatching(final Type startingType, final List<String> names) {
+    final Predicate<Path> lastMatchingFilter =
+      new LastMatchingFilter(startingType, names == null || names.isEmpty() ? null : names.listIterator(names.size()));
+    return this.upstream()
+      .filter(lastMatchingFilter)
+      .findFirst()
+      .orElse(null);
   }
 
   public final boolean endsWith(final Type startingType) {
-    // Kind of a pathological :-) case; i.e. no names
-    return this.targetType().equals(Objects.requireNonNull(startingType, "startingType"));
+    return this.endsWith(startingType, null);
   }
 
   public final boolean endsWith(final Type startingType, final List<String> names) {
-    return trailingPath(startingType, names) != null;
+    return Objects.equals(this, this.lastMatching(startingType, names));
   }
 
-  public final Path leadingPath(final Type startingType) {
-    return this.leadingPath(startingType, List.of());
+  public final Path firstMatching(final Type startingType) {
+    return this.firstMatching(startingType, null);
   }
 
-  public final Path leadingPath(final Type startingType, final List<String> names) {
-    Objects.requireNonNull(startingType, "startingType");
-    final Deque<Path> dq = new ArrayDeque<>(5);
-    Path path = this.traverse((p, x) -> { dq.addFirst(p); return p; }, Path::returnPath);
-    if (path.targetType().equals(startingType)) {
-      if (!names.isEmpty()) {
-        path = null;
-        final Iterator<Path> iterator = dq.iterator();
-        for (final String name : names) {
-          if (name.isEmpty()) {
-            throw new IllegalArgumentException("names: " + names);
-          }
-          if (iterator.hasNext()) {
-            final Path p = iterator.next();
-            final String pName = p.name();
-            if (pName.isEmpty()) {
-              // Skip the root
-              assert p.parent() == null;
-            } else if (pName.equals(name)) {
-              path = p;
-            } else {
-              path = null;
-              break;
-            }
-          } else {
-            path = null;
-            break;
-          }
-        }
-      }
-      return path;
-    } else {
-      return null;
-    }
+  public final Path firstMatching(final Type startingType, final List<? extends String> names) {
+    final Predicate<Path> firstMatchingFilter =
+      new FirstMatchingFilter(startingType, names == null ? null : names.iterator());
+    return this.downstream()
+      .filter(firstMatchingFilter)
+      .reduce(Path::last)
+      .orElse(null);
   }
 
   public final boolean startsWith(final Type startingType) {
-    return this.leadingPath(startingType, List.of()) != null;
+    return this.startsWith(startingType, null);
   }
 
   public final boolean startsWith(final Type startingType, final List<String> names) {
-    return this.leadingPath(startingType, names) != null;
+    final Path firstMatching = this.firstMatching(startingType, names);
+    return firstMatching != null && Objects.equals(startingType, firstMatching.root().targetType());
   }
 
   @Convenience
@@ -254,20 +226,15 @@ public final record Path(Path parent, String name, Type targetType) implements C
   }
 
   public final List<String> names() {
-    return
-      this.traverse((final Path p, Deque<String> dq) -> {
-          if (dq == null) {
-            dq = new ArrayDeque<>(5);
-          }
-          dq.addFirst(p.name());
-          return dq;
-        },
-        (p, dq) -> dq == null ? List.of() : List.copyOf(dq));
+    return this.downstream()
+      .filter(p -> p.parent() != null)
+      .map(Path::name)
+      .toList();
   }
 
   public final int length() {
-    return this.traverse((Path p, Integer i) -> i == null ? 2 : i + 1,
-                         (p, i) -> i == null ? 1 : i);
+    return this.upstream()
+      .reduce(0, (i, p) -> i + 1, Integer::sum);
   }
 
   private final <I> Path traverse(final BiFunction<? super Path, I, ? extends I> intermediateFunction) {
@@ -293,6 +260,36 @@ public final record Path(Path parent, String name, Type targetType) implements C
       parent = path.parent();
     }
     return terminalFunction.apply(path, acc);
+  }
+
+  @Convenience
+  public final Stream<Path> downstream() {
+    return this.downstream(null);
+  }
+
+  public final Stream<Path> downstream(final Predicate<? super Path> predicate) {
+    return this.upstream(predicate)
+      .<Deque<Path>>collect(ArrayDeque::new,
+                            (dq, p) -> dq.addFirst(p),
+                            Path::addAll)
+      .stream();
+  }
+
+  public final Stream<Path> upstream() {
+    return upstream(null);
+  }
+
+  public final Stream<Path> upstream(final Predicate<? super Path> predicate) {
+    final Predicate<Path> notNull = Path::notNull;
+    return Stream.iterate(this, predicate == null ? notNull : notNull.and(predicate), Path::parent);
+  }
+
+  public final Iterator<Path> ancestorIterator() {
+    return new AncestorIterator(this);
+  }
+
+  public final Iterator<Path> descendantIterator() {
+    return this.all().iterator();
   }
 
 
@@ -410,6 +407,106 @@ public final record Path(Path parent, String name, Type targetType) implements C
 
   private static final Path returnPath(final Path p, final Object ignored) {
     return p;
+  }
+
+  private static final Path last(final Path p0, final Path p1) {
+    return p1;
+  }
+  
+  private static final Path returnParent(final Path path, final Path parent) {
+    assert Objects.equals(path.parent(), parent);
+    return parent;
+  }
+
+  private static final boolean notNull(final Path p) {
+    return p != null;
+  }
+
+  private static final void addAll(final Collection<Path> c0, final Collection<Path> c1) {
+    c0.addAll(c1);
+  }
+
+  private static final class AncestorIterator implements Iterator<Path> {
+
+    private Path parent;
+    
+    private Path p;
+    
+    private AncestorIterator(final Path p) {
+      super();
+      this.p = p;
+    }
+
+    @Override
+    public final boolean hasNext() {
+      return this.p != null;
+    }
+
+    @Override
+    public final Path next() {
+      final Path p = this.p;
+      this.p = p.parent();
+      return p;
+    }
+    
+  }
+  
+  private static final class FirstMatchingFilter implements Predicate<Path> {
+
+    private Type targetType;
+
+    private final Iterator<? extends String> nameIterator;
+    
+    private FirstMatchingFilter(final Type targetType, final Iterator<? extends String> nameIterator) {
+      super();
+      this.targetType = Objects.requireNonNull(targetType, "targetType");
+      this.nameIterator = nameIterator;
+    }
+
+    @Override
+    public final boolean test(final Path p) {
+      final boolean returnValue;
+      if (p == null) {
+        returnValue = false;
+      } else if (this.targetType == null) {
+        // There was a match already
+        returnValue = this.nameIterator == null || (this.nameIterator.hasNext() && Objects.equals(p.name(), this.nameIterator.next()));
+      } else if (Objects.equals(p.targetType(), this.targetType)) {
+        this.targetType = null;
+        returnValue = true;
+      } else {
+        returnValue = false;
+      }
+      return returnValue;
+    }
+    
+  }
+
+  private static final class LastMatchingFilter implements Predicate<Path> {
+
+    private final Type targetType;
+
+    private final ListIterator<? extends String> nameIterator;
+
+    private LastMatchingFilter(final Type targetType, final ListIterator<? extends String> nameIterator) {
+      super();
+      this.targetType = Objects.requireNonNull(targetType, "targetType");
+      this.nameIterator = nameIterator;
+    }
+
+    @Override
+    public final boolean test(final Path p) {
+      final boolean returnValue;
+      if (p == null) {
+        returnValue = false;
+      } else if (nameIterator == null || !nameIterator.hasPrevious()) {
+        returnValue = Objects.equals(p.targetType(), this.targetType);
+      } else {
+        returnValue = Objects.equals(p.name(), nameIterator.previous());
+      }
+      return returnValue;
+    }
+    
   }
 
 }

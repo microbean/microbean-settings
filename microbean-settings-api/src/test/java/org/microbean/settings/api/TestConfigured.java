@@ -57,10 +57,8 @@ final class TestConfigured {
   final void testGenericThing() throws ReflectiveOperationException {
     Type returnType = GenericThing.class.getDeclaredMethod("getThing").getGenericReturnType();
     Class<?>[] c = Types.rawClasses(returnType);
-    System.out.println("*** returnType rawClasses: " + asList(c));
     returnType = GenericThing.class.getDeclaredMethod("getThing2").getGenericReturnType();
     c = Types.rawClasses(returnType);
-    System.out.println("*** returnType rawClasses: " + asList(c));
   }
 
   @Test

@@ -20,6 +20,9 @@ import java.lang.reflect.Type;
 
 import java.util.List;
 
+import java.util.stream.Stream;
+
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -88,14 +91,38 @@ final class TestPath {
 
   @Test
   final void testOf() {
-    Path path = Path.of(Number.class, "a", Object.class, "b", Number.class, "c", String.class);
+    Path path =
+      Path.of(Number.class,
+              "a", Object.class,
+              "b", Number.class,
+              "c", String.class);
     assertNotNull(path);
     assertEquals("c", path.name());
     assertSame(String.class, path.targetType());
   }
 
   @Test
-  final void testTrailingPath() {
+  final void testUpstream() {
+    final Stream<Path> stream =
+      Path.of(Number.class,
+              "a", Object.class,
+              "b", Number.class,
+              "c", String.class)
+      .upstream();
+    assertNotNull(stream);
+    final List<Path> list = stream.toList();
+    assertNotNull(list);
+    assertEquals(4, list.size());
+    // 0 is "last"
+    assertSame(list.get(1), list.get(0).parent());
+    assertSame(list.get(2), list.get(1).parent());
+    assertSame(list.get(3), list.get(2).parent());
+    assertNull(list.get(3).parent());
+  }
+
+  // @Disabled
+  @Test
+  final void testLastMatching() {
     final Path path =
       Path.of(Number.class,
               "a", Object.class,
@@ -103,16 +130,26 @@ final class TestPath {
               "c", String.class);
     assertNotNull(path);
     assertSame(String.class, path.targetType());
-    final Path trailingPath = path.trailingPath(Object.class, List.of("b", "c"));
-    assertNotNull(trailingPath);
-    System.out.println("*** trailing path: " + trailingPath); // TODO: er, wait, isn't this leading?
-    System.out.println("    leading path: " + path.leadingPath(Object.class, List.of("b", "c")));
-    System.out.println("    targetType: " + trailingPath.targetType()); // TODO: shouldn't this be
+    final Path lastMatching = path.lastMatching(Object.class, List.of("b", "c"));
+    assertNotNull(lastMatching);
+
+    assertEquals("c", lastMatching.name());
+    assertSame(String.class, lastMatching.targetType());
+
+    assertEquals("b", lastMatching.parent().name());
+    assertSame(Number.class, lastMatching.parent().targetType());
+
+    assertEquals("a", lastMatching.parent().parent().name());
+    assertSame(Object.class, lastMatching.parent().parent().targetType());
   }
 
   @Test
   final void testEndsWith() {
-    final Path path = Path.of(Number.class, "a", Object.class, "b", Number.class, "c", String.class);
+    final Path path =
+      Path.of(Number.class,
+              "a", Object.class,
+              "b", Number.class,
+              "c", String.class);
     assertNotNull(path);
     assertSame(String.class, path.targetType());
     assertTrue(path.endsWith(Object.class, List.of("b", "c")));
@@ -121,13 +158,35 @@ final class TestPath {
   }
 
   @Test
+  final void testFirstMatching() {
+    final Path path =
+      Path.of(Number.class,
+              "a", Object.class,
+              "b", CharSequence.class,
+              "c", String.class);
+    assertNotNull(path);
+    assertSame(CharSequence.class, path.parent().targetType());
+    assertEquals("c", path.name());
+    assertSame(String.class, path.targetType());
+    final Path firstMatching = path.firstMatching(Number.class, List.of("a", "b"));
+    assertNotNull(firstMatching);
+    assertSame(Object.class, firstMatching.parent().targetType());
+    assertEquals("b", firstMatching.name());
+    assertSame(CharSequence.class, firstMatching.targetType());
+  }
+
+  @Test
   final void testStartsWith() {
     final Path root = new Path();
     assertTrue(root.startsWith(Object.class));
-    final Path path = Path.of(Number.class, "a", Object.class, "b", CharSequence.class, "c", String.class);
+    final Path path =
+      Path.of(Number.class,
+              "a", Object.class,
+              "b", CharSequence.class,
+              "c", String.class);
     assertTrue(path.startsWith(Number.class));
     assertEquals("c", path.name());
-    final Path ab = path.leadingPath(Number.class, List.of("a", "b"));
+    final Path ab = path.firstMatching(Number.class, List.of("a", "b"));
     assertNotNull(ab);
     assertEquals("b", ab.name());
     assertSame(CharSequence.class, ab.targetType());
@@ -136,7 +195,11 @@ final class TestPath {
 
   @Test
   final void testPathString() {
-    final Path path = Path.of(Number.class, "a", Object.class, "b", Number.class, "c", String.class);
+    final Path path =
+      Path.of(Number.class,
+              "a", Object.class,
+              "b", Number.class,
+              "c", String.class);
     assertEquals("a.b.c", path.pathString());
     final Path root = new Path();
     assertTrue(root.name().isEmpty());
