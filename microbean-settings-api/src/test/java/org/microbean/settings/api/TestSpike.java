@@ -29,10 +29,20 @@ final class TestSpike {
 
   @Test
   final void testSpike() {
-    final Car car = Configured2.of(Car.class);
+    // Note that Car is an interface.
+    final Car car = Configured.of(Car.class);
     assertNotNull(car);
+
+    // Note that Car::getColor throws an
+    // UnsupportedOperationException.  But there's a ValueSupplier
+    // installed that proxies Color.  So the default implementation of
+    // Car::getColor is bypassed.
     final Color color = car.getColor();
     assertNotNull(color);
+
+    // Note that the same ValueSupplier proxies the Color interface
+    // generally, so that in this case its default value, "Gray", is
+    // returned.  See ProxyingValueSupplier for details.
     assertEquals("Gray", color.getName());
   }
 
