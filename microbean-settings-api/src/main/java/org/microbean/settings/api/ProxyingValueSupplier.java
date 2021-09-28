@@ -124,28 +124,12 @@ public class ProxyingValueSupplier implements ValueSupplier {
     this.proxies = new ConcurrentHashMap<>();
     this.basePriority = basePriority;
     this.qualifiers = qualifiers == null ? Map.of() : Map.copyOf(qualifiers);
-    if (mayHandlePredicate == null) {
-      this.mayHandlePredicate = qp -> true;
-    } else {
-      this.mayHandlePredicate = mayHandlePredicate;
-    }
+    this.mayHandlePredicate = mayHandlePredicate == null ? qp -> true : mayHandlePredicate;
     this.defaultTargetSupplierFunction =
       defaultTargetSupplierFunction == null ? ProxyingValueSupplier::noDefaultTargetSupplier : defaultTargetSupplierFunction;
-    if (valueSuppliers == null) {
-      this.valueSuppliers = ValueSupplier::loadedValueSuppliers;
-    } else {
-      this.valueSuppliers = valueSuppliers;
-    }
-    if (pathComponentFunction == null) {
-      this.pathComponentFunction = ProxyingValueSupplier::identity;
-    } else {
-      this.pathComponentFunction = pathComponentFunction;
-    }
-    if (isProxiableFunction == null) {
-      this.isProxiableFunction = ProxyingValueSupplier::isProxiable;
-    } else {
-      this.isProxiableFunction = isProxiableFunction;
-    }
+    this.valueSuppliers = valueSuppliers == null ? ValueSupplier::loadedValueSuppliers : valueSuppliers;
+    this.pathComponentFunction = pathComponentFunction == null ? ProxyingValueSupplier::identity : pathComponentFunction;
+    this.isProxiableFunction = isProxiableFunction == null ? ProxyingValueSupplier::isProxiable : isProxiableFunction;
   }
 
 

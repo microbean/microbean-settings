@@ -97,9 +97,12 @@ public final record Path(Path parent, String name, Type targetType) {
    */
 
 
+  // Turns this Path into a fragment
   @Convenience
   public final Path detach() {
-    return this.parent() == null ? this : this.withParent(null);
+    final Path returnValue = this.parent() == null ? this : this.withParent(null);
+    assert !returnValue.absolute();
+    return returnValue;
   }
 
   public final Path withParent(final Path parent) {
@@ -485,7 +488,7 @@ public final record Path(Path parent, String name, Type targetType) {
                                 final Iterator<? extends String> nameIterator,
                                 final Type targetType) {
       super();
-      this.startingType = Objects.requireNonNull(startingType, "startingType");
+      this.startingType = startingType;
       this.nameIterator = nameIterator;
       this.targetType = targetType;
     }
@@ -496,11 +499,9 @@ public final record Path(Path parent, String name, Type targetType) {
       if (p == null) {
         returnValue = false;
       } else if (this.startingType == null) {
-        // (We set it to null to indicate that we matched a starting type already; see below.)
         if (this.nameIterator == null) {
-          // No names to check
           if (this.targetType == null) {
-            // No target type to check
+            // Nothing to filter, so true.
             returnValue = true;
           } else {
             returnValue = Objects.equals(p.targetType(), this.targetType);
