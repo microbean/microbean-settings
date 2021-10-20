@@ -45,7 +45,7 @@ public interface ValueSupplier extends Prioritized {
     // specificity, should also be taken into account. This
     // implementation is deliberately simplistic and just moves the
     // inappropriates to the back of the line.
-    return this.mayHandle(qualifiedPath) ? this.priority() : Integer.MIN_VALUE;
+    return this.mayHandle(qualifiedPath) ? qualifiedPath.priority() : Integer.MIN_VALUE;
   }
 
   @OverridingEncouraged

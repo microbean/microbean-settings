@@ -36,7 +36,15 @@ import java.util.stream.Stream;
 
 import org.microbean.development.annotation.Convenience;
 
-public final record Path(Path parent, String name, Type targetType) {
+import org.microbean.type.Types;
+
+public final record Path(Path parent, String name, Type targetType) implements Prioritized {
+
+
+  // A Really Big Number™ to indicate that a path that matches a whole
+  // path is the most suitable path there is.  We take ten thousand or
+  // so off the top just in case there's some other use case.
+  public static final int ABSOLUTE_PATH_PRIORITY = Integer.MAX_VALUE - 10000;
 
 
   /*
@@ -80,7 +88,9 @@ public final record Path(Path parent, String name, Type targetType) {
   }
 
   public Path {
-    Objects.requireNonNull(targetType, "targetType");
+    if (Types.erase(Objects.requireNonNull(targetType, "targetType")) == null) {
+      throw new IllegalArgumentException("No raw class available for " + targetType);
+    }
     Objects.requireNonNull(name, "name");
     if (name.isEmpty()) {
       if (parent != null) {
@@ -134,7 +144,7 @@ public final record Path(Path parent, String name, Type targetType) {
   }
 
   public final Class<?> targetClass() {
-    return Types.rawClass(this.targetType());
+    return Types.erase(this.targetType());
   }
 
   public final ClassLoader classLoader() {
@@ -146,9 +156,7 @@ public final record Path(Path parent, String name, Type targetType) {
   }
 
   public final Path root() {
-    return this.upstream()
-      .reduce(Path::returnParent)
-      .orElseThrow();
+    return this.upstream().reduce(Path::returnParent).orElseThrow();
   }
 
   public final boolean root(final Type type) {
@@ -171,12 +179,10 @@ public final record Path(Path parent, String name, Type targetType) {
   public final Path lastMatching(final Type startingType,
                                  final List<String> names,
                                  final Type targetType) {
-    final Predicate<Path> lastMatchingFilter =
-      new LastMatchingFilter(startingType,
-                             names == null || names.isEmpty() ? null : names.listIterator(names.size()),
-                             targetType);
     return this.upstream()
-      .filter(lastMatchingFilter)
+      .filter(new LastMatchingFilter(startingType,
+                                     names == null || names.isEmpty() ? null : names.listIterator(names.size()),
+                                     targetType))
       .findFirst()
       .orElse(null);
   }
@@ -196,12 +202,10 @@ public final record Path(Path parent, String name, Type targetType) {
   public final Path firstMatching(final Type startingType, final List<? extends String> names) {
     return this.firstMatching(startingType, names, null);
   }
-  
+
   public final Path firstMatching(final Type startingType, final List<? extends String> names, final Type targetType) {
-    final Predicate<Path> firstMatchingFilter =
-      new FirstMatchingFilter(startingType, names == null ? null : names.iterator(), targetType);
     return this.downstream()
-      .filter(firstMatchingFilter)
+      .filter(new FirstMatchingFilter(startingType, names == null ? null : names.iterator(), targetType))
       .reduce(Path::last)
       .orElse(null);
   }
@@ -215,31 +219,6 @@ public final record Path(Path parent, String name, Type targetType) {
     return firstMatching != null && Objects.equals(startingType, firstMatching.root().targetType());
   }
 
-  @Convenience
-  public final Type parentType() {
-    final Path parent = this.parent();
-    return parent == null ? this.targetType() : parent.targetType();
-  }
-
-  @Convenience
-  public final Class<?> parentClass() {
-    return Types.rawClass(this.parentType());
-  }
-
-  @Convenience
-  public final String parentName() {
-    final Path parent = this.parent();
-    return parent == null ? "" : parent.name();
-  }
-
-  public final Type rootType() {
-    return this.root().targetType();
-  }
-
-  public final Class<?> rootClass() {
-    return Types.rawClass(this.rootType());
-  }
-
   public final String pathString() {
     return this.pathString(".");
   }
@@ -251,40 +230,16 @@ public final record Path(Path parent, String name, Type targetType) {
   }
 
   public final List<String> names() {
-    return this.downstream()
-      .filter(p -> p.parent() != null)
-      .map(Path::name)
-      .toList();
+    return this.downstream().filter(p -> p.parent() != null).map(Path::name).toList();
+  }
+
+  @Override // Prioritized
+  public final int priority() {
+    return this.absolute() ? ABSOLUTE_PATH_PRIORITY : this.length();
   }
 
   public final int length() {
-    return this.upstream()
-      .reduce(0, (i, p) -> i + 1, Integer::sum);
-  }
-
-  private final <I> Path traverse(final BiFunction<? super Path, I, ? extends I> intermediateFunction) {
-    return this.traverse(Path::returnTrue, intermediateFunction, Path::returnPath);
-  }
-
-  private final <T, I> T traverse(final BiFunction<? super Path, I, ? extends I> intermediateFunction,
-                                  final BiFunction<? super Path, I, ? extends T> terminalFunction) {
-    return this.traverse(Path::returnTrue, intermediateFunction, terminalFunction);
-  }
-
-  private final <T, I> T traverse(final Predicate<? super Path> parentPredicate,
-                                  final BiFunction<? super Path, I, ? extends I> intermediateFunction,
-                                  final BiFunction<? super Path, I, ? extends T> terminalFunction) {
-    Path path = this;
-    Path parent = path.parent();
-    I acc = null;
-    while (parent != null && parentPredicate.test(parent)) {
-      if ((acc = intermediateFunction.apply(path, acc)) == null) {
-        break;
-      }
-      path = parent;
-      parent = path.parent();
-    }
-    return terminalFunction.apply(path, acc);
+    return this.upstream().reduce(0, (i, p) -> i + 1, Integer::sum);
   }
 
   @Convenience
@@ -309,11 +264,11 @@ public final record Path(Path parent, String name, Type targetType) {
     return Stream.iterate(this, predicate == null ? notNull : notNull.and(predicate), Path::parent);
   }
 
-  public final Iterator<Path> ancestorIterator() {
-    return new AncestorIterator(this);
+  public final Iterator<Path> upstreamIterator() {
+    return new UpstreamIterator(this);
   }
 
-  public final Iterator<Path> descendantIterator() {
+  public final Iterator<Path> downstreamIterator() {
     return this.all().iterator();
   }
 
@@ -402,6 +357,98 @@ public final record Path(Path parent, String name, Type targetType) {
   }
 
   @Convenience
+  public static final Path of(final Type rootType,
+                              final String name0, final Type type0,
+                              final String name1, final Type type1,
+                              final String name2, final Type type2,
+                              final String name3, final Type type3,
+                              final String name4, final Type type4,
+                              final String name5, final Type type5,
+                              final String name6, final Type type6) {
+    return
+      new Path(rootType)
+      .plus(name0, type0)
+      .plus(name1, type1)
+      .plus(name2, type2)
+      .plus(name3, type3)
+      .plus(name4, type4)
+      .plus(name5, type5)
+      .plus(name6, type6);
+  }
+
+  @Convenience
+  public static final Path of(final Type rootType,
+                              final String name0, final Type type0,
+                              final String name1, final Type type1,
+                              final String name2, final Type type2,
+                              final String name3, final Type type3,
+                              final String name4, final Type type4,
+                              final String name5, final Type type5,
+                              final String name6, final Type type6,
+                              final String name7, final Type type7) {
+    return
+      new Path(rootType)
+      .plus(name0, type0)
+      .plus(name1, type1)
+      .plus(name2, type2)
+      .plus(name3, type3)
+      .plus(name4, type4)
+      .plus(name5, type5)
+      .plus(name6, type6)
+      .plus(name7, type7);
+  }
+
+  @Convenience
+  public static final Path of(final Type rootType,
+                              final String name0, final Type type0,
+                              final String name1, final Type type1,
+                              final String name2, final Type type2,
+                              final String name3, final Type type3,
+                              final String name4, final Type type4,
+                              final String name5, final Type type5,
+                              final String name6, final Type type6,
+                              final String name7, final Type type7,
+                              final String name8, final Type type8) {
+    return
+      new Path(rootType)
+      .plus(name0, type0)
+      .plus(name1, type1)
+      .plus(name2, type2)
+      .plus(name3, type3)
+      .plus(name4, type4)
+      .plus(name5, type5)
+      .plus(name6, type6)
+      .plus(name7, type7)
+      .plus(name8, type8);
+  }
+
+  @Convenience
+  public static final Path of(final Type rootType,
+                              final String name0, final Type type0,
+                              final String name1, final Type type1,
+                              final String name2, final Type type2,
+                              final String name3, final Type type3,
+                              final String name4, final Type type4,
+                              final String name5, final Type type5,
+                              final String name6, final Type type6,
+                              final String name7, final Type type7,
+                              final String name8, final Type type8,
+                              final String name9, final Type type9) {
+    return
+      new Path(rootType)
+      .plus(name0, type0)
+      .plus(name1, type1)
+      .plus(name2, type2)
+      .plus(name3, type3)
+      .plus(name4, type4)
+      .plus(name5, type5)
+      .plus(name6, type6)
+      .plus(name7, type7)
+      .plus(name8, type8)
+      .plus(name9, type9);
+  }
+
+  @Convenience
   public static final Path of(final Type rootType, final Object... components) {
     Path path = new Path(rootType);
     if (components != null && components.length > 0) {
@@ -451,13 +498,13 @@ public final record Path(Path parent, String name, Type targetType) {
     c0.addAll(c1);
   }
 
-  private static final class AncestorIterator implements Iterator<Path> {
+  private static final class UpstreamIterator implements Iterator<Path> {
 
     private Path parent;
 
     private Path p;
 
-    private AncestorIterator(final Path p) {
+    private UpstreamIterator(final Path p) {
       super();
       this.p = p;
     }

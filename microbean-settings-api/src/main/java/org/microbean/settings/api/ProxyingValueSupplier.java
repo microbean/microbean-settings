@@ -24,6 +24,7 @@ import java.lang.reflect.Type;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
 
 import java.util.concurrent.ConcurrentHashMap;
@@ -40,10 +41,17 @@ import org.microbean.development.annotation.Incomplete;
 
 import org.microbean.settings.api.ValueSupplier.Value;
 
+import org.microbean.type.CovariantTypeSemantics;
+import org.microbean.type.TypeSemantics;
+import org.microbean.type.Types;
+
 @Experimental
 @Incomplete
 public class ProxyingValueSupplier implements ValueSupplier {
 
+
+  private static final TypeSemantics typeSemantics = new CovariantTypeSemantics(false);
+  
 
   /*
    * Instance fields.
@@ -79,8 +87,7 @@ public class ProxyingValueSupplier implements ValueSupplier {
 
   private final int basePriority;
 
-  // e.g. this guy's for env=test
-  private final Map<?, ?> qualifiers;
+  private Map<Path, Supplier<? extends Map<?, ?>>> qualifiersSupplierMap;
 
   private final Predicate<? super QualifiedPath> mayHandlePredicate;
 
@@ -105,16 +112,12 @@ public class ProxyingValueSupplier implements ValueSupplier {
     this(-1000, null, null, null, null, null, null);
   }
 
-  public ProxyingValueSupplier(final Map<?, ?> qualifiers) {
-    this(-1000, qualifiers, null, null, null, null, null);
-  }
-
   public ProxyingValueSupplier(final Supplier<?> defaultTargetSupplier) {
     this(-1000, null, null, p -> defaultTargetSupplier, null, null, null);
   }
 
   public ProxyingValueSupplier(final int basePriority,
-                               final Map<?, ?> qualifiers,
+                               final Map<? extends Path, ? extends Supplier<? extends Map<?, ?>>> qualifiersSupplierMap,
                                final Predicate<? super QualifiedPath> mayHandlePredicate,
                                final Function<? super Path, ? extends Supplier<?>> defaultTargetSupplierFunction,
                                final Function<? super QualifiedPath, ? extends Collection<ValueSupplier>> valueSuppliers,
@@ -123,7 +126,7 @@ public class ProxyingValueSupplier implements ValueSupplier {
     super();    
     this.proxies = new ConcurrentHashMap<>();
     this.basePriority = basePriority;
-    this.qualifiers = qualifiers == null ? Map.of() : Map.copyOf(qualifiers);
+    this.qualifiersSupplierMap = qualifiersSupplierMap == null ? Map.of() : Map.copyOf(qualifiersSupplierMap);
     this.mayHandlePredicate = mayHandlePredicate == null ? qp -> true : mayHandlePredicate;
     this.defaultTargetSupplierFunction =
       defaultTargetSupplierFunction == null ? ProxyingValueSupplier::noDefaultTargetSupplier : defaultTargetSupplierFunction;
@@ -138,35 +141,55 @@ public class ProxyingValueSupplier implements ValueSupplier {
    */
 
 
-  public final Map<?, ?> qualifiers() {
-    return this.qualifiers;
-  }
-
   @Override // Prioritized
   public int priority() {
-    return this.basePriority + this.qualifiers().size();
+    return this.basePriority;
+  }
+
+  @Override // ValueSupplier
+  public int priority(final QualifiedPath qp) {
+    if (this.mayHandle(qp)) {
+      final Map<?, ?> qualifiers = this.qualifiersSupplierMap.get(qp.path()).get();
+      return qualifiers == null ? 0 : qualifiers.size();
+    } else {
+      return Integer.MIN_VALUE;
+    }
   }
 
   @Override // ValueSupplier
   public final boolean mayHandle(final QualifiedPath qualifiedPath) {
-    return
-      this.isProxiableFunction.apply(qualifiedPath.type()) &&
-      qualifiedPath.isAssignable(this.qualifiers) &&
-      this.mayHandlePredicate.test(qualifiedPath);
+    final boolean returnValue;
+    if (this.isProxiableFunction.apply(qualifiedPath.type())) {
+      final Type qpType = qualifiedPath.type();
+      boolean temp = false;
+      for (final Entry<Path, Supplier<? extends Map<?, ?>>> entry : this.qualifiersSupplierMap.entrySet()) {
+        final Path pathFragment = entry.getKey();
+        if (typeSemantics.isAssignable(qpType, pathFragment.targetType()) && qualifiedPath.isAssignable(entry.getValue().get())) {
+          temp = true;
+          break;
+        }
+      }
+      returnValue = temp;
+    } else {
+      returnValue = false;
+    }
+    return returnValue;
   }
 
   @Override // ValueSupplier
   public Value<?> get(final QualifiedPath qp,
                       final Function<? super QualifiedPath, ? extends Collection<ValueSupplier>> valueSuppliers) {
     if (this.mayHandle(qp)) {
-      // Ensure the incoming QualiifedPath implementation is
+      final Path path = qp.path();
+      // Ensure the incoming QualifiedPath implementation is
       // immutable.
       final QualifiedPath.Record qpr =
-        qp instanceof QualifiedPath.Record r ? r : new QualifiedPath.Record(qp.path(), qp.applicationQualifiers());
+        qp instanceof QualifiedPath.Record r ? r : new QualifiedPath.Record(path, qp.applicationQualifiers());
+      final Map<?, ?> qualifiers = this.qualifiersSupplierMap.get(path).get();      
       return
         new Value<>(this.proxies.computeIfAbsent(qpr, k -> this.computeProxy(k, valueSuppliers)),
                     qpr.path(),
-                    this.qualifiers,
+                    qualifiers,
                     this.priority(qpr));
     } else {
       return null;
@@ -304,7 +327,7 @@ public class ProxyingValueSupplier implements ValueSupplier {
   }
   
   private static final boolean isProxiable(final Type genericReturnType) {
-    final Class<?> c = Types.rawClass(genericReturnType);
+    final Class<?> c = Types.erase(genericReturnType);
     if (c != null && c.isInterface()) {
       for (final Method m : c.getMethods()) {
         if (accessor(m)) {

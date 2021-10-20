@@ -76,6 +76,13 @@
       </dependency>
 
       <dependency>
+        <groupId>org.microbean</groupId>
+        <artifactId>microbean-type</artifactId>
+        <version>0.0.14</version>
+        <type>jar</type>
+      </dependency>
+
+      <dependency>
         <groupId>${project.groupId}</groupId>
         <artifactId>microbean-settings-api</artifactId>
         <version>${project.version}</version>

@@ -24,8 +24,13 @@ import java.util.Objects;
 import org.microbean.development.annotation.OverridingDiscouraged;
 import org.microbean.development.annotation.OverridingEncouraged;
 
-public interface QualifiedPath {
+public interface QualifiedPath extends Prioritized {
 
+  @Override // Prioritized
+  public default int priority() {
+    return this.path().priority();
+  }
+  
   public Path path();
 
   @OverridingEncouraged
@@ -40,6 +45,10 @@ public interface QualifiedPath {
 
   public default Type type() {
     return this.path().targetType();
+  }
+
+  public default Class<?> rawClass() {
+    return this.path().targetClass();
   }
 
   public static record Record(Path path, Map<?, ?> applicationQualifiers) implements QualifiedPath {

@@ -16,6 +16,7 @@
  */
 package org.microbean.settings.api;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -27,6 +28,7 @@ final class TestSpike {
     super();
   }
 
+  @Disabled
   @Test
   final void testSpike() {
     // Note that Car is an interface.
@@ -66,6 +68,14 @@ final class TestSpike {
 
     public default String getName() {
       return "Gray";
+    }
+    
+  }
+
+  public static final class SpikeSupplier extends ProxyingValueSupplier {
+
+    public SpikeSupplier() {
+      super();
     }
     
   }
