@@ -16,29 +16,19 @@
  */
 package org.microbean.settings.api;
 
-import java.util.List;
-import java.util.ServiceLoader;
+import org.junit.jupiter.api.Test;
 
-public abstract class AbstractValueSupplier implements ValueSupplier {
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-  private static final ClassValue<List<ValueSupplier>> loadedValueSuppliers = new ClassValue<>() {
-      @Override
-      protected final List<ValueSupplier> computeValue(final Class<?> c) {
-        if (ValueSupplier.class.equals(c)) {
-          return ServiceLoader.load(ValueSupplier.class, ValueSupplier.class.getClassLoader())
-          .stream()
-          .map(ServiceLoader.Provider::get)
-          .sorted(Prioritized.COMPARATOR_DESCENDING)
-          .toList();
-        } else {
-          return null;
-        }
-      }
-    };
-  
-  
-  protected AbstractValueSupplier() {
+final class TestQualifierToString {
+
+  private TestQualifierToString() {
     super();
+  }
+
+  @Test
+  final void testQualifierToString() {
+    assertEquals("env=test", Qualifier.of("env", "test").toString());
   }
   
 }

@@ -16,17 +16,20 @@
  */
 package org.microbean.settings.api;
 
-import java.lang.annotation.Documented;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import org.junit.jupiter.api.Test;
 
-@Documented
-@Retention(RetentionPolicy.RUNTIME)
-@Target({ ElementType.METHOD, ElementType.TYPE })
-public @interface Priority {
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-  int value() default 0;
+final class TestQualifiersToString {
+
+  private TestQualifiersToString() {
+    super();
+  }
+
+  @Test
+  final void testQualifiersToString() {
+    // Note the sorting.
+    assertEquals("a=b;c=d;env=test;stability=bad", Qualifiers.of("env", "test", "c", "d", "stability", "bad", "a", "b").toString());
+  }
   
 }

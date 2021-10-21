@@ -16,111 +16,146 @@
  */
 package org.microbean.settings.api;
 
-import java.util.List;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Objects;
-import java.util.ServiceLoader;
 import java.util.Set;
+import java.util.SortedMap;
+import java.util.SortedSet;
+import java.util.StringJoiner;
+import java.util.TreeMap;
+import java.util.TreeSet;
 
-import java.util.function.Supplier;
+import java.util.stream.Stream;
 
-public class Qualifiers implements Supplier<Map<?, ?>> {
+import static java.util.Collections.emptySortedMap;
+import static java.util.Collections.emptySortedSet;
+import static java.util.Collections.unmodifiableSortedMap;
+import static java.util.Collections.unmodifiableSortedSet;
 
+public record Qualifiers(SortedMap<String, ?> qualifiers) implements Assignable<Qualifiers> {
 
-  /*
-   * Static fields.
-   */
-
-
-  private static final ClassValue<Qualifiers> loadedQualifiers = new ClassValue<>() {
-      @Override // ClassValue<Qualifiers>
-      protected final Qualifiers computeValue(final Class<?> c) {
-        return Qualifiers.class == c ?
-        ServiceLoader.load(Qualifiers.class, Qualifiers.class.getClassLoader())
-        .stream()
-        .map(ServiceLoader.Provider::get)
-        .sorted(Prioritized.COMPARATOR_DESCENDING)
-        .findFirst()
-        .orElse(new Qualifiers()) :
-        null;
-      }
-    };
-
-
-  /*
-   * Instance fields.
-   */
-
-
-  private final Map<?, ?> qualifiers;
-
-
-  /*
-   * Constructors.
-   */
-
-
-  public Qualifiers() {
-    this(Map.of());
+  public Qualifiers(final Qualifier<?> qualifier) {
+    this(new TreeMap<>(Map.of(qualifier.name(), qualifier.value())));
+  }
+  
+  public Qualifiers(final SortedSet<Qualifier<?>> qualifiers) {
+    this(toMap(qualifiers));
+  }
+  
+  public Qualifiers {
+    qualifiers = qualifiers == null || qualifiers.isEmpty() ? emptySortedMap() : unmodifiableSortedMap(new TreeMap<>(qualifiers));
   }
 
-  public Qualifiers(final Map<?, ?> qualifiers) {
-    super();
-    this.qualifiers = qualifiers == null ? Map.of() : Map.copyOf(qualifiers);
+  @Override // Assignable<Qualifiers>
+  public final Qualifiers assignable() {
+    return this;
+  }
+  
+  @Override // Assignable<Qualifiers>
+  public final boolean isAssignable(final Qualifiers other) {
+    return this.isSubsetOf(other);
+  }
+  
+  public final boolean isEmpty() {
+    return this.qualifiers().isEmpty();
   }
 
-
-  /*
-   * Instance methods.
-   */
-
-
-  @Override // Supplier<Map<?, ?>
-  public final Map<?, ?> get() {
-    return this.qualifiers;
+  public final int size() {
+    return this.qualifiers().size();
   }
 
-  @Override // Object
-  public int hashCode() {
-    return this.qualifiers.hashCode();
+  public final Set<? extends Entry<String, ?>> entrySet() {
+    return this.qualifiers().entrySet();
+  }
+  
+  public final Set<String> keySet() {
+    return this.qualifiers().keySet();
   }
 
-  @Override
-  public boolean equals(final Object other) {
-    if (other == this) {
-      return true;
-    } else if (other != null && this.getClass().equals(other.getClass())) {
-      final Qualifiers her = (Qualifiers)other;
-      return Objects.equals(this.get(), her.get());
+  public final boolean containsAll(final Qualifiers her) {
+    if (this.size() < her.size()) {
+      return false;
+    } else {
+      return this.entrySet().containsAll(her.entrySet());
+    }
+  }
+
+  public final Object get(final String name) {
+    return this.qualifiers.get(name);
+  }
+
+  public Stream<Qualifier<?>> stream() {
+    return this.qualifiers().entrySet().stream().map(Qualifier::of);
+  }
+
+  public final boolean isSubsetOf(final Qualifiers other) {
+    if (other.isEmpty()) {
+      return this.isEmpty();
+    } else if (this.size() <= other.size()) {
+      return other.containsAll(this);
     } else {
       return false;
     }
   }
-
-  @Override
-  public String toString() {
-    return this.get().toString();
+  
+  public final String toString() {
+    final StringJoiner sj = new StringJoiner(";");
+    this.stream().map(Qualifier::toString).forEach(sj::add);
+    return sj.toString();
   }
 
-
-  /*
-   * Static methods.
-   */
-
-
-  public static final Map<?, ?> application() {
-    return loadedQualifiers.get(Qualifiers.class).get();
+  public final SortedSet<Qualifier<?>> toQualifiers() {
+    final SortedMap<? extends String, ?> q = this.qualifiers();
+    return q.isEmpty() ? emptySortedSet() : unmodifiableSortedSet(new TreeSet<>(q.entrySet().stream().map(Qualifier::of).toList()));
   }
 
-  public static boolean isAssignable(final Map<?, ?> lhs, final Map<?, ?> rhs) {
-    return
-      rhs == null || rhs.isEmpty() || (lhs != null && isAssignable(lhs.entrySet(), rhs.entrySet()));
+  private static final SortedMap<String, ?> toMap(final SortedSet<? extends Qualifier<?>> qs) {
+    final SortedMap<String, Object> map = new TreeMap<>();
+    qs.forEach(q -> map.put(q.name(), q.value()));
+    return unmodifiableSortedMap(map);
   }
 
-  public static boolean isAssignable(final Set<? extends Entry<?, ?>> lhs, final Set<? extends Entry<?, ?>> rhs) {
-    return
-      rhs == null || rhs.isEmpty() || (lhs != null && lhs.containsAll(rhs));
+  public static final Qualifiers of() {
+    return new Qualifiers(emptySortedMap());
+  }
+  
+  public static final <T> Qualifiers of(final SortedMap<? extends CharSequence, T> map) {
+    final SortedMap<String, T> newMap = new TreeMap<>();
+    map.entrySet().forEach(e -> newMap.put(e.getKey().toString(), e.getValue()));
+    return new Qualifiers(newMap);
   }
 
+  public static final <T> Qualifiers of(final SortedSet<? extends Qualifier<T>> set) {
+    return of(toMap(set));
+  }
+
+  public static final Qualifiers of(final String name0, final Object value0) {
+    return new Qualifiers(Qualifier.of(name0, value0));
+  }
+
+  public static final Qualifiers of(final String name0, final Object value0,
+                                    final String name1, final Object value1)
+  {
+    final SortedMap<String, Object> map = new TreeMap<>();
+    map.put(name0, value0);
+    map.put(name1, value1);
+    return new Qualifiers(map);
+  }
+
+  public static final Qualifiers of(final String... nameValuePairs) {
+    if (nameValuePairs == null || nameValuePairs.length <= 0) {
+      return Qualifiers.of();
+    } else if (nameValuePairs.length % 2 != 0) {
+      throw new IllegalArgumentException("nameValuePairs: " + Arrays.toString(nameValuePairs));
+    } else {
+      final SortedMap<String, Object> map = new TreeMap<>();
+      for (int i = 0; i < nameValuePairs.length; i++) {        
+        map.put(nameValuePairs[i++], nameValuePairs[i]);
+      }
+      return new Qualifiers(map);
+    }
+  }
+  
 }

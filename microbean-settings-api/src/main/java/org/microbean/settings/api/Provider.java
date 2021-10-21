@@ -16,8 +16,16 @@
  */
 package org.microbean.settings.api;
 
-public interface MethodHandler {
+public abstract class Provider<T> {
 
-  public Object invoke(final Object proxy);
+  protected Provider() {
+    super();
+  }
+
+  public boolean canHandle(final Accessor accessor) {
+    return false;
+  }
+  
+  public abstract T get();
   
 }
