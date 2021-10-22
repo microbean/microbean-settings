@@ -54,8 +54,34 @@ public record Qualifiers(SortedMap<String, ?> qualifiers) implements Assignable<
   }
   
   @Override // Assignable<Qualifiers>
-  public final boolean isAssignable(final Qualifiers other) {
-    return this.isSubsetOf(other);
+  public final boolean isAssignable(final Qualifiers payload) {
+    // Demand is for "red car".  Payload is, say, "red racing car".
+    // It matches, for some intuitive level of matching.
+    //
+    // But suppose the qualifier is "env=test", so "env=test car" is
+    // the demand.  Should "car" be assignable?  You *could* argue
+    // yes: this match would occur only if there were no more specific
+    // match.  It represents the "fallback" match: I couldn't give you
+    // a "env=test car" but I can give you this generic "car" as a
+    // fallback.  Note the *lack* of the "env" key.  Note also this is
+    // still subset semantics: the empty set (in "car") is a subset of
+    // "env=test".
+    //
+    // If demand is for "env=test car" and I have "env=production
+    // car", that shouldn't match, ever.  And with subset semantics
+    // this wouldn't.
+    //
+    // I *think* subset semantics are still the way to go.  Later on,
+    // during resolution, we will definitely apply different rules.
+    // Specifically, if there is a provider with "env=test car" and
+    // one with "env=test,color=red car" and the demand was, exactly,
+    // "env=test car", then the first provider would match and the
+    // second one would be jettisoned.
+    //
+    // TODO: this is the heart of the matter, isn't it?
+    //
+    // For now, implement CDI rules.
+    return this.isSubsetOf(payload);
   }
   
   public final boolean isEmpty() {
@@ -74,7 +100,7 @@ public record Qualifiers(SortedMap<String, ?> qualifiers) implements Assignable<
     return this.qualifiers().keySet();
   }
 
-  public final boolean containsAll(final Qualifiers her) {
+  public final boolean contains(final Qualifiers her) {
     if (this.size() < her.size()) {
       return false;
     } else {
@@ -94,7 +120,7 @@ public record Qualifiers(SortedMap<String, ?> qualifiers) implements Assignable<
     if (other.isEmpty()) {
       return this.isEmpty();
     } else if (this.size() <= other.size()) {
-      return other.containsAll(this);
+      return other.contains(this);
     } else {
       return false;
     }

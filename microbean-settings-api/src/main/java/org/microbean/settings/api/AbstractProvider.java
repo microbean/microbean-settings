@@ -16,14 +16,21 @@
  */
 package org.microbean.settings.api;
 
+import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 
-import java.util.function.Supplier;
+public abstract class AbstractProvider<T> implements Provider {
 
-public interface Provider {
+  private final Type type;
+  
+  protected AbstractProvider() {
+    super();
+    this.type = ((ParameterizedType)this.getClass().getGenericSuperclass()).getActualTypeArguments()[0];
+  }
 
-  public default Type upperBound() {
-    return Object.class;
+  @Override
+  public final Type upperBound() {
+    return this.type;
   }
   
   /**
@@ -41,29 +48,8 @@ public interface Provider {
    * capable of satisfying the demand represented by the supplied
    * {@link Context}; {@code false} if it absolutely cannot do so
    */
-  public boolean isSelectable(final Context context);
-
-  public Value<?> get(final Context context);
-
-  public record Value<T>(T value) implements Supplier<T> {
-
-    public Value() {
-      this(null);
-    }
-    
-    @Override
-    public final T get() {
-      return this.value();
-    }
-
-    public static final <T> Value<T> of() {
-      return new Value<>();
-    }
-
-    public static final <T> Value<T> of(final T value) {
-      return new Value<>(value);
-    }
-
+  public boolean isSelectable(final Context context) {
+    return context.target().isAssignable(this.type);
   }
-
+  
 }

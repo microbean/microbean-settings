@@ -23,7 +23,19 @@ import org.microbean.type.TypeSemantics;
 
 public record AssignableType(Type assignable) implements Assignable<Type>, Type {
 
+
+  /*
+   * Static fields.
+   */
+
+
   private static final TypeSemantics covariantTypeSemantics = new CovariantTypeSemantics(false);
+
+
+  /*
+   * Ionstance methods.
+   */
+
 
   @Override // Type
   public final String getTypeName() {
@@ -34,5 +46,24 @@ public record AssignableType(Type assignable) implements Assignable<Type>, Type 
   public boolean isAssignable(final Type payload) {
     return covariantTypeSemantics.isAssignable(this.assignable(), payload);
   }
+
+  @Override // Object
+  public final String toString() {
+    return this.assignable().toString();
+  }
+
+
+  /*
+   * Static methods.
+   */
+
+
+  public static final AssignableType of(final AssignableType type) {
+    return type;
+  }
   
+  public static final AssignableType of(final Type type) {
+    return type instanceof AssignableType a ? a : new AssignableType(type);
+  }
+
 }

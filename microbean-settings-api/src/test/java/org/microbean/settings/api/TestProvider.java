@@ -16,34 +16,33 @@
  */
 package org.microbean.settings.api;
 
+import java.util.List;
+
 import org.junit.jupiter.api.Test;
 
+import org.microbean.settings.api.Provider.Value;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import static org.microbean.settings.api.Accessor.root;
+import static org.microbean.settings.api.Path.absoluteOf;
+import static org.microbean.settings.api.Path.fragmentOf;
+import static org.microbean.settings.api.Path.root;
 
-final class TestAccessorToString {
+final class TestProvider {
 
-  private TestAccessorToString() {
+  private TestProvider() {
     super();
   }
 
   @Test
-  final void testAccessorFragmentToString() {
-    // No leading slash is an accessor fragment.
-    assertEquals("java.lang.Number", Accessor.of(Number.class).toString());
-  }
-
-  @Test
-  final void testRootToString() {
-    // Single slash is root.
-    assertEquals("/", root().toString());
-  }
-
-  @Test
-  final void testAccessorToString() {
-    // Double leading slash is one level down from root.
-    assertEquals("//java.lang.Number", Accessor.of(root(), Number.class).toString());
+  final void testLoadedProviders() {
+    final List<Provider> ps = Configured.loadedProviders();
+    assertSame(ps, Configured.loadedProviders());
+    assertSame(ps, Configured.loadedProviders());
   }
 
 }
