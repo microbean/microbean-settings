@@ -133,13 +133,13 @@ public final class Path implements Cloneable, Comparable<Path>, Iterable<Qualifi
   }
 
   @Convenience
-  public final Qualifiers rootQualifiers() {
-    return this.list.get(0).qualifiers();
+  public final Qualified<Type> target() {
+    return this.list.get(this.list.size() - 1);
   }
 
   @Convenience
-  public final Qualified<Type> target() {
-    return this.list.get(this.list.size() - 1);
+  public final Type type() {
+    return this.target().qualified();
   }
 
   @Convenience

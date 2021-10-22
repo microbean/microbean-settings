@@ -230,7 +230,10 @@
     <maven.compiler.target>17</maven.compiler.target>
 
     <!-- maven-javadoc-plugin properties -->
-    <links></links>
+    <links>
+      https://microbean.github.io/microbean-development-annotations/apidocs,
+      https://microbean.github.io/microbean-type/apidocs
+    </links>
 
   </properties>
 
