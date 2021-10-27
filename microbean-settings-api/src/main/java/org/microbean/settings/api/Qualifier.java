@@ -19,7 +19,7 @@ package org.microbean.settings.api;
 import java.util.Map.Entry;
 import java.util.Objects;
 
-public record Qualifier<T>(String name, T value) implements Assignable<Qualifier<T>>, Comparable<Qualifier<?>> {
+public record Qualifier<T>(String name, T value) implements Assignable<Qualifier<T>> {
 
   public static final String VALUE = "value";
 
@@ -35,17 +35,6 @@ public record Qualifier<T>(String name, T value) implements Assignable<Qualifier
   @Override // Assignable<Qualifier>
   public final Qualifier<T> assignable() {
     return this;
-  }
-
-  @Override
-  public final int compareTo(final Qualifier<?> other) {
-    if (other == null) {
-      return -1; // nulls go to the right
-    } else if (this.equals(other)) {
-      return 0;
-    } else {
-      return this.toString().compareTo(other.toString());
-    }
   }
 
   @Override // Object

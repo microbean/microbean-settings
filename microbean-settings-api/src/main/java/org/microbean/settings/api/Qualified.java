@@ -16,9 +16,18 @@
  */
 package org.microbean.settings.api;
 
+import java.util.Objects;
+
 import java.util.function.Function;
+import java.util.function.BiPredicate;
 
 public interface Qualified<T> extends Assignable<T> {
+
+
+  /*
+   * Instance methods.
+   */
+
 
   @Override // Assignable<T>
   public default T assignable() {
@@ -29,15 +38,21 @@ public interface Qualified<T> extends Assignable<T> {
   public default boolean isAssignable(final T payload) {
     return this.assignable().equals(payload);
   }
-  
+
   public T qualified();
 
   public Qualifiers qualifiers();
 
+
+  /*
+   * Static methods.
+   */
+
+
   public static <T> String toString(final Qualified<T> q) {
     return toString(q, t -> t.toString());
   }
-  
+
   public static <T> String toString(final Qualified<? extends T> q, final Function<? super T, ? extends String> f) {
     if (q == null) {
       return "";
@@ -50,6 +65,95 @@ public interface Qualified<T> extends Assignable<T> {
       return sb.toString();
     }
   }
-  
-}
 
+
+  /*
+   * Inner and nested classes.
+   */
+
+
+  public record Record<T>(Qualifiers qualifiers, T qualified, BiPredicate<T, T> assignabilityPredicate) implements Qualified<T> {
+
+
+    /*
+     * Constructors.
+     */
+
+
+    public Record(final Qualifiers qualifiers, final T qualified) {
+      this(qualifiers, qualified, Objects::equals);
+    }
+
+    public Record {
+      if (assignabilityPredicate == null) {
+        assignabilityPredicate = Objects::equals;
+      }
+    }
+
+
+    /*
+     * Instance methods.
+     */
+
+
+    @Override
+    public final boolean isAssignable(final T payload) {
+      return this.assignabilityPredicate().test(this.assignable(), payload);
+    }
+
+    @Override
+    public final int hashCode() {
+      int hashCode = 17;
+      Object v = this.qualifiers();
+      int c = v == null ? 0 : v.hashCode();
+      hashCode = 37 * hashCode + c;
+      v = this.qualified();
+      c = v == null ? 0 : v.hashCode();
+      hashCode = 37 * hashCode + c;
+      return hashCode;
+    }
+
+    @Override
+    public final boolean equals(final Object other) {
+      if (other == this) {
+        return true;
+      } else if (other == null || this.getClass() != other.getClass()) {
+        return false;
+      } else {
+        final Record<?> her = (Record<?>)other;
+        return
+          Objects.equals(this.qualifiers(), her.qualifiers()) &&
+          Objects.equals(this.qualified(), her.qualified());
+      }
+    }
+
+    @Override
+    public final String toString() {
+      return Qualified.toString(this);
+    }
+
+    public final String toString(final Function<? super T, ? extends String> f) {
+      return Qualified.toString(this, f);
+    }
+
+
+    /*
+     * Static methods.
+     */
+
+
+    public static final <T> Record<T> of(final Qualified<T> q) {
+      return q instanceof Record<T> qr ? qr : new Record<>(q.qualifiers(), q.qualified());
+    }
+
+    public static final <T> Record<T> of(final T qualified) {
+      return of(Qualifiers.of(), qualified);
+    }
+
+    public static final <T> Record<T> of(final Qualifiers qualifiers, final T qualified) {
+      return new Record<>(qualifiers, qualified);
+    }
+
+  }
+
+}

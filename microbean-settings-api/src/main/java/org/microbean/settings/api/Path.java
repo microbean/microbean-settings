@@ -33,7 +33,8 @@ import java.util.stream.Stream;
 
 import org.microbean.development.annotation.Convenience;
 
-public final class Path implements Cloneable, Comparable<Path>, Iterable<Qualified<Type>> {
+@Deprecated(forRemoval = true)
+public final class Path implements Assignable<Type>, Cloneable, Iterable<Qualified<Type>> {
 
 
   /*
@@ -60,15 +61,16 @@ public final class Path implements Cloneable, Comparable<Path>, Iterable<Qualifi
    * Constructors.
    */
 
+  
   private Path() {
     super();
-    this.list = List.of(QualifiedRecord.of(BOTTOM_TYPE));
+    this.list = List.of(Qualified.Record.of(BOTTOM_TYPE));
     this.absolute = true;
   }
 
   private Path(final Qualifiers qualifiers) {
     super();
-    this.list = List.of(QualifiedRecord.of(qualifiers, BOTTOM_TYPE));
+    this.list = List.of(Qualified.Record.of(qualifiers, BOTTOM_TYPE));
     this.absolute = true;
   }
 
@@ -119,6 +121,16 @@ public final class Path implements Cloneable, Comparable<Path>, Iterable<Qualifi
    */
 
 
+  @Override
+  public final Type assignable() {
+    return this.type();
+  }
+
+  @Override
+  public final boolean isAssignable(final Type payload) {
+    return AssignableType.of(this.assignable()).isAssignable(payload);
+  }
+  
   @Override // Cloneable
   public final Path clone() {
     try {
@@ -167,7 +179,7 @@ public final class Path implements Cloneable, Comparable<Path>, Iterable<Qualifi
 
   @Convenience
   public final Path plus(final Type type) {
-    return plus(QualifiedRecord.of(type));
+    return plus(Qualified.Record.of(type));
   }
 
   public final boolean contains(final Path other) {
@@ -262,9 +274,14 @@ public final class Path implements Cloneable, Comparable<Path>, Iterable<Qualifi
     }
   }
 
+  public final boolean endsWith(final Path path) {
+    final int lastIndex = this.lastIndexOf(path);
+    return lastIndex >= 0 && lastIndex + path.list.size() == this.list.size();
+  }
+
   @Convenience
   public final List<Path> splitAfter(final Type type) {
-    return this.splitAfter(QualifiedRecord.of(type));
+    return this.splitAfter(Qualified.Record.of(type));
   }
 
   @Convenience
@@ -340,17 +357,6 @@ public final class Path implements Cloneable, Comparable<Path>, Iterable<Qualifi
     return this.list.stream().sequential();
   }
 
-  @Override // Comparable<Path>
-  public final int compareTo(final Path other) {
-    if (other == null) {
-      return -1; // nulls go to the right
-    } else if (this.equals(other)) {
-      return 0;
-    } else {
-      return Integer.signum(other.list.size() - this.list.size());
-    }
-  }
-
   @Override // Object
   public final int hashCode() {
     return this.list.hashCode();
@@ -360,12 +366,11 @@ public final class Path implements Cloneable, Comparable<Path>, Iterable<Qualifi
   public final boolean equals(final Object other) {
     if (other == this) {
       return true;
-    } else if (other == null) {
+    } else if (other == null || this.getClass() != other.getClass()) {
       return false;
-    } else if (this.getClass() == other.getClass()) {
-      return this.list.equals(((Path)other).list);
     } else {
-      return false;
+      final Path her = (Path)other;
+      return this.isAbsolute() && her.isAbsolute() && this.list.equals(her.list);
     }
   }
 
@@ -406,7 +411,7 @@ public final class Path implements Cloneable, Comparable<Path>, Iterable<Qualifi
 
 
   public static final Path absoluteOf(final Type type) {
-    return absoluteOf(QualifiedRecord.of(type));
+    return absoluteOf(Qualified.Record.of(type));
   }
 
   public static final Path absoluteOf(final Qualified<Type> element) {
@@ -414,7 +419,7 @@ public final class Path implements Cloneable, Comparable<Path>, Iterable<Qualifi
   }
 
   public static final Path fragmentOf(final Type type) {
-    return fragmentOf(QualifiedRecord.of(type));
+    return fragmentOf(Qualified.Record.of(type));
   }
 
   public static final Path fragmentOf(final Qualified<Type> element) {
@@ -450,6 +455,41 @@ public final class Path implements Cloneable, Comparable<Path>, Iterable<Qualifi
   /*
    * Inner and nested classes.
    */
+
+
+  // INCONSISTENT WITH EQUALS
+  public static final class SpecificityComparator implements java.util.Comparator<Path> {
+
+    public static final SpecificityComparator INSTANCE = new SpecificityComparator();
+    
+    private SpecificityComparator() {
+      super();
+    }
+
+    @Override // java.util.Comparator<Path>
+    public final int compare(final Path p0, final Path p1) {
+      if (p0 == null) {
+        return p1 == null ? 0 : -1;
+      } else if (p1 == null) {
+        return 1;
+      } else if (p0.equals(p1)) {
+        return 0;
+      } else {
+        final int sizeDiff = p0.size() - p1.size();
+        if (sizeDiff != 0) {
+          return sizeDiff;
+        } else if (p0.isAbsolute()) {
+          if (!p1.isAbsolute()) {
+            return 1;
+          }
+        } else if (p1.isAbsolute()) {
+          return -1;
+        }
+        return 0;
+      }
+    }
+    
+  }
 
 
   private static final class BottomType {

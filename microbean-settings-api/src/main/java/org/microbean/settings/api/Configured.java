@@ -27,8 +27,7 @@ import java.util.function.Supplier;
 
 import org.microbean.settings.api.Provider.Value;
 
-import static org.microbean.settings.api.Path.root;
-
+@Deprecated(forRemoval = true)
 public final class Configured {
 
 
@@ -75,7 +74,7 @@ public final class Configured {
   }
   
   public static final <T> T of(final Qualifiers rootQualifiers, final Qualified<Type> target, final Supplier<? extends T> defaultTargetSupplier) {
-    return of(root(rootQualifiers), target, defaultTargetSupplier);
+    return of(Path.root(rootQualifiers), target, defaultTargetSupplier);
   }
 
   public static final <T> T of(final Path parentPath, final Qualified<Type> target, final Supplier<? extends T> defaultTargetSupplier) {
@@ -98,19 +97,47 @@ public final class Configured {
   }
 
   public static final Value<?> resolve(final Collection<? extends Provider> providers, final Context context) {
-    if (providers.isEmpty()) {
-      return null;
-    } else {
-      switch (providers.size()) {
-      case 1:
-        return
-          (providers instanceof List<? extends Provider> list ? list.get(0) : providers.iterator().next()).get(context);
-      default:
-        throw new UnsupportedOperationException("Not yet implemented");
+    switch (providers.size()) {
+    case 0:
+      break;
+    case 1:
+      final Provider provider = providers instanceof List<? extends Provider> list ? list.get(0) : providers.iterator().next();
+      return provider.isSelectable(context) ? provider.get(context) : null;
+    default:
+      Collection<Value<?>> bad = null;
+      Value<?> candidate = null;
+      final Path contextPath = context.path();
+      for (final Provider p : providers) {
+        if (p.isSelectable(context)) {
+          final Value<?> v = p.get(context);
+          if (v != null) {
+            final Path valuePath = v.path();
+            if (contextPath.isAssignable(valuePath.type())) {
+              if (candidate == null) {
+                candidate = v;
+              } else {
+                switch (Integer.signum(Path.SpecificityComparator.INSTANCE.compare(valuePath, candidate.path()))) {
+                case -1:
+                  // The valuePath is less specific than the candidate path.
+                  break;
+                case 0:
+                  // The two paths are equal.
+                  break;
+                case 1:
+                  // The valuePath is more specific than the candidate path.
+                  break;
+                default:
+                  throw new AssertionError();
+                }
+              }
+            }
+          }
+        }
       }
     }
+    throw new UnsupportedOperationException("TODO: Not yet fully implemented");
   }
-
+  
   private static final class LoadedProviders {
 
     // We hide this static field inside a private nested class so it

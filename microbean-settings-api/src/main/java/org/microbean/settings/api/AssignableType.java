@@ -44,7 +44,8 @@ public record AssignableType(Type assignable) implements Assignable<Type>, Type 
 
   @Override // Assignable<Type>
   public boolean isAssignable(final Type payload) {
-    return covariantTypeSemantics.isAssignable(this.assignable(), payload);
+    return covariantTypeSemantics.isAssignable(this.assignable(),
+                                               payload instanceof AssignableType a ? a.assignable() : payload);
   }
 
   @Override // Object

@@ -22,6 +22,7 @@ import java.util.Objects;
 
 import static org.microbean.settings.api.Path.root;
 
+@Deprecated(forRemoval = true)
 public record Context(Path parentPath, // the path so far
                       Object object, // the "parent" object if known
                       Qualified<Type> target) { // the type of thing being requested with its qualifiers

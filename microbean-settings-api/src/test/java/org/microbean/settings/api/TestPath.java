@@ -44,7 +44,7 @@ final class TestPath {
   
   @Test
   final void testAbsolutePathToString() {
-    assertEquals("//java.lang.Number", root().plus(QualifiedRecord.of(Number.class)).toString());
+    assertEquals("//java.lang.Number", root().plus(Qualified.Record.of(Number.class)).toString());
   }
 
   @Test
@@ -62,15 +62,15 @@ final class TestPath {
 
   @Test
   final void testSplitEdgeCases() {
-    List<Path> p = Path.root().split(0);
+    List<Path> p = root().split(0);
     assertEquals(1, p.size());
-    assertSame(Path.root(), p.get(0));
-    p = Path.root().split(45);
+    assertSame(root(), p.get(0));
+    p = root().split(45);
     assertEquals(1, p.size());
-    assertSame(Path.root(), p.get(0));
-    p = Path.root().split(-12);
+    assertSame(root(), p.get(0));
+    p = root().split(-12);
     assertEquals(1, p.size());
-    assertSame(Path.root(), p.get(0));
+    assertSame(root(), p.get(0));
   }
 
 }

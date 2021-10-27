@@ -32,6 +32,7 @@ import static org.microbean.settings.api.Path.absoluteOf;
 import static org.microbean.settings.api.Path.fragmentOf;
 import static org.microbean.settings.api.Path.root;
 
+@Deprecated(forRemoval = true)
 final class TestContext {
 
   private TestContext() {
@@ -43,8 +44,8 @@ final class TestContext {
     final Context context =
       new Context(Path.root(Qualifiers.of("env", "test", "stability", "bad")).plus(Car.class),
                   new Car() {}, // Object
-                  QualifiedRecord.of(Qualifiers.of("accessor", "getDrivetrain"),
-                                     Drivetrain.class));
+                  Qualified.Record.of(Qualifiers.of("accessor", "getDrivetrain"),
+                                      Drivetrain.class));
     assertSame(Drivetrain.class, context.target().qualified());
     assertSame(Car.class, context.parentPath().target().qualified());
   }
@@ -57,8 +58,18 @@ final class TestContext {
     }
 
     @Override // Provider
+    public final Value2<?> get(final Qualified<? extends Context2> context) {
+      return new Value2(); // dummy response
+    }
+
+    @Override // Provider
     public boolean isSelectable(final Context context) {
       return context.target().isAssignable(Car.class);
+    }
+
+    @Override // Provider
+    public boolean isSelectable(final Qualified<? extends Context2> context) {
+      return AssignableType.of(context.qualified().type()).isAssignable(Car.class);
     }
     
   }

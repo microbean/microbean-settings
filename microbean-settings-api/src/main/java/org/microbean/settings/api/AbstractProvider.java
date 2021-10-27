@@ -48,6 +48,7 @@ public abstract class AbstractProvider<T> implements Provider {
    * capable of satisfying the demand represented by the supplied
    * {@link Context}; {@code false} if it absolutely cannot do so
    */
+  @Deprecated(forRemoval = true)
   public boolean isSelectable(final Context context) {
     return context.target().isAssignable(this.type);
   }
