@@ -16,27 +16,31 @@
  */
 package org.microbean.settings.api;
 
-import java.lang.reflect.Type;
+import java.util.List;
 
-import java.util.Objects;
+import org.junit.jupiter.api.Test;
 
-public record Context2(Object object, PathFragment path) {
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-  public Context2(final PathFragment path) {
-    this(null, path);
-  }
-  
-  public Context2 {
-    Objects.requireNonNull(path, "path");
-  }
+final class TestPath {
 
-  public final Type type() {
-    return path().type();
+  private TestPath() {
+    super();
   }
 
-  public static final Context2 of(final PathFragment path) {
-    return new Context2(path);
+  @Test
+  final void testAdd() {
+    final Path pf = Path.of(Car.class);
+    assertSame(Car.class, pf.type());
+    assertEquals(1, pf.size());
   }
-  
-  
+
+  private static interface Car {
+
+  }
+
 }

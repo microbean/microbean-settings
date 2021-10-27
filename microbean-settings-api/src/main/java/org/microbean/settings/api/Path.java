@@ -26,30 +26,30 @@ import java.util.Objects;
 
 import java.util.function.BiPredicate;
 
-public final class PathFragment {
+public final class Path {
 
-  private static final PathFragment ROOT = new PathFragment();
+  private static final Path ROOT = new Path();
   
   private final List<Object> elements;
   
-  private PathFragment() {
+  private Path() {
     super();
     this.elements = List.of(void.class);
   }
 
-  private PathFragment(final Accessor accessor, final Type type) {
+  private Path(final Accessor accessor, final Type type) {
     this(List.of(), List.of(accessor), type);
   }
 
-  private PathFragment(final List<? extends Accessor> accessors, final Type type) {
+  private Path(final List<? extends Accessor> accessors, final Type type) {
     this(List.of(), accessors, type);
   }
   
-  private PathFragment(final Type type) {
+  private Path(final Type type) {
     this(List.of(), List.of(), type);
   }
 
-  private PathFragment(final List<?> existingElements, final List<? extends Accessor> accessors, final Type type) {
+  private Path(final List<?> existingElements, final List<? extends Accessor> accessors, final Type type) {
     super();
     if (Objects.requireNonNull(type, "type") == void.class) {
       throw new IllegalArgumentException("type: " + type);
@@ -94,13 +94,13 @@ public final class PathFragment {
   }
   */
 
-  public final int indexOf(final PathFragment pathFragment, final BiPredicate<? super Object, ? super Object> p) {
-    final int pathFragmentSize = pathFragment.size();
-    final int sizeDiff = this.size() - pathFragmentSize;
+  public final int indexOf(final Path path, final BiPredicate<? super Object, ? super Object> p) {
+    final int pathSize = path.size();
+    final int sizeDiff = this.size() - pathSize;
     OUTER_LOOP:
     for (int i = 0; i <= sizeDiff; i++) {
-      for (int j = 0, k = i; j < pathFragmentSize; j++, k++) {
-        if (!p.test(this.elements.get(k), pathFragment.elements.get(j))) {
+      for (int j = 0, k = i; j < pathSize; j++, k++) {
+        if (!p.test(this.elements.get(k), path.elements.get(j))) {
           continue OUTER_LOOP;
         }
       }
@@ -109,13 +109,13 @@ public final class PathFragment {
     return -1;
   }
 
-  public final int lastIndexOf(final PathFragment pathFragment, final BiPredicate<? super Object, ? super Object> p) {
-    final int pathFragmentSize = pathFragment.size();
-    final int sizeDiff = this.size() - pathFragmentSize;
+  public final int lastIndexOf(final Path path, final BiPredicate<? super Object, ? super Object> p) {
+    final int pathSize = path.size();
+    final int sizeDiff = this.size() - pathSize;
     OUTER_LOOP:
     for (int i = sizeDiff; i >= 0; i--) {
-      for (int j = 0, k = i; j < pathFragmentSize; j++, k++) {
-        if (!p.test(this.elements.get(k), pathFragment.elements.get(j))) {
+      for (int j = 0, k = i; j < pathSize; j++, k++) {
+        if (!p.test(this.elements.get(k), path.elements.get(j))) {
           continue OUTER_LOOP;
         }
       }
@@ -124,39 +124,39 @@ public final class PathFragment {
     return -1;
   }
   
-  public final int indexOf(final PathFragment other) {
+  public final int indexOf(final Path other) {
     return Collections.indexOfSubList(this.elements, other.elements);
   }
 
-  public final int lastIndexOf(final PathFragment other) {
+  public final int lastIndexOf(final Path other) {
     return Collections.lastIndexOfSubList(this.elements, other.elements);
   }
   
-  public final PathFragment plus(final String accessor, final Type type) {
+  public final Path plus(final String accessor, final Type type) {
     return this.plus(Accessor.of(accessor), type);
   }
   
-  public final PathFragment plus(final Accessor accessor, final Type type) {
+  public final Path plus(final Accessor accessor, final Type type) {
     return this.plus(List.of(accessor), type);
   }
   
-  public final PathFragment plus(final List<? extends Accessor> accessors, final Type type) {
-    return new PathFragment(this.elements, accessors, type);
+  public final Path plus(final List<? extends Accessor> accessors, final Type type) {
+    return new Path(this.elements, accessors, type);
   }
 
   // Drops the intermediate type.
-  public final PathFragment merge(final String accessor, final Type type) {
+  public final Path merge(final String accessor, final Type type) {
     return this.merge(Accessor.of(accessor), type);
   }
 
   // Drops the intermediate type.
-  public final PathFragment merge(final Accessor accessor, final Type type) {
+  public final Path merge(final Accessor accessor, final Type type) {
     return this.merge(List.of(accessor), type);
   }
 
     // Drops the intermediate type.
-  public final PathFragment merge(final List<? extends Accessor> accessors, final Type type) {
-    return new PathFragment(this.elements.subList(0, this.elements.size() - 1), accessors, type);
+  public final Path merge(final List<? extends Accessor> accessors, final Type type) {
+    return new Path(this.elements.subList(0, this.elements.size() - 1), accessors, type);
   }
 
   public final int size() {
@@ -197,7 +197,7 @@ public final class PathFragment {
     } else if (other == null || this.getClass() != other.getClass()) {
       return false;
     } else {
-      return this.elements.equals(((PathFragment)other).elements);
+      return this.elements.equals(((Path)other).elements);
     }
   }
 
@@ -207,43 +207,43 @@ public final class PathFragment {
     return this.elements.toString();
   }
 
-  public static final PathFragment of(final Type type) {
-    return new PathFragment(type);
+  public static final Path of(final Type type) {
+    return new Path(type);
   }
 
-  public static final PathFragment of(final String accessor, final Type type) {
-    return new PathFragment(Accessor.of(accessor), type);
+  public static final Path of(final String accessor, final Type type) {
+    return new Path(Accessor.of(accessor), type);
   }
 
   /*
-  public static final PathFragment ofAbsolute(final String accessor, final Type type) {
+  public static final Path ofAbsolute(final String accessor, final Type type) {
     return root().plus(accessor, type);
   }
   */
 
-  public static final PathFragment of(final Accessor accessor, final Type type) {
-    return new PathFragment(accessor, type);
+  public static final Path of(final Accessor accessor, final Type type) {
+    return new Path(accessor, type);
   }
 
   /*
-  public static final PathFragment ofAbsolute(final Accessor accessor, final Type type) {
+  public static final Path ofAbsolute(final Accessor accessor, final Type type) {
     return root().plus(accessor, type);
   }
   */
 
   
-  public static final PathFragment of(final List<? extends Accessor> accessors, final Type type) {
-    return new PathFragment(accessors, type);
+  public static final Path of(final List<? extends Accessor> accessors, final Type type) {
+    return new Path(accessors, type);
   }
 
   /*
-  public static final PathFragment ofAbsolute(final List<? extends Accessor> accessors, final Type type) {
+  public static final Path ofAbsolute(final List<? extends Accessor> accessors, final Type type) {
     return root().plus(accessors, type);
   }
   */
 
   /*
-  public static final PathFragment root() {
+  public static final Path root() {
     return ROOT;
   }
   */

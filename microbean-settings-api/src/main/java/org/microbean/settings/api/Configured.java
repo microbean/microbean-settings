@@ -22,11 +22,11 @@ import java.util.ServiceLoader;
 
 import java.util.function.Supplier;
 
-import org.microbean.settings.api.Provider.Value2;
+import org.microbean.settings.api.Provider.Value;
 
-public final class Configured2<T> {
+public final class Configured<T> {
 
-  private Configured2() {
+  private Configured() {
     super();
   }
 
@@ -34,16 +34,16 @@ public final class Configured2<T> {
     return LoadedProviders.loadedProviders;
   }
 
-  public static final List<Provider> loadedProviders(final Qualified<? extends Context2> context) {
+  public static final List<Provider> loadedProviders(final Qualified<? extends Context> context) {
     return loadedProviders()
       .stream()
       .filter(p -> isSelectable(p, context))
       .toList();
   }
   
-  public static final <T> T of(final Qualifiers qualifiers, final PathFragment path, final Supplier<? extends T> defaultTargetSupplier) {
+  public static final <T> T of(final Qualifiers qualifiers, final Path path, final Supplier<? extends T> defaultTargetSupplier) {
     final T returnValue;
-    final Qualified<Context2> context = Qualified.Record.of(qualifiers, new Context2(path));
+    final Qualified<? extends Context> context = Qualified.Record.of(qualifiers, new Context(path));
     final Collection<? extends Provider> providers = loadedProviders(context);
     if (providers.isEmpty()) {
       if (defaultTargetSupplier == null) {
@@ -52,7 +52,7 @@ public final class Configured2<T> {
         returnValue = defaultTargetSupplier.get();
       }
     } else {
-      final Value2<?> value = resolve(providers, context);
+      final Value<?> value = resolve(providers, context);
       @SuppressWarnings("unchecked")
       final T rv = value == null ? null : (T)value.value();
       returnValue = rv;
@@ -60,7 +60,7 @@ public final class Configured2<T> {
     return returnValue;
   }
 
-  public static final Value2<?> resolve(final Collection<? extends Provider> providers, final Qualified<? extends Context2> context) {
+  public static final Value<?> resolve(final Collection<? extends Provider> providers, final Qualified<? extends Context> context) {
     switch (providers.size()) {
     case 0:
       return null;
@@ -72,7 +72,7 @@ public final class Configured2<T> {
     throw new UnsupportedOperationException("TODO: Not yet fully implemented");
   }
   
-  private static final boolean isSelectable(final Provider provider, final Qualified<? extends Context2> context) {
+  private static final boolean isSelectable(final Provider provider, final Qualified<? extends Context> context) {
     return AssignableType.of(context.qualified().path().type()).isAssignable(provider.upperBound()) && provider.isSelectable(context);
   }
 

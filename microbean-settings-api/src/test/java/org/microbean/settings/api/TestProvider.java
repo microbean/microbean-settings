@@ -30,9 +30,9 @@ final class TestProvider {
 
   @Test
   final void testLoadedProviders() {
-    final List<Provider> ps = Configured2.loadedProviders();
-    assertSame(ps, Configured2.loadedProviders());
-    assertSame(ps, Configured2.loadedProviders());
+    final List<Provider> ps = Configured.loadedProviders();
+    assertSame(ps, Configured.loadedProviders());
+    assertSame(ps, Configured.loadedProviders());
   }
 
 }

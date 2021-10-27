@@ -26,9 +26,9 @@ public interface Provider {
     return Object.class;
   }
 
-  public boolean isSelectable(final Qualified<? extends Context2> context);
+  public boolean isSelectable(final Qualified<? extends Context> context);
 
-  public Value2<?> get(final Qualified<? extends Context2> context);
+  public Value<?> get(final Qualified<? extends Context> context);
 
 
   /*
@@ -36,25 +36,25 @@ public interface Provider {
    */
 
 
-  public record Value2<T>(Qualified<? extends PathFragment> qualifiedPath, T value) implements Supplier<T> {
+  public record Value<T>(Qualified<? extends Path> qualifiedPath, T value) implements Supplier<T> {
 
-    public Value2() {
+    public Value() {
       this(null, null);
     }
 
-    public Value2(final Qualified<? extends PathFragment> qualifiedPath) {
+    public Value(final Qualified<? extends Path> qualifiedPath) {
       this(qualifiedPath, null);
     }
     
-    public Value2(final PathFragment path) {
+    public Value(final Path path) {
       this(Qualified.Record.of(path), null);
     }
 
-    public Value2(final T value) {
+    public Value(final T value) {
       this(null, value);
     }
 
-    public Value2 {
+    public Value {
       if (qualifiedPath != null && value != null && !AssignableType.of(qualifiedPath.qualified().type()).isAssignable(value.getClass())) {
         throw new IllegalArgumentException("value: " + value);
       }
@@ -66,17 +66,17 @@ public interface Provider {
     }
 
     public final Qualifiers qualifiers() {
-      final Qualified<? extends PathFragment> qualifiedPath = this.qualifiedPath();
+      final Qualified<? extends Path> qualifiedPath = this.qualifiedPath();
       return qualifiedPath == null ? Qualifiers.of() : qualifiedPath.qualifiers();
     }
     
-    public final PathFragment path() {
-      final Qualified<? extends PathFragment> qualifiedPath = this.qualifiedPath();
+    public final Path path() {
+      final Qualified<? extends Path> qualifiedPath = this.qualifiedPath();
       return qualifiedPath == null ? null : qualifiedPath.qualified();
     }
     
     public final Type type() {
-      final Qualified<? extends PathFragment> qualifiedPath = this.qualifiedPath();
+      final Qualified<? extends Path> qualifiedPath = this.qualifiedPath();
       return qualifiedPath == null ? null : qualifiedPath.qualified().type();
     }
 
