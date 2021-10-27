@@ -17,9 +17,7 @@
 package org.microbean.settings.api;
 
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -29,9 +27,6 @@ import java.util.StringJoiner;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
-import java.util.function.BinaryOperator;
-import java.util.function.Predicate;
-
 import java.util.stream.Stream;
 
 import static java.util.Collections.emptySortedMap;
@@ -40,6 +35,9 @@ import static java.util.Collections.unmodifiableSortedMap;
 import static java.util.Collections.unmodifiableSortedSet;
 
 public class Qualifiers implements Assignable<Qualifiers> {
+
+
+  private static final Qualifiers EMPTY_QUALIFIERS = new Qualifiers();
 
 
   /*
@@ -185,17 +183,21 @@ public class Qualifiers implements Assignable<Qualifiers> {
 
 
   public static final Qualifiers of() {
-    return new Qualifiers(emptySortedMap());
+    return EMPTY_QUALIFIERS;
   }
 
   public static final <T> Qualifiers of(final SortedMap<? extends CharSequence, T> map) {
-    final SortedMap<String, T> newMap = new TreeMap<>();
-    map.entrySet().forEach(e -> newMap.put(e.getKey().toString(), e.getValue()));
-    return new Qualifiers(newMap);
+    if (map == null || map.isEmpty()) {
+      return of();
+    } else {
+      final SortedMap<String, T> newMap = new TreeMap<>();
+      map.entrySet().forEach(e -> newMap.put(e.getKey().toString(), e.getValue()));
+      return new Qualifiers(newMap);
+    }
   }
 
   public static final <T> Qualifiers of(final SortedSet<? extends Qualifier<T>> set) {
-    return of(toMap(set));
+    return set == null || set.isEmpty() ? of() : of(toMap(set));
   }
 
   public static final Qualifiers of(final String name0, final Object value0) {

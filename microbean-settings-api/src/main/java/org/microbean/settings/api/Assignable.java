@@ -21,9 +21,9 @@ import java.util.Objects;
 public interface Assignable<T> {
 
   public T assignable();
-  
+
   public default boolean isAssignable(final T payload) {
     return Objects.equals(this.assignable(), payload);
   }
-  
+
 }

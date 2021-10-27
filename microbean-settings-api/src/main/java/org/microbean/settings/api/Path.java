@@ -20,7 +20,6 @@ import java.lang.reflect.Type;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 
@@ -29,9 +28,9 @@ import java.util.function.BiPredicate;
 public final class Path {
 
   private static final Path ROOT = new Path();
-  
+
   private final List<Object> elements;
-  
+
   private Path() {
     super();
     this.elements = List.of(void.class);
@@ -44,7 +43,7 @@ public final class Path {
   private Path(final List<? extends Accessor> accessors, final Type type) {
     this(List.of(), accessors, type);
   }
-  
+
   private Path(final Type type) {
     this(List.of(), List.of(), type);
   }
@@ -123,7 +122,7 @@ public final class Path {
     }
     return -1;
   }
-  
+
   public final int indexOf(final Path other) {
     return Collections.indexOfSubList(this.elements, other.elements);
   }
@@ -131,15 +130,15 @@ public final class Path {
   public final int lastIndexOf(final Path other) {
     return Collections.lastIndexOfSubList(this.elements, other.elements);
   }
-  
+
   public final Path plus(final String accessor, final Type type) {
     return this.plus(Accessor.of(accessor), type);
   }
-  
+
   public final Path plus(final Accessor accessor, final Type type) {
     return this.plus(List.of(accessor), type);
   }
-  
+
   public final Path plus(final List<? extends Accessor> accessors, final Type type) {
     return new Path(this.elements, accessors, type);
   }
@@ -170,7 +169,7 @@ public final class Path {
   public final boolean isType(final int index) {
     return this.elements.get(index) instanceof Type;
   }
-  
+
   public final Accessor getAccessor(final int index) {
     final Object o = this.elements.get(index);
     return o instanceof Accessor a ? a : null;
@@ -231,7 +230,7 @@ public final class Path {
   }
   */
 
-  
+
   public static final Path of(final List<? extends Accessor> accessors, final Type type) {
     return new Path(accessors, type);
   }

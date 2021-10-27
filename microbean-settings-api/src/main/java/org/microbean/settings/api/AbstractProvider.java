@@ -21,16 +21,24 @@ import java.lang.reflect.Type;
 
 public abstract class AbstractProvider<T> implements Provider {
 
-  private final Type type;
+  private static final ClassValue<Type> type = new ClassValue<>() {
+      @Override
+      protected final Type computeValue(final Class<?> c) {
+        if (c != AbstractProvider.class && AbstractProvider.class.isAssignableFrom(c)) {
+          return ((ParameterizedType)this.getClass().getGenericSuperclass()).getActualTypeArguments()[0];
+        } else {
+          return null;
+        }
+      }
+    };
   
   protected AbstractProvider() {
     super();
-    this.type = ((ParameterizedType)this.getClass().getGenericSuperclass()).getActualTypeArguments()[0];
   }
 
   @Override
   public final Type upperBound() {
-    return this.type;
+    return type.get(this.getClass());
   }
   
   /**
@@ -49,9 +57,8 @@ public abstract class AbstractProvider<T> implements Provider {
    * {@link Qualified Qualified&lt;Context&gt;}; {@code false} if it
    * absolutely cannot do so
    */
-  @Deprecated(forRemoval = true)
   public boolean isSelectable(final Qualified<? extends Context> context) {
-    return AssignableType.of(context.qualified().type()).isAssignable(this.type);
+    return AssignableType.of(context.qualified().type()).isAssignable(this.upperBound());
   }
   
 }

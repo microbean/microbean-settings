@@ -34,14 +34,11 @@ public interface Qualified<T> extends Assignable<T> {
     return this.qualified();
   }
 
-  @Override // Assignable<T>
-  public default boolean isAssignable(final T payload) {
-    return this.assignable().equals(payload);
-  }
-
   public T qualified();
 
-  public Qualifiers qualifiers();
+  public default Qualifiers qualifiers() {
+    return Qualifiers.of();
+  }
 
 
   /*
@@ -50,16 +47,18 @@ public interface Qualified<T> extends Assignable<T> {
 
 
   public static <T> String toString(final Qualified<T> q) {
-    return toString(q, t -> t.toString());
+    return toString(q, null);
   }
 
   public static <T> String toString(final Qualified<? extends T> q, final Function<? super T, ? extends String> f) {
     if (q == null) {
       return "";
+    } else if (f == null) {
+      return q.toString();
     } else {
       final StringBuilder sb = new StringBuilder(String.valueOf(f.apply(q.qualified())));
       final Qualifiers qualifiers = q.qualifiers();
-      if (!qualifiers.isEmpty()) {
+      if (qualifiers != null && !qualifiers.isEmpty()) {
         sb.append(":").append(qualifiers.toString());
       }
       return sb.toString();

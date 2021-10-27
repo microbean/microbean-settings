@@ -41,10 +41,11 @@ public final class Configured<T> {
       .toList();
   }
   
-  public static final <T> T of(final Qualifiers qualifiers, final Path path, final Supplier<? extends T> defaultTargetSupplier) {
+  public static final <T> T of(final Qualified<? extends Path> qualifiedPath, final Supplier<? extends T> defaultTargetSupplier) {
     final T returnValue;
-    final Qualified<? extends Context> context = Qualified.Record.of(qualifiers, new Context(path));
-    final Collection<? extends Provider> providers = loadedProviders(context);
+    final Qualified<? extends Context> qualifiedContext =
+      Qualified.Record.of(qualifiedPath.qualifiers(), new Context(qualifiedPath.qualified()));
+    final Collection<? extends Provider> providers = loadedProviders(qualifiedContext);
     if (providers.isEmpty()) {
       if (defaultTargetSupplier == null) {
         throw new UnsupportedOperationException();
@@ -52,7 +53,7 @@ public final class Configured<T> {
         returnValue = defaultTargetSupplier.get();
       }
     } else {
-      final Value<?> value = resolve(providers, context);
+      final Value<?> value = resolve(providers, qualifiedContext);
       @SuppressWarnings("unchecked")
       final T rv = value == null ? null : (T)value.value();
       returnValue = rv;
@@ -60,20 +61,23 @@ public final class Configured<T> {
     return returnValue;
   }
 
-  public static final Value<?> resolve(final Collection<? extends Provider> providers, final Qualified<? extends Context> context) {
+  public static final Value<?> resolve(final Collection<? extends Provider> providers,
+                                       final Qualified<? extends Context> qualifiedContext) {
     switch (providers.size()) {
     case 0:
       return null;
     case 1:
       final Provider provider = providers instanceof List<? extends Provider> list ? list.get(0) : providers.iterator().next();
-      return provider.isSelectable(context) ? provider.get(context) : null;
+      return provider.isSelectable(qualifiedContext) ? provider.get(qualifiedContext) : null;
     default:
     }
     throw new UnsupportedOperationException("TODO: Not yet fully implemented");
   }
   
-  private static final boolean isSelectable(final Provider provider, final Qualified<? extends Context> context) {
-    return AssignableType.of(context.qualified().path().type()).isAssignable(provider.upperBound()) && provider.isSelectable(context);
+  private static final boolean isSelectable(final Provider provider, final Qualified<? extends Context> qualifiedContext) {
+    return
+      AssignableType.of(qualifiedContext.qualified().path().type()).isAssignable(provider.upperBound()) &&
+      provider.isSelectable(qualifiedContext);
   }
 
   private static final class LoadedProviders {

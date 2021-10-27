@@ -22,21 +22,43 @@ import java.util.Objects;
 
 public record Context(Object object, Path path) {
 
+
+  /*
+   * Constructors.
+   */
+
+
   public Context(final Path path) {
     this(null, path);
   }
-  
+
   public Context {
     Objects.requireNonNull(path, "path");
   }
+
+
+  /*
+   * Instance methods.
+   */
+
 
   public final Type type() {
     return path().type();
   }
 
+  public final Context with(final Object object) {
+    return object == this.object() ? this : new Context(object, this.path());
+  }
+
+
+  /*
+   * Static methods.
+   */
+
+
   public static final Context of(final Path path) {
     return new Context(path);
   }
-  
-  
+
+
 }
