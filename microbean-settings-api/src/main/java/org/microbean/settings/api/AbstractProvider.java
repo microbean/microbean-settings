@@ -35,22 +35,23 @@ public abstract class AbstractProvider<T> implements Provider {
   
   /**
    * Returns {@code true} if this {@link Provider} could potentially
-   * be appropriate or relevant for the supplied {@link Context}.
-   * Further selection may happen that rules out this {@link
-   * Provider}, even if it returns {@code true} from this method.  If
-   * it returns {@code false} from this method, no further selection
-   * will happen.
+   * be appropriate or relevant for the supplied {@link Qualified
+   * Qualified&lt;Context2&gt;}.  Further selection may happen that
+   * rules out this {@link Provider}, even if it returns {@code true}
+   * from this method.  If it returns {@code false} from this method,
+   * no further selection will happen.
    *
-   * @param context the {@link Context} representing demand; must not
-   * be {@code null}
+   * @param context the {@link Qualified Qualified&lt;Context2&gt;}
+   * representing demand; must not be {@code null}
    *
    * @return {@code true} if this {@link Provider} thinks it is
    * capable of satisfying the demand represented by the supplied
-   * {@link Context}; {@code false} if it absolutely cannot do so
+   * {@link Qualified Qualified&lt;Context&gt;}; {@code false} if it
+   * absolutely cannot do so
    */
   @Deprecated(forRemoval = true)
-  public boolean isSelectable(final Context context) {
-    return context.target().isAssignable(this.type);
+  public boolean isSelectable(final Qualified<? extends Context2> context) {
+    return AssignableType.of(context.qualified().type()).isAssignable(this.type);
   }
   
 }

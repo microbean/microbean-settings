@@ -20,17 +20,7 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
-import org.microbean.settings.api.Provider.Value;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import static org.microbean.settings.api.Path.absoluteOf;
-import static org.microbean.settings.api.Path.fragmentOf;
-import static org.microbean.settings.api.Path.root;
 
 final class TestProvider {
 
@@ -40,9 +30,9 @@ final class TestProvider {
 
   @Test
   final void testLoadedProviders() {
-    final List<Provider> ps = Configured.loadedProviders();
-    assertSame(ps, Configured.loadedProviders());
-    assertSame(ps, Configured.loadedProviders());
+    final List<Provider> ps = Configured2.loadedProviders();
+    assertSame(ps, Configured2.loadedProviders());
+    assertSame(ps, Configured2.loadedProviders());
   }
 
 }
