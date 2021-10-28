@@ -30,6 +30,10 @@ public record Context<T>(T object, Path path) implements Assignable<Type>, Suppl
    */
 
 
+  public Context(final Type type) {
+    this(null, Path.of(type));
+  }
+  
   public Context(final Path path) {
     this(null, path);
   }
@@ -73,6 +77,10 @@ public record Context<T>(T object, Path path) implements Assignable<Type>, Suppl
    * Static methods.
    */
 
+
+  public static final Context<?> of(final Type type) {
+    return new Context<>(type);
+  }
 
   public static final Context<?> of(final Path path) {
     return new Context<>(path);

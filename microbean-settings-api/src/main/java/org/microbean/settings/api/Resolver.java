@@ -18,6 +18,7 @@ package org.microbean.settings.api;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 
 import java.util.function.Consumer;
 
@@ -28,12 +29,16 @@ public interface Resolver {
   public static final Resolver DEFAULT = new Resolver() {};
 
   public default <T> Value<T> resolve(final Collection<? extends Provider> providers,
-                                      final Qualifiers contextQualifiers,
+                                      Qualifiers contextQualifiers,
                                       final Context<?> context,
                                       Consumer<? super Provider> rejectedProviders,
                                       Consumer<? super Value<?>> rejectedValues,
                                       Disambiguator disambiguator,
                                       Consumer<? super Value<?>> ambiguousValues) {
+    Objects.requireNonNull(context, "context");
+    if (contextQualifiers == null) {
+      contextQualifiers = Qualifiers.of();
+    }
     if (rejectedProviders == null) {
       rejectedProviders = Resolver::sink;
     }

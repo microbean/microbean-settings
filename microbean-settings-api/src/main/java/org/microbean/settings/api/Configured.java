@@ -16,7 +16,11 @@
  */
 package org.microbean.settings.api;
 
+import java.lang.reflect.Type;
+
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.ServiceLoader;
 
@@ -31,29 +35,117 @@ public final class Configured {
     super();
   }
 
-  public static final List<Provider> loadedProviders() {
-    return LoadedProviders.loadedProviders;
+  public static final Qualifiers qualifiers() {
+    return qualifiers(Resolver.DEFAULT);
+  }
+  
+  public static final Qualifiers qualifiers(final Resolver resolver) {
+    return get(Qualifiers.of(), Context.of(Qualifiers.class), resolver, Qualifiers::of);
   }
 
-  public static final <T> T of(final Collection<? extends Provider> providers,
-                               final Qualifiers contextQualifiers,
-                               final Context<?> context,
-                               Resolver resolver,
-                               final Consumer<? super Provider> rejectedProviders,
-                               final Consumer<? super Value<?>> rejectedValues,
-                               final Consumer<? super Value<?>> ambiguousValues,
-                               final Disambiguator disambiguator,
-                               final Supplier<? extends T> defaultTargetSupplier) {
-    final T returnValue;
-    if (resolver == null) {
-      resolver = Resolver.DEFAULT;
+  public static final <T> T get(final Type type,
+                                final Supplier<? extends T> defaultSupplier) {
+    return
+      get(Context.of(type),
+          defaultSupplier);
+  }    
+
+  public static final <T> T get(final Context<?> context,
+                                final Supplier<? extends T> defaultSupplier) {
+    return
+      get(qualifiers(Resolver.DEFAULT),
+          context,
+          Resolver.DEFAULT,
+          defaultSupplier);
+  }
+
+  public static final <T> T get(final Context<?> context,
+                                final Resolver resolver,
+                                final Supplier<? extends T> defaultSupplier) {
+    return
+      get(qualifiers(resolver),
+          context,
+          resolver,
+          defaultSupplier);
+  }
+
+  public static final <T> T get(final Qualifiers contextQualifiers,
+                                final Context<?> context,
+                                final Supplier<? extends T> defaultSupplier) {
+    return
+      get(contextQualifiers,
+          context,
+          Resolver.DEFAULT,
+          defaultSupplier);
+  }
+  
+  public static final <T> T get(final Qualifiers contextQualifiers,
+                                final Context<?> context,
+                                final Resolver resolver,
+                                final Supplier<? extends T> defaultSupplier) {
+    final Collection<Provider> rejectedProviders = new ArrayList<>();
+    final Collection<Value<?>> rejectedValues = new ArrayList<>();
+    final Collection<Value<?>> ambiguousValues = new ArrayList<>();
+    final T object =
+      get(loadedProviders(),
+          contextQualifiers,
+          context,
+          resolver,
+          rejectedProviders::add,
+          rejectedValues::add,
+          ambiguousValues::add,
+          Disambiguator.DEFAULT,
+          defaultSupplier);
+    if (ambiguousValues.isEmpty()) {
+      return object;
+    } else {
+      throw new AmbiguousConfigurationException(Collections.unmodifiableCollection(ambiguousValues));
     }
-    final Value<T> value = resolver.resolve(providers, contextQualifiers, context, rejectedProviders, rejectedValues, disambiguator, ambiguousValues);
+  }
+  
+  public static final <T> T get(final Qualifiers contextQualifiers,
+                                final Context<?> context,
+                                final Resolver resolver,
+                                final Consumer<? super Provider> rejectedProviders,
+                                final Consumer<? super Value<?>> rejectedValues,
+                                final Consumer<? super Value<?>> ambiguousValues,
+                                final Disambiguator disambiguator,
+                                final Supplier<? extends T> defaultSupplier) {
+    return
+      get(loadedProviders(),
+          contextQualifiers,
+          context,
+          resolver,
+          rejectedProviders,
+          rejectedValues,
+          ambiguousValues,
+          disambiguator,
+          defaultSupplier);
+  }
+  
+  public static final <T> T get(final Collection<? extends Provider> providers,
+                                final Qualifiers contextQualifiers,
+                                final Context<?> context,
+                                final Resolver resolver,
+                                final Consumer<? super Provider> rejectedProviders,
+                                final Consumer<? super Value<?>> rejectedValues,
+                                final Consumer<? super Value<?>> ambiguousValues,
+                                final Disambiguator disambiguator,
+                                final Supplier<? extends T> defaultSupplier) {
+    final T returnValue;
+    final Value<T> value =
+      (resolver == null ? Resolver.DEFAULT : resolver).resolve(providers,
+                                                               contextQualifiers,
+                                                               context,
+                                                               rejectedProviders,
+                                                               rejectedValues,
+                                                               disambiguator,
+                                                               ambiguousValues);
     if (value == null) {
-      if (defaultTargetSupplier == null) {
+      if (defaultSupplier == null) {
         throw new UnsupportedOperationException();
       } else {
-        returnValue = defaultTargetSupplier.get();
+        returnValue = defaultSupplier.get();
       }
     } else {
       returnValue = value.value();
@@ -61,6 +153,10 @@ public final class Configured {
     return returnValue;
   }
 
+  public static final List<Provider> loadedProviders() {
+    return LoadedProviders.loadedProviders;
+  }
+  
   private static final class LoadedProviders {
 
     // We hide this static field inside a private nested class so it
