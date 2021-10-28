@@ -36,29 +36,14 @@ public abstract class AbstractProvider<T> implements Provider {
     super();
   }
 
-  @Override
+  @Override // Provider
   public final Type upperBound() {
     return type.get(this.getClass());
   }
   
-  /**
-   * Returns {@code true} if this {@link Provider} could potentially
-   * be appropriate or relevant for the supplied {@link Qualified
-   * Qualified&lt;Context&gt;}.  Further selection may happen that
-   * rules out this {@link Provider}, even if it returns {@code true}
-   * from this method.  If it returns {@code false} from this method,
-   * no further selection will happen.
-   *
-   * @param context the {@link Qualified Qualified&lt;Context&gt;}
-   * representing demand; must not be {@code null}
-   *
-   * @return {@code true} if this {@link Provider} thinks it is
-   * capable of satisfying the demand represented by the supplied
-   * {@link Qualified Qualified&lt;Context&gt;}; {@code false} if it
-   * absolutely cannot do so
-   */
-  public boolean isSelectable(final Qualified<? extends Context> context) {
-    return AssignableType.of(context.qualified().type()).isAssignable(this.upperBound());
+  @Override // Provider
+  public boolean isSelectable(final Qualifiers contextQualifiers, final Context<?> context) {
+    return AssignableType.of(context.type()).isAssignable(this.upperBound());
   }
   
 }

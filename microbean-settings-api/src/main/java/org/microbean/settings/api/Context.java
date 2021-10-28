@@ -20,7 +20,9 @@ import java.lang.reflect.Type;
 
 import java.util.Objects;
 
-public record Context(Object object, Path path) {
+import java.util.function.Supplier;
+
+public record Context<T>(T object, Path path) implements Assignable<Type>, Supplier<T> {
 
 
   /*
@@ -42,12 +44,28 @@ public record Context(Object object, Path path) {
    */
 
 
-  public final Type type() {
-    return path().type();
+  @Override // Assignable<Type>
+  public final Type assignable() {
+    return this.type();
   }
 
-  public final Context with(final Object object) {
-    return object == this.object() ? this : new Context(object, this.path());
+  @Override // Assignable<Type>
+  public final boolean isAssignable(final Type type) {
+    return AssignableType.of(this.assignable()).isAssignable(type);
+  }
+
+  @Override // Supplier<T>
+  public final T get() {
+    return this.object();
+  }
+  
+  public final Type type() {
+    return this.path().type();
+  }
+
+  @SuppressWarnings("unchecked")
+  public final <U extends T> Context<U> with(final U object) {
+    return object == this.object() ? (Context<U>)this : new Context<>(object, this.path());
   }
 
 
@@ -56,8 +74,8 @@ public record Context(Object object, Path path) {
    */
 
 
-  public static final Context of(final Path path) {
-    return new Context(path);
+  public static final Context<?> of(final Path path) {
+    return new Context<>(path);
   }
 
 

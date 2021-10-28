@@ -20,12 +20,13 @@ import java.util.Collection;
 import java.util.List;
 import java.util.ServiceLoader;
 
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import org.microbean.settings.api.Provider.Value;
 
-public final class Configured<T> {
-
+public final class Configured {
+  
   private Configured() {
     super();
   }
@@ -34,50 +35,30 @@ public final class Configured<T> {
     return LoadedProviders.loadedProviders;
   }
 
-  public static final List<Provider> loadedProviders(final Qualified<? extends Context> context) {
-    return loadedProviders()
-      .stream()
-      .filter(p -> isSelectable(p, context))
-      .toList();
-  }
-  
-  public static final <T> T of(final Qualified<? extends Path> qualifiedPath, final Supplier<? extends T> defaultTargetSupplier) {
+  public static final <T> T of(final Collection<? extends Provider> providers,
+                               final Qualifiers contextQualifiers,
+                               final Context<?> context,
+                               Resolver resolver,
+                               final Consumer<? super Provider> rejectedProviders,
+                               final Consumer<? super Value<?>> rejectedValues,
+                               final Consumer<? super Value<?>> ambiguousValues,
+                               final Disambiguator disambiguator,
+                               final Supplier<? extends T> defaultTargetSupplier) {
     final T returnValue;
-    final Qualified<? extends Context> qualifiedContext =
-      Qualified.Record.of(qualifiedPath.qualifiers(), new Context(qualifiedPath.qualified()));
-    final Collection<? extends Provider> providers = loadedProviders(qualifiedContext);
-    if (providers.isEmpty()) {
+    if (resolver == null) {
+      resolver = Resolver.DEFAULT;
+    }
+    final Value<T> value = resolver.resolve(providers, contextQualifiers, context, rejectedProviders, rejectedValues, disambiguator, ambiguousValues);
+    if (value == null) {
       if (defaultTargetSupplier == null) {
         throw new UnsupportedOperationException();
       } else {
         returnValue = defaultTargetSupplier.get();
       }
     } else {
-      final Value<?> value = resolve(providers, qualifiedContext);
-      @SuppressWarnings("unchecked")
-      final T rv = value == null ? null : (T)value.value();
-      returnValue = rv;
+      returnValue = value.value();
     }
     return returnValue;
-  }
-
-  public static final Value<?> resolve(final Collection<? extends Provider> providers,
-                                       final Qualified<? extends Context> qualifiedContext) {
-    switch (providers.size()) {
-    case 0:
-      return null;
-    case 1:
-      final Provider provider = providers instanceof List<? extends Provider> list ? list.get(0) : providers.iterator().next();
-      return provider.isSelectable(qualifiedContext) ? provider.get(qualifiedContext) : null;
-    default:
-    }
-    throw new UnsupportedOperationException("TODO: Not yet fully implemented");
-  }
-  
-  private static final boolean isSelectable(final Provider provider, final Qualified<? extends Context> qualifiedContext) {
-    return
-      AssignableType.of(qualifiedContext.qualified().path().type()).isAssignable(provider.upperBound()) &&
-      provider.isSelectable(qualifiedContext);
   }
 
   private static final class LoadedProviders {
@@ -90,7 +71,7 @@ public final class Configured<T> {
       .map(ServiceLoader.Provider::get)
       .sorted(Prioritized.COMPARATOR_DESCENDING)
       .toList();
-    
+
   }
 
 }

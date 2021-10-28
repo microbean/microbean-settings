@@ -18,6 +18,8 @@ package org.microbean.settings.api;
 
 import java.lang.reflect.Type;
 
+import java.util.Objects;
+
 import java.util.function.Supplier;
 
 public interface Provider {
@@ -26,9 +28,9 @@ public interface Provider {
     return Object.class;
   }
 
-  public boolean isSelectable(final Qualified<? extends Context> context);
+  public boolean isSelectable(final Qualifiers contextQualifiers, final Context<?> context);
 
-  public Value<?> get(final Qualified<? extends Context> context);
+  public Value<?> get(final Qualifiers contextQualifiers, final Context<?> context);
 
 
   /*
@@ -36,48 +38,33 @@ public interface Provider {
    */
 
 
-  public record Value<T>(Qualified<? extends Path> qualifiedPath, T value) implements Supplier<T> {
+  public record Value<T>(Qualifiers qualifiers, Path path, T value) implements Supplier<T> {
 
-    public Value() {
-      this(null, null);
-    }
-
-    public Value(final Qualified<? extends Path> qualifiedPath) {
-      this(qualifiedPath, null);
+    public Value(final Type type, final T value) {
+      this(Qualifiers.of(), Path.of(type), value);
     }
     
-    public Value(final Path path) {
-      this(Qualified.Record.of(path), null);
-    }
-
-    public Value(final T value) {
-      this(null, value);
+    public Value(final Path path, final T value) {
+      this(Qualifiers.of(), path, value);
     }
 
     public Value {
-      if (qualifiedPath != null && value != null && !AssignableType.of(qualifiedPath.qualified().type()).isAssignable(value.getClass())) {
+      Objects.requireNonNull(path, "path");
+      if (qualifiers == null) {
+        qualifiers = Qualifiers.of();
+      }
+      if (value != null && !AssignableType.of(path.type()).isAssignable(value.getClass())) {
         throw new IllegalArgumentException("value: " + value);
       }
     }
 
-    @Override
+    @Override // Supplier<T>
     public final T get() {
       return this.value();
     }
 
-    public final Qualifiers qualifiers() {
-      final Qualified<? extends Path> qualifiedPath = this.qualifiedPath();
-      return qualifiedPath == null ? Qualifiers.of() : qualifiedPath.qualifiers();
-    }
-    
-    public final Path path() {
-      final Qualified<? extends Path> qualifiedPath = this.qualifiedPath();
-      return qualifiedPath == null ? null : qualifiedPath.qualified();
-    }
-    
     public final Type type() {
-      final Qualified<? extends Path> qualifiedPath = this.qualifiedPath();
-      return qualifiedPath == null ? null : qualifiedPath.qualified().type();
+      return this.path().type();
     }
 
   }

@@ -18,6 +18,7 @@ package org.microbean.settings.api;
 
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -26,6 +27,8 @@ import java.util.SortedSet;
 import java.util.StringJoiner;
 import java.util.TreeMap;
 import java.util.TreeSet;
+
+import java.util.function.Predicate;
 
 import java.util.stream.Stream;
 
@@ -153,12 +156,59 @@ public class Qualifiers implements Assignable<Qualifiers> {
     return q.isEmpty() ? emptySortedSet() : unmodifiableSortedSet(new TreeSet<>(q.entrySet().stream().map(Qualifier::of).toList()));
   }
 
-  @Override
+  final int relativeScore(final Qualifiers q1) {
+    if (q1 != null) {
+      final int intersectionSize = this.intersectionSize(q1);
+      if (intersectionSize > 0) {
+        if (intersectionSize == q1.size()) {
+          assert this.equals(q1);
+          return intersectionSize;
+        } else {
+          return intersectionSize - this.symmetricDifferenceSize(q1);
+        }
+      } else {
+        return -(this.size() + q1.size());
+      }
+    } else {
+      return -this.size();
+    }
+  }
+  
+  public final int intersectionSize(final Qualifiers q1) {
+    if (q1 == null || q1.isEmpty()) {
+      return 0;
+    } else if (this == q1) {
+      // Just an identity check to rule this easy case out.
+      return this.size();
+    } else {
+      final Set<? extends Entry<String, ?>> q1EntrySet = q1.entrySet();
+      return (int)this.entrySet().stream()
+        .filter(q1EntrySet::contains)
+        .count();
+    }
+  }
+  
+  public final int symmetricDifferenceSize(final Qualifiers q1) {
+    if (q1 == null || q1.isEmpty()) {
+      return this.size();
+    } else if (this == q1) {
+      // Just an identity check to rule this easy case out.
+      return 0;
+    } else {
+      final Set<Entry<?, ?>> q1SymmetricDifference = new HashSet<>(this.entrySet());
+      q1.entrySet().stream()
+        .filter(Predicate.not(q1SymmetricDifference::add))
+        .forEach(q1SymmetricDifference::remove);
+      return q1SymmetricDifference.size();
+    }
+  }
+
+  @Override // Object
   public int hashCode() {
     return this.qualifiers().hashCode();
   }
 
-  @Override
+  @Override // Object
   public boolean equals(final Object other) {
     if (other == this) {
       return true;
@@ -169,7 +219,7 @@ public class Qualifiers implements Assignable<Qualifiers> {
     }
   }
 
-  @Override
+  @Override // Object
   public String toString() {
     final StringJoiner sj = new StringJoiner(";");
     this.stream().map(Qualifier::toString).forEach(sj::add);

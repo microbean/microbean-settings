@@ -25,7 +25,7 @@ import java.util.Objects;
 
 import java.util.function.BiPredicate;
 
-public final class Path {
+public final class Path implements Assignable<Type> {
 
   private static final Path ROOT = new Path();
 
@@ -93,6 +93,16 @@ public final class Path {
   }
   */
 
+  @Override // Assignable<Type>
+  public final Type assignable() {
+    return this.type();
+  }
+
+  @Override // Assignable<Type>
+  public final boolean isAssignable(final Type type) {
+    return AssignableType.of(this.assignable()).isAssignable(type);
+  }
+  
   public final int indexOf(final Path path, final BiPredicate<? super Object, ? super Object> p) {
     final int pathSize = path.size();
     final int sizeDiff = this.size() - pathSize;
