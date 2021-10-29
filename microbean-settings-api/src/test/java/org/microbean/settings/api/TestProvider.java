@@ -16,7 +16,7 @@
  */
 package org.microbean.settings.api;
 
-import java.util.List;
+import java.util.Collection;
 
 import org.junit.jupiter.api.Test;
 
@@ -30,9 +30,9 @@ final class TestProvider {
 
   @Test
   final void testLoadedProviders() {
-    final List<Provider> ps = Configured.loadedProviders();
-    assertSame(ps, Configured.loadedProviders());
-    assertSame(ps, Configured.loadedProviders());
+    final Collection<Provider> ps = Settings.loadedProviders();
+    assertSame(ps, Settings.loadedProviders());
+    assertSame(ps, Settings.loadedProviders());
   }
 
 }
