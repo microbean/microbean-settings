@@ -95,6 +95,15 @@ public interface Provider {
    * <p>Implementations of this method may, and often do, return
    * {@code null}.</p>
    *
+   * <p>If an implementation of this method returns a non-{@code null}
+   * {@link Value}, there is a tacit contract that the {@link
+   * Provider} has fulfilled its responsibilities and may be
+   * jettisoned.  That is, the returned {@link Value} may be cached by
+   * the caller (for example) and can be regarded as the source for
+   * (little-v) values going forward.  (The {@link Value} so returned
+   * may, of course, return {@code null} from its {@link Value#get()}
+   * method at any point for any reason.)</p>
+   *
    * @param contextQualifiers the {@link Qualifiers} qualifying the
    * supplied {@link Context}; must not be {@code null}
    *
@@ -124,6 +133,11 @@ public interface Provider {
   /**
    * A {@link Supplier} of a value returned by a {@link Provider}.
    *
+   * <p>A {@link Value}, once returned by a {@link Provider}, is no
+   * longer linked to that {@link Provider} and can be regarded as an
+   * authoritative source for values going forward.  Notably, it can
+   * be cached.  Its {@link Provider} can be discarded.</p>
+   *
    * @author <a href="https://about.me/lairdnelson"
    * target="_parent">Laird Nelson</a>
    *
@@ -151,11 +165,12 @@ public interface Provider {
      * Creates a new {@link Value} generically suitable for all {@link
      * Path}s {@linkplain Path#type() bearing} the supplied {@link Type}.
      *
-     * @param qualifiers the {@link Qualifiers} the value is suitable
-     * for; must not be {@code null}
+     * @param qualifiers the {@link Qualifiers} this {@link Value} is
+     * suitable for; must not be {@code null}
      *
-     * @param type the {@link Type} the value must bear; must not be
-     * {@code null}
+     * @param type the {@link Type} values {@linkplain #value()
+     * supplied} by this {@link Value} must bear; must not be {@code
+     * null}
      *
      * @param value the value itself; must bear the supplied {@link
      * Type}
@@ -176,6 +191,14 @@ public interface Provider {
       this(Qualifiers.of(), path, value);
     }
 
+    /**
+     * Creates a new {@link Value}.
+     *
+     * @param <T> the type of values this {@link Value} supplies
+     *
+     * @param qualifiers the {@link Qualifiers} the {@link Value} is
+     * suitable for; must not be {@code null}
+     */
     public Value {
       Objects.requireNonNull(qualifiers, "qualifiers");
       Objects.requireNonNull(path, "path");
