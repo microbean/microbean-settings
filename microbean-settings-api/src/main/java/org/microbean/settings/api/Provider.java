@@ -147,9 +147,10 @@ public interface Provider {
    * @param path the possibly vague {@link Path} (or paths that match
    * it) this {@link Value} is suitable for; must not be {@code null}
    *
-   * @param value the value itself; may be {@code null}
+   * @param supplier the {@link Supplier} underlying this {@link
+   * Value}; must not be {@code null}
    */
-  public record Value<T>(Qualifiers qualifiers, Path path, T value) implements Supplier<T> {
+  public record Value<T>(Qualifiers qualifiers, Path path, Supplier<T> supplier) implements Supplier<T> {
 
 
     /*
@@ -158,53 +159,53 @@ public interface Provider {
 
 
     public Value(final Type type, final T value) {
-      this(Qualifiers.of(), Path.of(type), value);
+      this(Qualifiers.of(), Path.of(type), () -> value);
     }
 
-    /**
-     * Creates a new {@link Value} generically suitable for all {@link
-     * Path}s {@linkplain Path#type() bearing} the supplied {@link Type}.
-     *
-     * @param qualifiers the {@link Qualifiers} this {@link Value} is
-     * suitable for; must not be {@code null}
-     *
-     * @param type the {@link Type} values {@linkplain #value()
-     * supplied} by this {@link Value} must bear; must not be {@code
-     * null}
-     *
-     * @param value the value itself; must bear the supplied {@link
-     * Type}
-     */
+    public Value(final Type type, final Supplier<T> supplier) {
+      this(Qualifiers.of(), Path.of(type), supplier);
+    }
+
     public Value(final Qualifiers qualifiers, final Type type, final T value) {
-      this(qualifiers, Path.of(type), value);
+      this(qualifiers, Path.of(type), () -> value);
+    }
+
+    public Value(final Qualifiers qualifiers, final Type type, final Supplier<T> supplier) {
+      this(qualifiers, Path.of(type), supplier);
     }
 
     public Value(final Class<T> type, final T value) {
-      this(Qualifiers.of(), Path.of(type), value);
+      this(Qualifiers.of(), Path.of(type), () -> value);
+    }
+
+    public Value(final Class<T> type, final Supplier<T> supplier) {
+      this(Qualifiers.of(), Path.of(type), supplier);
     }
 
     public Value(final Qualifiers qualifiers, final Class<T> type, final T value) {
-      this(qualifiers, Path.of(type), value);
+      this(qualifiers, Path.of(type), () -> value);
+    }
+
+    public Value(final Qualifiers qualifiers, final Class<T> type, final Supplier<T> supplier) {
+      this(qualifiers, Path.of(type), supplier);
     }
 
     public Value(final Path path, final T value) {
-      this(Qualifiers.of(), path, value);
+      this(Qualifiers.of(), path, () -> value);
     }
 
-    /**
-     * Creates a new {@link Value}.
-     *
-     * @param <T> the type of values this {@link Value} supplies
-     *
-     * @param qualifiers the {@link Qualifiers} the {@link Value} is
-     * suitable for; must not be {@code null}
-     */
+    public Value(final Path path, final Supplier<T> supplier) {
+      this(Qualifiers.of(), path, supplier);
+    }
+
+    public Value(final Qualifiers qualifiers, final Path path, final T value) {
+      this(qualifiers, path, () -> value);
+    }
+
     public Value {
       Objects.requireNonNull(qualifiers, "qualifiers");
       Objects.requireNonNull(path, "path");
-      if (value != null && !AssignableType.of(path.type()).isAssignable(value.getClass())) {
-        throw new IllegalArgumentException("value: " + value);
-      }
+      Objects.requireNonNull(supplier, "supplier");
     }
 
 
@@ -213,28 +214,9 @@ public interface Provider {
      */
 
 
-    /**
-     * Returns the result of invoking this {@link Value}'s {@link
-     * #value()} method.
-     *
-     * <p>This method may return {@code null}.</p>
-     *
-     * @return the result of invoking this {@link Value}'s {@link
-     * #value()} method, which may be {@code null}
-     *
-     * @nullability This method may return {@code null}.
-     *
-     * @idempotency This method is idempotent and and deterministic.
-     *
-     * @threadsafety This method is safe for concurrent use by
-     * multiple threads.
-     *
-     * @see #value()
-     */
-    @Convenience
     @Override // Supplier<T>
     public final T get() {
-      return this.value();
+      return this.supplier().get();
     }
 
     /**
