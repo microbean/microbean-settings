@@ -23,20 +23,14 @@ import java.util.function.Supplier;
 
 import org.microbean.settings.api.Provider.Value;
 
-public interface SupplierBroker<T> {
-  
-  public <X> SupplierBroker<X> of(final Qualifiers qualifiers,
-                                  final Supplier<?> parentSupplier,
-                                  final Path path,
-                                  final Supplier<X> defaultSupplier,
-                                  final Consumer<? super Provider> rejectedProviders,
-                                  final Consumer<? super Value<?>> rejectedValues,
-                                  final Consumer<? super Value<?>> ambiguousValues);
+public interface SupplierBroker<T> extends Supplier<T> {
 
-  public Supplier<T> supplier();
-
-  private static void sink(final Object ignored) {
-
-  }
+  public <P, X> SupplierBroker<X> of(final Qualifiers qualifiers,
+                                     final Supplier<P> parentSupplier,
+                                     final Path path,
+                                     final Supplier<X> defaultSupplier,
+                                     final Consumer<? super Provider> rejectedProviders,
+                                     final Consumer<? super Value<?>> rejectedValues,
+                                     final Consumer<? super Value<?>> ambiguousValues);
 
 }
