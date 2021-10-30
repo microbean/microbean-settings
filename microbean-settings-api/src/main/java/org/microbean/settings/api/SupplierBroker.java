@@ -16,8 +16,6 @@
  */
 package org.microbean.settings.api;
 
-import java.lang.reflect.Type;
-
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -25,10 +23,16 @@ import org.microbean.settings.api.Provider.Value;
 
 public interface SupplierBroker<T> extends Supplier<T> {
 
-  public <P, X> SupplierBroker<X> of(final Qualifiers qualifiers,
+  public <U> SupplierBroker<U> plus(final Path path,
+                                    final Supplier<U> defaultSupplier,
+                                    final Consumer<? super Provider> rejectedProviders,
+                                    final Consumer<? super Value<?>> rejectedValues,
+                                    final Consumer<? super Value<?>> ambiguousValues);
+  
+  public <P, U> SupplierBroker<U> of(final Qualifiers qualifiers,
                                      final Supplier<P> parentSupplier,
                                      final Path path,
-                                     final Supplier<X> defaultSupplier,
+                                     final Supplier<U> defaultSupplier,
                                      final Consumer<? super Provider> rejectedProviders,
                                      final Consumer<? super Value<?>> rejectedValues,
                                      final Consumer<? super Value<?>> ambiguousValues);

@@ -35,7 +35,6 @@ import java.util.function.Supplier;
 
 import org.microbean.settings.api.Provider.Value;
 
-// Could not be any more experimental.
 public class Settings<P, T> implements SupplierBroker<T> {
 
 
@@ -180,14 +179,33 @@ public class Settings<P, T> implements SupplierBroker<T> {
     return this.supplier.get();
   }
 
-  public final <U> Settings<T, U> plus(final Path path, final Supplier<U> defaultSupplier) {
-    return this.of(this, path, defaultSupplier);
+  public final <U> Settings<T, U> plus(final Path path,
+                                       final Supplier<U> defaultSupplier) {
+    return this.plus(path, defaultSupplier, Settings::sink, Settings::sink, Settings::sink);
+  }
+
+  @Override // SupplierBroker
+  public final <U> Settings<T, U> plus(final Path path,
+                                       final Supplier<U> defaultSupplier,
+                                       final Consumer<? super Provider> rejectedProviders,
+                                       final Consumer<? super Value<?>> rejectedValues,
+                                       final Consumer<? super Value<?>> ambiguousValues) {
+    return this.of(this, path, defaultSupplier, rejectedProviders, rejectedValues, ambiguousValues);
   }
 
   public final <Q, U> Settings<Q, U> of(final Settings<?, Q> parent,
                                         final Path path,
                                         final Supplier<U> defaultSupplier) {
-    return this.of(parent.qualifiers(), parent, path, defaultSupplier);
+    return this.of(parent.qualifiers(), parent, parent.path().plus(path), defaultSupplier);
+  }
+
+  public final <Q, U> Settings<Q, U> of(final Settings<?, Q> parent,
+                                        final Path path,
+                                        final Supplier<U> defaultSupplier,
+                                        final Consumer<? super Provider> rejectedProviders,
+                                        final Consumer<? super Value<?>> rejectedValues,
+                                        final Consumer<? super Value<?>> ambiguousValues) {
+    return this.of(parent.qualifiers(), parent, parent.path().plus(path), defaultSupplier, rejectedProviders, rejectedValues, ambiguousValues);
   }
 
   public final <Q, U> Settings<Q, U> of(final Qualifiers qualifiers,
@@ -394,6 +412,8 @@ public class Settings<P, T> implements SupplierBroker<T> {
     if (returnValue == null) {
       final Settings<Void, Void> bootstrapSettings = new Settings<>(Qualifiers.of());
       instance.compareAndSet(null,
+                             bootstrapSettings.plus(Path.of(Accessor.of("of"), Qualifiers.class), () -> bootstrapSettings)
+                             /*
                              bootstrapSettings.of(bootstrapSettings.qualifiers(),
                                                   bootstrapSettings.parentSupplier(),
                                                   bootstrapSettings.path().plus(Accessor.of("of"), Qualifiers.class),
@@ -401,6 +421,7 @@ public class Settings<P, T> implements SupplierBroker<T> {
                                                   Settings::sink,
                                                   Settings::sink,
                                                   Settings::sink)
+                             */
                              .get());
       returnValue = instance.get();
       assert returnValue != null;

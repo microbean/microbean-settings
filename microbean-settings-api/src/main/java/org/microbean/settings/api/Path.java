@@ -153,6 +153,15 @@ public final class Path implements Assignable<Type> {
     return new Path(this.elements, accessors, type);
   }
 
+  public final Path plus(final Path path) {
+    if (path.isType(0)) {
+      throw new IllegalArgumentException("path: " + path);
+    }
+    final List<Object> newElements = new ArrayList<>(this.elements);
+    newElements.addAll(path.elements.subList(0, path.elements.size() - 1));
+    return new Path(newElements, List.of(), path.type());
+  }
+
   // Drops the intermediate type.
   public final Path merge(final String accessor, final Type type) {
     return this.merge(Accessor.of(accessor), type);
