@@ -154,12 +154,18 @@ public final class Path implements Assignable<Type> {
   }
 
   public final Path plus(final Path path) {
-    if (path.isType(0)) {
-      throw new IllegalArgumentException("path: " + path);
+    final int size = path.size();
+    assert size > 0;
+    if (size == 1) {
+      assert path.isType(0);
+      return new Path(this.elements, List.of(Accessor.of()), path.type());
+    } else {
+      assert path.isAccessor(0);
+      assert path.isType(size - 1);
+      final List<Object> newElements = new ArrayList<>(this.elements);
+      newElements.addAll(path.elements.subList(0, size - 1));
+      return new Path(newElements, List.of(), path.type());
     }
-    final List<Object> newElements = new ArrayList<>(this.elements);
-    newElements.addAll(path.elements.subList(0, path.elements.size() - 1));
-    return new Path(newElements, List.of(), path.type());
   }
 
   // Drops the intermediate type.
