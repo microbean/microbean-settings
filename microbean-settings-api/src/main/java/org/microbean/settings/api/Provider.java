@@ -60,62 +60,15 @@ public interface Provider {
     return Object.class;
   }
 
-  /**
-   * Returns {@code true} if this {@link Provider} should be
-   * considered for potentially satisfying the demand represented by
-   * the supplied {@link Context}.
-   *
-   * <p>This method will be called immediately before any invocation
-   * of the {@link #get(Context)} method, and if it returns {@code
-   * false} no {@link #get(Context)} invocation will occur.</p>
-   *
-   * @param context the {@link Context} representing demand; must not
-   * be {@code null}
-   *
-   * @nullability Implementations of this method must not return
-   * {@code null}.
-   *
-   * @idempotency Implementations of this method must be idempotent
-   * and deterministic.
-   *
-   * @threadsafety Implementations of this method must be safe for
-   * concurrent use by multiple threads.
-   */
-  public boolean isSelectable(final Context<?> context);
+  public boolean isSelectable(final SupplierBroker broker,
+                              final Qualifiers qualifiers,
+                              final Supplier<?> parentSupplier,
+                              final Path path);
 
-  /**
-   * Returns a {@link Value} suitable for the supplied {@link
-   * Context}, or {@code null} if the represented request is
-   * inappropriate or cannot be satisfied.
-   *
-   * <p>Implementations of this method may, and often do, return
-   * {@code null}.</p>
-   *
-   * <p>If an implementation of this method returns a non-{@code null}
-   * {@link Value}, there is a tacit contract that the {@link
-   * Provider} has fulfilled its responsibilities and may be
-   * jettisoned.  That is, the returned {@link Value} may be cached by
-   * the caller (for example) and can be regarded as the source for
-   * (little-v) values going forward.  (The {@link Value} so returned
-   * may, of course, return {@code null} from its {@link Value#get()}
-   * method at any point for any reason.)</p>
-   *
-   * @param context the {@link Context} representing demand; must not
-   * be {@code null}
-   *
-   * @return a {@link Value} suitable for the supplied {@link
-   * Context}, or {@code null}
-   *
-   * @nullability Implementations of this method may return {@code
-   * null}.
-   *
-   * @idempotency Implementations of this method need not be
-   * idempotent or deterministic.
-   *
-   * @threadsafety Implementations of this method must be safe for
-   * concurrent use by multiple threads.
-   */
-  public Value<?> get(final Context<?> context);
+  public Value<?> get(final SupplierBroker broker,
+                      final Qualifiers qualifiers,
+                      final Supplier<?> parentSupplier,
+                      final Path path);
 
 
   /*

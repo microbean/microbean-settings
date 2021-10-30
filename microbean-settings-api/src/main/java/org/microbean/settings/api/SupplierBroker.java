@@ -25,24 +25,10 @@ import org.microbean.settings.api.Provider.Value;
 
 public interface SupplierBroker {
   
-  public default <T> Supplier<T> supplier(final Qualifiers contextQualifiers,
-                                          final Type type,
-                                          final Supplier<T> defaultSupplier) {
-    return this.supplier(contextQualifiers, Path.of().plus(Accessor.of("supplier"), type), defaultSupplier);
-  }
-
-  public default <T> Supplier<T> supplier(final Qualifiers contextQualifiers,
-                                          final Path path,
-                                          final Supplier<T> defaultSupplier) {
-    return this.supplier(new Context<>(this, contextQualifiers, this, path), defaultSupplier);
-  }
-
-  public default <T> Supplier<T> supplier(final Context<?> context,
-                                          final Supplier<T> defaultSupplier) {
-    return this.supplier(context, SupplierBroker::sink, SupplierBroker::sink, SupplierBroker::sink, defaultSupplier);
-  }
-
-  public <T> Supplier<T> supplier(final Context<?> context,
+  public <T> Supplier<T> supplier(final SupplierBroker broker,
+                                  final Qualifiers qualifiers,
+                                  final Supplier<?> parentSupplier,
+                                  final Path path,
                                   final Consumer<? super Provider> rejectedProviders,
                                   final Consumer<? super Value<?>> rejectedValues,
                                   final Consumer<? super Value<?>> ambiguousValues,

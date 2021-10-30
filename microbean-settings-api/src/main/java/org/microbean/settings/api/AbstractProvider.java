@@ -19,6 +19,8 @@ package org.microbean.settings.api;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 
+import java.util.function.Supplier;
+
 public abstract class AbstractProvider<T> implements Provider {
 
   private static final ClassValue<Type> type = new ClassValue<>() {
@@ -42,8 +44,11 @@ public abstract class AbstractProvider<T> implements Provider {
   }
   
   @Override // Provider
-  public boolean isSelectable(final Context<?> context) {
-    return AssignableType.of(context.path().type()).isAssignable(this.upperBound());
+  public boolean isSelectable(final SupplierBroker broker,
+                              final Qualifiers qualifiers,
+                              final Supplier<?> parentSupplier,
+                              final Path path) {
+    return AssignableType.of(path.type()).isAssignable(this.upperBound());
   }
   
 }

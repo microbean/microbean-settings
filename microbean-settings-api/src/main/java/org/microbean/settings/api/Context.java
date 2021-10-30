@@ -24,6 +24,11 @@ import java.util.function.Supplier;
 
 import org.microbean.development.annotation.Convenience;
 
+// TODO: as written this now has a reference to SupplierBroker, and
+// SupplierBroker has a reference to this.  Java lets this happen just
+// fine, but I'm not thrilled about it.  Working on making what is
+// currently Settings be, effectively, this class.  Remember that a
+// Path always starts with Accessors, not a Type.
 public record Context<T>(SupplierBroker broker, Qualifiers qualifiers, T object, Path path) {
 
 

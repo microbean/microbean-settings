@@ -18,6 +18,8 @@ package org.microbean.settings.api;
 
 import java.lang.reflect.Type;
 
+import java.util.function.Supplier;
+
 import org.microbean.type.Types;
 
 public class ProxyingProvider extends AbstractProvider<Object> {
@@ -27,8 +29,11 @@ public class ProxyingProvider extends AbstractProvider<Object> {
   }
 
   @Override // Provider
-  public boolean isSelectable(final Context<?> context) {
-    return super.isSelectable(context) && this.isProxyable(context.path());
+  public boolean isSelectable(final SupplierBroker broker,
+                              final Qualifiers qualifiers,
+                              final Supplier<?> parentSupplier,
+                              final Path path) {
+    return super.isSelectable(broker, qualifiers, parentSupplier, path) && this.isProxyable(path);
   }
 
   public boolean isProxyable(final Path path) {
@@ -37,8 +42,11 @@ public class ProxyingProvider extends AbstractProvider<Object> {
   }
 
   @Override // Provider
-  public Value<?> get(final Context<?> context) {
-    final Class<?> c = Types.erase(context.type());
+  public Value<?> get(final SupplierBroker broker,
+                      final Qualifiers qualifiers,
+                      final Supplier<?> parentSupplier,
+                      final Path path) {
+    final Class<?> c = Types.erase(path.type());
     return null; // not supported yet
   }
 
