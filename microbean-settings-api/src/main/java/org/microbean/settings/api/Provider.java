@@ -60,12 +60,12 @@ public interface Provider {
     return Object.class;
   }
 
-  public boolean isSelectable(final SupplierBroker broker,
+  public boolean isSelectable(final SupplierBroker<?> broker,
                               final Qualifiers qualifiers,
                               final Supplier<?> parentSupplier,
                               final Path path);
 
-  public Value<?> get(final SupplierBroker broker,
+  public Value<?> get(final SupplierBroker<?> broker,
                       final Qualifiers qualifiers,
                       final Supplier<?> parentSupplier,
                       final Path path);

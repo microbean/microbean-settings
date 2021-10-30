@@ -35,10 +35,8 @@ import java.util.function.Supplier;
 
 import org.microbean.settings.api.Provider.Value;
 
-// Could not be any more experimental.  The <T> is because I'm
-// currently making Settings usurp Context<T>.  It could be <Void> to
-// start.
-public class Settings<T> implements SupplierBroker {
+// Could not be any more experimental.
+public class Settings<T> implements SupplierBroker<T> {
 
 
   /*
@@ -54,15 +52,15 @@ public class Settings<T> implements SupplierBroker {
    */
 
 
-  private final BiFunction<? super Qualified.Record<Path>, Function<? super Qualified.Record<Path>, ? extends Supplier<?>>, ? extends Supplier<?>> supplierCache;
+  private final BiFunction<? super Qualified.Record<Path>, Function<? super Qualified.Record<Path>, ? extends Settings<?>>, ? extends Settings<?>> settingsCache;
 
   private final List<Provider> providers;
 
-  // I'm in the process of making Settings usurp Context; hence the
-  // three following currently useless fields.
   private final Qualifiers qualifiers;
 
   private final Supplier<?> parentSupplier;
+
+  private final Supplier<T> supplier;
 
   private final Path path;
 
@@ -77,51 +75,71 @@ public class Settings<T> implements SupplierBroker {
   }
 
   public Settings(final Collection<? extends Provider> providers) {
-    this(new ConcurrentHashMap<Qualified.Record<Path>, Supplier<?>>()::computeIfAbsent, providers);
+    this(new ConcurrentHashMap<Qualified.Record<Path>, Settings<?>>()::computeIfAbsent, providers);
   }
 
-  public Settings(final BiFunction<? super Qualified.Record<Path>, Function<? super Qualified.Record<Path>, ? extends Supplier<?>>, ? extends Supplier<?>> supplierCache,
+  public Settings(final BiFunction<? super Qualified.Record<Path>, Function<? super Qualified.Record<Path>, ? extends Settings<?>>, ? extends Settings<?>> settingsCache,
                   final Collection<? extends Provider> providers) {
     super();
-    this.supplierCache = Objects.requireNonNull(supplierCache, "supplierCache");
+    this.settingsCache = Objects.requireNonNull(settingsCache, "settingsCache");
     this.providers = List.copyOf(providers);
     this.parentSupplier = Settings::returnNull;
     this.path = Path.of();
+    this.supplier = Settings::returnNull;
     this.qualifiers =
-      this.supplier(this,
-                    Qualifiers.of(),
-                    this.parentSupplier,
-                    this.path().plus(Accessor.of("supplier"), Qualifiers.class),
-                    Settings::sink,
-                    Settings::sink,
-                    Settings::sink,
-                    Qualifiers::of).get();
+      this.of(Qualifiers.of(),
+              this.parentSupplier,
+              this.path().plus(Accessor.of("supplier"), Qualifiers.class),
+              Qualifiers::of,
+              Settings::sink,
+              Settings::sink,
+              Settings::sink)
+      .supplier()
+      .get();
   }
 
-  public Settings(final BiFunction<? super Qualified.Record<Path>, Function<? super Qualified.Record<Path>, ? extends Supplier<?>>, ? extends Supplier<?>> supplierCache,
+  public Settings(final Qualifiers qualifiers) {
+    this(loadedProviders(), qualifiers);
+  }
+
+  public Settings(final Collection<? extends Provider> providers, final Qualifiers qualifiers) {
+    this(new ConcurrentHashMap<Qualified.Record<Path>, Settings<?>>()::computeIfAbsent, providers, qualifiers);
+  }
+
+  public Settings(final BiFunction<? super Qualified.Record<Path>, Function<? super Qualified.Record<Path>, ? extends Settings<?>>, ? extends Settings<?>> settingsCache,
                   final Collection<? extends Provider> providers,
                   final Qualifiers qualifiers) {
-    this(supplierCache, providers, qualifiers, Settings::returnNull);
+    this(settingsCache, providers, qualifiers, Settings::returnNull);
   }
 
-  public Settings(final BiFunction<? super Qualified.Record<Path>, Function<? super Qualified.Record<Path>, ? extends Supplier<?>>, ? extends Supplier<?>> supplierCache,
+  public Settings(final BiFunction<? super Qualified.Record<Path>, Function<? super Qualified.Record<Path>, ? extends Settings<?>>, ? extends Settings<?>> settingsCache,
                   final Collection<? extends Provider> providers,
                   final Qualifiers qualifiers,
                   final Supplier<?> parentSupplier) {
-    this(supplierCache, providers, qualifiers, Settings::returnNull, null);
+    this(settingsCache, providers, qualifiers, Settings::returnNull, Path.of(), Settings::returnNull);
   }
 
-  public Settings(final BiFunction<? super Qualified.Record<Path>, Function<? super Qualified.Record<Path>, ? extends Supplier<?>>, ? extends Supplier<?>> supplierCache,
+  public Settings(final BiFunction<? super Qualified.Record<Path>, Function<? super Qualified.Record<Path>, ? extends Settings<?>>, ? extends Settings<?>> settingsCache,
                   final Collection<? extends Provider> providers,
                   final Qualifiers qualifiers,
                   final Supplier<?> parentSupplier,
                   final Path path) {
+    this(settingsCache, providers, qualifiers, parentSupplier, path, Settings::returnNull);
+  }
+
+  public Settings(final BiFunction<? super Qualified.Record<Path>, Function<? super Qualified.Record<Path>, ? extends Settings<?>>, ? extends Settings<?>> settingsCache,
+                  final Collection<? extends Provider> providers,
+                  final Qualifiers qualifiers,
+                  final Supplier<?> parentSupplier,
+                  final Path path,
+                  final Supplier<T> supplier) {
     super();
-    this.supplierCache = Objects.requireNonNull(supplierCache, "supplierCache");
+    this.settingsCache = Objects.requireNonNull(settingsCache, "settingsCache");
     this.providers = List.copyOf(providers);
     this.qualifiers = Objects.requireNonNull(qualifiers, "qualifiers");
-    this.parentSupplier = parentSupplier == null ? Settings::returnNull : parentSupplier;
-    this.path = path;
+    this.parentSupplier = Objects.requireNonNull(parentSupplier, "parentSupplier");
+    this.path = Objects.requireNonNull(path, "path");
+    this.supplier = Objects.requireNonNull(supplier, "supplier");
   }
 
 
@@ -146,59 +164,52 @@ public class Settings<T> implements SupplierBroker {
     return this.path;
   }
 
-  public final T get(final Supplier<T> defaultSupplier) {
-    return
-      this.supplier(this,
-                    this.qualifiers(),
-                    this.parentSupplier(),
-                    this.path(),
-                    Settings::sink,
-                    Settings::sink,
-                    Settings::sink,
-                    defaultSupplier)
-      .get();
+  @Override // SupplierBroker
+  public final Supplier<T> supplier() {
+    return this.supplier;
   }
 
   @Override // SupplierBroker
   @SuppressWarnings("unchecked")
-  public final <T> Supplier<T> supplier(final SupplierBroker broker,
-                                        final Qualifiers qualifiers,
-                                        final Supplier<?> parentSupplier,
-                                        final Path path,
-                                        final Consumer<? super Provider> rejectedProviders,
-                                        final Consumer<? super Value<?>> rejectedValues,
-                                        final Consumer<? super Value<?>> ambiguousValues,
-                                        final Supplier<T> defaultSupplier) {
-    return
-      (Supplier<T>)this.supplierCache.apply(Qualified.Record.of(qualifiers, path),
-                                            qp -> this.computeSupplier(broker,
-                                                                       qp.qualifiers(),
-                                                                       parentSupplier,
-                                                                       qp.qualified(),
-                                                                       rejectedProviders,
-                                                                       rejectedValues,
-                                                                       ambiguousValues,
-                                                                       defaultSupplier));
+  public final <X> Settings<X> of(final Qualifiers qualifiers,
+                                  final Supplier<?> parentSupplier,
+                                  final Path path,
+                                  final Supplier<X> defaultSupplier,
+                                  final Consumer<? super Provider> rejectedProviders,
+                                  final Consumer<? super Value<?>> rejectedValues,
+                                  final Consumer<? super Value<?>> ambiguousValues) {
+    return (Settings<X>)this.settingsCache.apply(Qualified.Record.of(qualifiers, path),
+                                                 qp -> this.computeSettings(qp.qualifiers(),
+                                                                            parentSupplier,
+                                                                            qp.qualified(),
+                                                                            defaultSupplier,
+                                                                            rejectedProviders,
+                                                                            rejectedValues,
+                                                                            ambiguousValues));
   }
 
-  private final <T> Supplier<T> computeSupplier(final SupplierBroker broker,
-                                                final Qualifiers qualifiers,
+  private final <X> Settings<X> computeSettings(final Qualifiers qualifiers,
                                                 final Supplier<?> parentSupplier,
                                                 final Path path,
+                                                final Supplier<X> defaultSupplier,
                                                 final Consumer<? super Provider> rejectedProviders,
                                                 final Consumer<? super Value<?>> rejectedValues,
-                                                final Consumer<? super Value<?>> ambiguousValues,
-                                                final Supplier<T> defaultSupplier) {
-    final Value<T> value = this.value(broker, qualifiers, parentSupplier, path, rejectedProviders, rejectedValues, ambiguousValues);
+                                                final Consumer<? super Value<?>> ambiguousValues) {
+    final Value<X> value = this.value(qualifiers, parentSupplier, path, rejectedProviders, rejectedValues, ambiguousValues);
+    final Supplier<X> supplier;
     if (value == null) {
-      return defaultSupplier == null ? Settings::throwUnsupported : defaultSupplier;
+      if (defaultSupplier == null) {
+        supplier = Settings::throwUnsupported;
+      } else {
+        supplier = value;
+      }
     } else {
-      return value;
+      supplier = value;
     }
+    return new Settings<>(this.settingsCache, this.providers, qualifiers, parentSupplier, path, supplier);
   }
 
-  private final <T> Value<T> value(final SupplierBroker broker,
-                                   final Qualifiers qualifiers,
+  private final <T> Value<T> value(final Qualifiers qualifiers,
                                    final Supplier<?> parentSupplier,
                                    final Path path,
                                    final Consumer<? super Provider> rejectedProviders,
@@ -211,11 +222,11 @@ public class Settings<T> implements SupplierBroker {
       final Provider provider = providers instanceof List<? extends Provider> list ? list.get(0) : providers.iterator().next();
       if (provider == null) {
         return null;
-      } else if (!isSelectable(broker, qualifiers, parentSupplier, path, provider)) {
+      } else if (!this.isSelectable(qualifiers, parentSupplier, path, provider)) {
         rejectedProviders.accept(provider);
         return null;
       } else {
-        final Value<?> value = provider.get(broker, qualifiers, parentSupplier, path);
+        final Value<?> value = provider.get(this, qualifiers, parentSupplier, path);
         if (value == null) {
           return null;
         } else if (!isSelectable(qualifiers, path, value.qualifiers(), value.path())) {
@@ -232,8 +243,8 @@ public class Settings<T> implements SupplierBroker {
       Provider candidateProvider = null;
       int candidateQualifiersScore = Integer.MIN_VALUE;
       for (final Provider provider : providers) {
-        if (provider != null && isSelectable(broker, qualifiers, parentSupplier, path, provider)) {
-          Value<?> value = provider.get(broker, qualifiers, parentSupplier, path);
+        if (provider != null && this.isSelectable(qualifiers, parentSupplier, path, provider)) {
+          Value<?> value = provider.get(this, qualifiers, parentSupplier, path);
           VALUE_EVALUATION_LOOP:
           while (value != null) { // NOTE INFINITE LOOP POSSIBILITY; read carefully
             if (isSelectable(qualifiers, path, value.qualifiers(), value.path())) {
@@ -257,7 +268,7 @@ public class Settings<T> implements SupplierBroker {
                     value = null; // critical
                   } else if (valuePathSize == candidate.path().size()) {
                     final Value<?> disambiguatedValue =
-                      this.disambiguate(broker, qualifiers, parentSupplier, path, candidateProvider, candidate, provider, value);
+                      this.disambiguate(qualifiers, parentSupplier, path, candidateProvider, candidate, provider, value);
                     if (disambiguatedValue == null) {
                       ambiguousValues.accept(candidate);
                       ambiguousValues.accept(value);
@@ -330,8 +341,7 @@ public class Settings<T> implements SupplierBroker {
     }
   }
 
-  protected Value<?> disambiguate(final SupplierBroker broker,
-                                  final Qualifiers qualifiers,
+  protected Value<?> disambiguate(final Qualifiers qualifiers,
                                   final Supplier<?> parentSupplier,
                                   final Path path,
                                   final Provider p0,
@@ -354,16 +364,16 @@ public class Settings<T> implements SupplierBroker {
   public static final Settings<?> instance() {
     Settings<?> returnValue = instance.get();
     if (returnValue == null) {
-      final Settings<?> bootstrapSettings = new Settings<>();
+      final Settings<Void> bootstrapSettings = new Settings<>(Qualifiers.of());
       instance.compareAndSet(null,
-                             bootstrapSettings.supplier(bootstrapSettings,
-                                                        bootstrapSettings.qualifiers(),
-                                                        bootstrapSettings.parentSupplier(),
-                                                        bootstrapSettings.path().plus(Accessor.of("supplier"), Qualifiers.class),
-                                                        Settings::sink,
-                                                        Settings::sink,
-                                                        Settings::sink,
-                                                        () -> bootstrapSettings)
+                             bootstrapSettings.of(bootstrapSettings.qualifiers(),
+                                                  bootstrapSettings.parentSupplier(),
+                                                  bootstrapSettings.path().plus(Accessor.of("of"), Qualifiers.class),
+                                                  () -> bootstrapSettings,
+                                                  Settings::sink,
+                                                  Settings::sink,
+                                                  Settings::sink)
+                             .supplier()
                              .get());
       returnValue = instance.get();
       assert returnValue != null;
@@ -371,12 +381,11 @@ public class Settings<T> implements SupplierBroker {
     return returnValue;
   }
 
-  protected static final boolean isSelectable(final SupplierBroker broker,
-                                              final Qualifiers qualifiers,
-                                              final Supplier<?> parentSupplier,
-                                              final Path path,
-                                              final Provider provider) {
-    return path.isAssignable(provider.upperBound()) && provider.isSelectable(broker, qualifiers, parentSupplier, path);
+  protected final boolean isSelectable(final Qualifiers qualifiers,
+                                       final Supplier<?> parentSupplier,
+                                       final Path path,
+                                       final Provider provider) {
+    return path.isAssignable(provider.upperBound()) && provider.isSelectable(this, qualifiers, parentSupplier, path);
   }
 
   protected static final boolean isSelectable(final Qualifiers contextQualifiers,

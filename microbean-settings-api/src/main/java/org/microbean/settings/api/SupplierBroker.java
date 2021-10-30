@@ -23,16 +23,17 @@ import java.util.function.Supplier;
 
 import org.microbean.settings.api.Provider.Value;
 
-public interface SupplierBroker {
+public interface SupplierBroker<T> {
   
-  public <T> Supplier<T> supplier(final SupplierBroker broker,
-                                  final Qualifiers qualifiers,
+  public <X> SupplierBroker<X> of(final Qualifiers qualifiers,
                                   final Supplier<?> parentSupplier,
                                   final Path path,
+                                  final Supplier<X> defaultSupplier,
                                   final Consumer<? super Provider> rejectedProviders,
                                   final Consumer<? super Value<?>> rejectedValues,
-                                  final Consumer<? super Value<?>> ambiguousValues,
-                                  final Supplier<T> defaultSupplier);
+                                  final Consumer<? super Value<?>> ambiguousValues);
+
+  public Supplier<T> supplier();
 
   private static void sink(final Object ignored) {
 

@@ -29,7 +29,7 @@ public class ProxyingProvider extends AbstractProvider<Object> {
   }
 
   @Override // Provider
-  public boolean isSelectable(final SupplierBroker broker,
+  public boolean isSelectable(final SupplierBroker<?> broker,
                               final Qualifiers qualifiers,
                               final Supplier<?> parentSupplier,
                               final Path path) {
@@ -42,7 +42,7 @@ public class ProxyingProvider extends AbstractProvider<Object> {
   }
 
   @Override // Provider
-  public Value<?> get(final SupplierBroker broker,
+  public Value<?> get(final SupplierBroker<?> broker,
                       final Qualifiers qualifiers,
                       final Supplier<?> parentSupplier,
                       final Path path) {

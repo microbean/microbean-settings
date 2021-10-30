@@ -44,7 +44,7 @@ public abstract class AbstractProvider<T> implements Provider {
   }
   
   @Override // Provider
-  public boolean isSelectable(final SupplierBroker broker,
+  public boolean isSelectable(final SupplierBroker<?> broker,
                               final Qualifiers qualifiers,
                               final Supplier<?> parentSupplier,
                               final Path path) {
