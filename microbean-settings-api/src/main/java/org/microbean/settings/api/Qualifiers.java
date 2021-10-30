@@ -37,7 +37,7 @@ import static java.util.Collections.emptySortedSet;
 import static java.util.Collections.unmodifiableSortedMap;
 import static java.util.Collections.unmodifiableSortedSet;
 
-public class Qualifiers implements Assignable<Qualifiers> {
+public final class Qualifiers {
 
 
   private static final Qualifiers EMPTY_QUALIFIERS = new Qualifiers();
@@ -56,19 +56,19 @@ public class Qualifiers implements Assignable<Qualifiers> {
    */
 
 
-  public Qualifiers() {
+  private Qualifiers() {
     this(emptySortedMap());
   }
 
-  public Qualifiers(final Qualifier<?> qualifier) {
+  private Qualifiers(final Qualifier<?> qualifier) {
     this(new TreeMap<>(Map.of(qualifier.name(), qualifier.value())));
   }
 
-  public Qualifiers(final SortedSet<Qualifier<?>> qualifiers) {
+  private Qualifiers(final SortedSet<Qualifier<?>> qualifiers) {
     this(toMap(qualifiers));
   }
 
-  public Qualifiers(final SortedMap<String, ?> qualifiers) {
+  private Qualifiers(final SortedMap<String, ?> qualifiers) {
     super();
     this.qualifiers = qualifiers == null || qualifiers.isEmpty() ? emptySortedMap() : unmodifiableSortedMap(new TreeMap<>(qualifiers));
   }
@@ -81,42 +81,6 @@ public class Qualifiers implements Assignable<Qualifiers> {
 
   public final SortedMap<String, ?> qualifiers() {
     return this.qualifiers;
-  }
-
-  @Override // Assignable<Qualifiers>
-  public final Qualifiers assignable() {
-    return this;
-  }
-
-  @Override // Assignable<Qualifiers>
-  public boolean isAssignable(final Qualifiers payload) {
-    // Demand is for "red car".  Payload is, say, "red racing car".
-    // It matches, for some intuitive level of matching.
-    //
-    // But suppose the qualifier is "env=test", so "env=test car" is
-    // the demand.  Should "car" be assignable?  You *could* argue
-    // yes: this match would occur only if there were no more specific
-    // match.  It represents the "fallback" match: I couldn't give you
-    // a "env=test car" but I can give you this generic "car" as a
-    // fallback.  Note the *lack* of the "env" key.  Note also this is
-    // still subset semantics: the empty set (in "car") is a subset of
-    // "env=test".
-    //
-    // If demand is for "env=test car" and I have "env=production
-    // car", that shouldn't match, ever.  And with subset semantics
-    // this wouldn't.
-    //
-    // I *think* subset semantics are still the way to go.  Later on,
-    // during resolution, we will definitely apply different rules.
-    // Specifically, if there is a provider with "env=test car" and
-    // one with "env=test,color=red car" and the demand was, exactly,
-    // "env=test car", then the first provider would match and the
-    // second one would be jettisoned.
-    //
-    // TODO: this is the heart of the matter, isn't it?
-    //
-    // For now, implement CDI rules.
-    return this.isSubsetOf(payload);
   }
 
   public final boolean isEmpty() {
@@ -143,7 +107,7 @@ public class Qualifiers implements Assignable<Qualifiers> {
     return this.qualifiers.get(name);
   }
 
-  public Stream<Qualifier<?>> stream() {
+  public final Stream<Qualifier<?>> stream() {
     return this.qualifiers().entrySet().stream().map(Qualifier::of);
   }
 
@@ -156,24 +120,6 @@ public class Qualifiers implements Assignable<Qualifiers> {
     return q.isEmpty() ? emptySortedSet() : unmodifiableSortedSet(new TreeSet<>(q.entrySet().stream().map(Qualifier::of).toList()));
   }
 
-  final int relativeScore(final Qualifiers q1) {
-    if (q1 != null) {
-      final int intersectionSize = this.intersectionSize(q1);
-      if (intersectionSize > 0) {
-        if (intersectionSize == q1.size()) {
-          assert this.equals(q1);
-          return intersectionSize;
-        } else {
-          return intersectionSize - this.symmetricDifferenceSize(q1);
-        }
-      } else {
-        return -(this.size() + q1.size());
-      }
-    } else {
-      return -this.size();
-    }
-  }
-  
   public final int intersectionSize(final Qualifiers q1) {
     if (q1 == null || q1.isEmpty()) {
       return 0;
@@ -204,12 +150,12 @@ public class Qualifiers implements Assignable<Qualifiers> {
   }
 
   @Override // Object
-  public int hashCode() {
+  public final int hashCode() {
     return this.qualifiers().hashCode();
   }
 
   @Override // Object
-  public boolean equals(final Object other) {
+  public final boolean equals(final Object other) {
     if (other == this) {
       return true;
     } else if (other == null || this.getClass() != other.getClass()) {
@@ -220,7 +166,7 @@ public class Qualifiers implements Assignable<Qualifiers> {
   }
 
   @Override // Object
-  public String toString() {
+  public final String toString() {
     final StringJoiner sj = new StringJoiner(";");
     this.stream().map(Qualifier::toString).forEach(sj::add);
     return sj.toString();
@@ -290,36 +236,6 @@ public class Qualifiers implements Assignable<Qualifiers> {
     final SortedMap<String, Object> map = new TreeMap<>();
     qs.forEach(q -> map.put(q.name(), q.value()));
     return unmodifiableSortedMap(map);
-  }
-
-
-  /*
-   * Inner and nested classes.
-   */
-
-
-  // INCONSISTENT WITH EQUALS
-  public static final class SpecificityComparator implements Comparator<Qualifiers> {
-
-    public static final SpecificityComparator INSTANCE = new SpecificityComparator();
-
-    public SpecificityComparator() {
-      super();
-    }
-
-    @Override
-    public final int compare(final Qualifiers q0, final Qualifiers q1) {
-      if (q0 == null) {
-        return q1 == null ? 0 : -1;
-      } else if (q1 == null) {
-        return 1;
-      } else if (q0.equals(q1)) {
-        return 0;
-      } else {
-        return q0.size() - q1.size();
-      }
-    }
-
   }
 
 }

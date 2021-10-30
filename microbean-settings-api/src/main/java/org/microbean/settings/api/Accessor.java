@@ -21,14 +21,16 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 
-public record Accessor(String name, List<Class<?>> parameters, List<?> arguments) {
+// Arguments are Strings because they are informative only and
+// Accessors are contained by Paths which are often keys in maps.
+public record Accessor(String name, List<Class<?>> parameters, List<String> arguments) {
 
   public Accessor(final String name) {
     this(name, List.of(), List.of());
   }
 
   public Accessor(final int index) {
-    this("[" + index + "]", List.of(Integer.class), List.of(Integer.valueOf(index)));
+    this("[" + index + "]", List.of(Integer.class), List.of(Integer.toString(index)));
   }
   
   public Accessor {
@@ -74,6 +76,10 @@ public record Accessor(String name, List<Class<?>> parameters, List<?> arguments
 
   public static final Accessor of(final int index) {
     return new Accessor(index);
+  }
+
+  public static final Accessor of(final String name, final List<Class<?>> parameters, final List<String> arguments) {
+    return new Accessor(name, parameters, arguments);
   }
   
 }

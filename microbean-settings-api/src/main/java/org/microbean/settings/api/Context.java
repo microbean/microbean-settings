@@ -22,7 +22,9 @@ import java.util.Objects;
 
 import java.util.function.Supplier;
 
-public record Context<T>(T object, Path path) implements Assignable<Type>, Supplier<T> {
+import org.microbean.development.annotation.Convenience;
+
+public record Context<T>(SupplierBroker broker, Qualifiers qualifiers, T object, Path path) {
 
 
   /*
@@ -30,15 +32,8 @@ public record Context<T>(T object, Path path) implements Assignable<Type>, Suppl
    */
 
 
-  public Context(final Type type) {
-    this(null, Path.of(type));
-  }
-  
-  public Context(final Path path) {
-    this(null, path);
-  }
-
   public Context {
+    Objects.requireNonNull(qualifiers, "qualifiers");
     Objects.requireNonNull(path, "path");
   }
 
@@ -48,43 +43,20 @@ public record Context<T>(T object, Path path) implements Assignable<Type>, Suppl
    */
 
 
-  @Override // Assignable<Type>
-  public final Type assignable() {
-    return this.type();
-  }
-
-  @Override // Assignable<Type>
-  public final boolean isAssignable(final Type type) {
-    return AssignableType.of(this.assignable()).isAssignable(type);
-  }
-
-  @Override // Supplier<T>
-  public final T get() {
-    return this.object();
-  }
-  
+  @Convenience
   public final Type type() {
     return this.path().type();
   }
-
+  
   @SuppressWarnings("unchecked")
   public final <U extends T> Context<U> with(final U object) {
-    return object == this.object() ? (Context<U>)this : new Context<>(object, this.path());
+    return object == this.object() ? (Context<U>)this : new Context<>(this.broker(), this.qualifiers(), object, this.path());
   }
 
 
   /*
    * Static methods.
    */
-
-
-  public static final Context<?> of(final Type type) {
-    return new Context<>(type);
-  }
-
-  public static final Context<?> of(final Path path) {
-    return new Context<>(path);
-  }
 
 
 }

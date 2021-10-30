@@ -42,8 +42,8 @@ public abstract class AbstractProvider<T> implements Provider {
   }
   
   @Override // Provider
-  public boolean isSelectable(final Qualifiers contextQualifiers, final Context<?> context) {
-    return AssignableType.of(context.type()).isAssignable(this.upperBound());
+  public boolean isSelectable(final Context<?> context) {
+    return AssignableType.of(context.path().type()).isAssignable(this.upperBound());
   }
   
 }

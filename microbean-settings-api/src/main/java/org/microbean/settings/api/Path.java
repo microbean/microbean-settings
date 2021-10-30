@@ -36,16 +36,16 @@ public final class Path implements Assignable<Type> {
     this.elements = List.of(void.class);
   }
 
+  private Path(final Type type) {
+    this(List.of(), List.of(), type);
+  }
+
   private Path(final Accessor accessor, final Type type) {
     this(List.of(), List.of(accessor), type);
   }
 
   private Path(final List<? extends Accessor> accessors, final Type type) {
     this(List.of(), accessors, type);
-  }
-
-  private Path(final Type type) {
-    this(List.of(), List.of(), type);
   }
 
   private Path(final List<?> existingElements, final List<? extends Accessor> accessors, final Type type) {
@@ -68,6 +68,12 @@ public final class Path implements Assignable<Type> {
       case 3:
         this.elements = List.of(accessors.get(0), accessors.get(1), accessors.get(2), type);
         break;
+      case 4:
+        this.elements = List.of(accessors.get(0), accessors.get(1), accessors.get(2), accessors.get(3), type);
+        break;
+      case 5:
+        this.elements = List.of(accessors.get(0), accessors.get(1), accessors.get(2), accessors.get(3), accessors.get(4), type);
+        break;
       default:
         final List<Object> elements = new ArrayList<>(accessors.size() + 1);
         for (final Accessor a : accessors) {
@@ -87,12 +93,6 @@ public final class Path implements Assignable<Type> {
     }
   }
 
-  /*
-  public final boolean isAbsolute() {
-    return this.elements.get(0) == void.class;
-  }
-  */
-
   @Override // Assignable<Type>
   public final Type assignable() {
     return this.type();
@@ -102,7 +102,7 @@ public final class Path implements Assignable<Type> {
   public final boolean isAssignable(final Type type) {
     return AssignableType.of(this.assignable()).isAssignable(type);
   }
-  
+
   public final int indexOf(final Path path, final BiPredicate<? super Object, ? super Object> p) {
     final int pathSize = path.size();
     final int sizeDiff = this.size() - pathSize;
@@ -163,7 +163,7 @@ public final class Path implements Assignable<Type> {
     return this.merge(List.of(accessor), type);
   }
 
-    // Drops the intermediate type.
+  // Drops the intermediate type.
   public final Path merge(final List<? extends Accessor> accessors, final Type type) {
     return new Path(this.elements.subList(0, this.elements.size() - 1), accessors, type);
   }
@@ -216,45 +216,20 @@ public final class Path implements Assignable<Type> {
     return this.elements.toString();
   }
 
+  public static final Path of() {
+    return ROOT;
+  }
+
   public static final Path of(final Type type) {
     return new Path(type);
   }
-
-  public static final Path of(final String accessor, final Type type) {
-    return new Path(Accessor.of(accessor), type);
-  }
-
-  /*
-  public static final Path ofAbsolute(final String accessor, final Type type) {
-    return root().plus(accessor, type);
-  }
-  */
 
   public static final Path of(final Accessor accessor, final Type type) {
     return new Path(accessor, type);
   }
 
-  /*
-  public static final Path ofAbsolute(final Accessor accessor, final Type type) {
-    return root().plus(accessor, type);
-  }
-  */
-
-
   public static final Path of(final List<? extends Accessor> accessors, final Type type) {
     return new Path(accessors, type);
   }
-
-  /*
-  public static final Path ofAbsolute(final List<? extends Accessor> accessors, final Type type) {
-    return root().plus(accessors, type);
-  }
-  */
-
-  /*
-  public static final Path root() {
-    return ROOT;
-  }
-  */
 
 }

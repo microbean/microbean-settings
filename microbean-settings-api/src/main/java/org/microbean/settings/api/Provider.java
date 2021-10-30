@@ -34,8 +34,8 @@ public interface Provider {
 
   /**
    * Returns a {@link Type} representing the upper bound of all
-   * possible {@link Value}s {@linkplain #get(Qualifiers, Context)
-   * supplied} by this {@link Provider}.
+   * possible {@link Value}s {@linkplain #get(Context) supplied} by
+   * this {@link Provider}.
    *
    * <p>Implementations of this method must not return {@code
    * null}.</p>
@@ -44,8 +44,8 @@ public interface Provider {
    * Object Object.class}.</p>
    *
    * @return a {@link Type} representing the upper bound of all
-   * possible {@link Value}s {@linkplain #get(Qualifiers, Context)
-   * supplied} by this {@link Provider}; never {@code null}
+   * possible {@link Value}s {@linkplain #get(Context) supplied} by
+   * this {@link Provider}; never {@code null}
    *
    * @nullability Implementations of this method must not return
    * {@code null}.
@@ -63,15 +63,11 @@ public interface Provider {
   /**
    * Returns {@code true} if this {@link Provider} should be
    * considered for potentially satisfying the demand represented by
-   * the supplied {@link Qualifiers} and {@link Context}.
+   * the supplied {@link Context}.
    *
    * <p>This method will be called immediately before any invocation
-   * of the {@link #get(Qualifiers, Context)} method, and if it
-   * returns {@code false} no {@link #get(Qualifiers, Context)}
-   * invocation will occur.</p>
-   *
-   * @param contextQualifiers the {@link Qualifiers} qualifying the
-   * supplied {@link Context}; must not be {@code null}
+   * of the {@link #get(Context)} method, and if it returns {@code
+   * false} no {@link #get(Context)} invocation will occur.</p>
    *
    * @param context the {@link Context} representing demand; must not
    * be {@code null}
@@ -85,12 +81,12 @@ public interface Provider {
    * @threadsafety Implementations of this method must be safe for
    * concurrent use by multiple threads.
    */
-  public boolean isSelectable(final Qualifiers contextQualifiers, final Context<?> context);
+  public boolean isSelectable(final Context<?> context);
 
   /**
    * Returns a {@link Value} suitable for the supplied {@link
-   * Qualifiers} and {@link Context}, or {@code null} if the
-   * represented request is inappropriate or cannot be satisfied.
+   * Context}, or {@code null} if the represented request is
+   * inappropriate or cannot be satisfied.
    *
    * <p>Implementations of this method may, and often do, return
    * {@code null}.</p>
@@ -104,14 +100,11 @@ public interface Provider {
    * may, of course, return {@code null} from its {@link Value#get()}
    * method at any point for any reason.)</p>
    *
-   * @param contextQualifiers the {@link Qualifiers} qualifying the
-   * supplied {@link Context}; must not be {@code null}
-   *
    * @param context the {@link Context} representing demand; must not
    * be {@code null}
    *
    * @return a {@link Value} suitable for the supplied {@link
-   * Qualifiers} and {@link Context}, or {@code null}
+   * Context}, or {@code null}
    *
    * @nullability Implementations of this method may return {@code
    * null}.
@@ -122,7 +115,7 @@ public interface Provider {
    * @threadsafety Implementations of this method must be safe for
    * concurrent use by multiple threads.
    */
-  public Value<?> get(final Qualifiers contextQualifiers, final Context<?> context);
+  public Value<?> get(final Context<?> context);
 
 
   /*

@@ -45,16 +45,6 @@ final class TestQualifiersComparators {
   }
 
   @Test
-  final void testSpecificityComparatorSizeBasedOrderingAscending() {
-    final Qualifiers q0 = Qualifiers.of("a", "b", "c", "d");
-    final Qualifiers q1 = Qualifiers.of();
-    final List<Qualifiers> list = arrayListOf(q0, q1);
-    Collections.sort(list, Qualifiers.SpecificityComparator.INSTANCE);
-    assertSame(q1, list.get(0));
-    assertSame(q0, list.get(1));
-  }
-
-  @Test
   final void testScorer() {
     final Qualifiers a = Qualifiers.of("a", "x");
     final Scorer s = new Scorer(a);
