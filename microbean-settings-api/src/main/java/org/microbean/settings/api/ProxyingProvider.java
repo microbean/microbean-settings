@@ -65,27 +65,66 @@ public class ProxyingProvider extends AbstractProvider<Object> {
 
 
   @Override // Provider
-  public boolean isSelectable(final SupplierBroker<?> broker,
-                              final Qualifiers qualifiers,
-                              final Supplier<?> parentSupplier,
-                              final Path path) {
-    return super.isSelectable(broker, qualifiers, parentSupplier, path) && this.isProxiable(path);
+  public final boolean isSelectable(final SupplierBroker<?> broker,
+                                    final Qualifiers qualifiers,
+                                    final Supplier<?> parentSupplier,
+                                    final Path path) {
+    return
+      super.isSelectable(broker, qualifiers, parentSupplier, path) &&
+      this.isProxiable(broker, qualifiers, parentSupplier, path);
   }
 
-  public boolean isProxiable(final Path path) {
+  protected boolean isProxiable(final SupplierBroker<?> broker,
+                                final Qualifiers qualifiers,
+                                final Supplier<?> parentSupplier,
+                                final Path path) {
     return path.type() instanceof Class<?> c && c.isInterface();
   }
 
   @Override // Provider
-  public Value<?> get(final SupplierBroker<?> broker,
+  public final Value<?> get(final SupplierBroker<?> broker,
+                            final Qualifiers qualifiers,
+                            final Supplier<?> parentSupplier,
+                            final Path path) {
+    return
+      new Value<>(this.qualifiers(broker, qualifiers, parentSupplier, path),
+                  this.path(broker, qualifiers, parentSupplier, path),
+                  this.proxies.computeIfAbsent(broker.path().plus(path),
+                                               p -> this.newProxyInstance(broker,
+                                                                          qualifiers,
+                                                                          parentSupplier,
+                                                                          path,
+                                                                          Types.erase(path.type()))));
+  }
+
+  protected Qualifiers qualifiers(final SupplierBroker<?> broker,
+                                  final Qualifiers qualifiers,
+                                  final Supplier<?> parentSupplier,
+                                  final Path path) {
+    return Qualifiers.of();
+  }
+
+  protected Path path(final SupplierBroker<?> broker,
                       final Qualifiers qualifiers,
                       final Supplier<?> parentSupplier,
                       final Path path) {
+    return Path.of(path.type());
+  }
+
+  protected Proxy newProxyInstance(final SupplierBroker<?> broker,
+                                   final Qualifiers qualifiers,
+                                   final Supplier<?> parentSupplier,
+                                   final Path path,
+                                   final Class<?> iface) {
     return
-      new Value<>(Qualifiers.of(),
-                  Path.of(path.type()),
-                  this.proxies.computeIfAbsent(broker.path().plus(path),
-                                               p -> computeProxy(broker, path)));
+      (Proxy)Proxy.newProxyInstance(iface.getClassLoader(),
+                                    new Class<?>[] { iface },
+                                    new Handler(broker,
+                                                (m, args) -> Path.of(Accessor.of(propertyName(m.getName(),
+                                                                                              boolean.class == m.getReturnType()),
+                                                                                 Arrays.asList(m.getParameterTypes()),
+                                                                                 stringArgs(args)),
+                                                                     m.getGenericReturnType())));
   }
 
 
@@ -93,19 +132,6 @@ public class ProxyingProvider extends AbstractProvider<Object> {
    * Static methods.
    */
 
-
-  private static final Object computeProxy(final SupplierBroker<?> broker, final Path path) {
-    final Class<?> c = Types.erase(path.type());
-    return
-      Proxy.newProxyInstance(c.getClassLoader(),
-                             new Class<?>[] { c },
-                             new Handler(broker,
-                                         (m, args) -> Path.of(Accessor.of(propertyName(m.getName(),
-                                                                                       boolean.class == m.getReturnType()),
-                                                                          Arrays.asList(m.getParameterTypes()),
-                                                                          stringArgs(args)),
-                                                              m.getGenericReturnType())));
-  }
 
   private static final List<String> stringArgs(final Object[] args) {
     if (args == null || args.length <= 0) {
