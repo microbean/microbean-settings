@@ -206,7 +206,7 @@ public class Settings<P, T> implements SupplierBroker<T> {
   @Override // SupplierBroker
   public final <U> Settings<T, U> plus(final Path path,
                                        final Supplier<U> defaultSupplier) {
-    return this.plus(path, defaultSupplier, Settings::sink, Settings::sink, Settings::sink);
+    return this.plus(path, defaultSupplier, this.rejectedProvidersConsumerSupplier.get(), this.rejectedValuesConsumerSupplier.get(), this.ambiguousValuesConsumerSupplier.get());
   }
 
   public final <U> Settings<T, U> plus(final Path path,
@@ -237,7 +237,7 @@ public class Settings<P, T> implements SupplierBroker<T> {
                                         final Supplier<Q> parentSupplier,
                                         final Path path,
                                         final Supplier<U> defaultSupplier) {
-    return this.of(qualifiers, parentSupplier, path, defaultSupplier, Settings::sink, Settings::sink, Settings::sink);
+    return this.of(qualifiers, parentSupplier, path, defaultSupplier, this.rejectedProvidersConsumerSupplier.get(), this.rejectedValuesConsumerSupplier.get(), this.ambiguousValuesConsumerSupplier.get());
   }
 
   @SuppressWarnings("unchecked")
@@ -443,7 +443,7 @@ public class Settings<P, T> implements SupplierBroker<T> {
     if (returnValue == null) {
       final Settings<Void, Void> bootstrapSettings = new Settings<>(Qualifiers.of());
       returnValue =
-        bootstrapSettings.plus(Path.of(Accessor.of("plus"), Settings.class), () -> bootstrapSettings).get();       
+        bootstrapSettings.plus(Path.of(Accessor.of("plus"), Settings.class), () -> bootstrapSettings).get();
       if (!instance.compareAndSet(null, returnValue)) {
         returnValue = instance.get();
       }
