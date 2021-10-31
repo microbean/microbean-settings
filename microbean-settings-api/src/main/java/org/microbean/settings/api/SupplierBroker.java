@@ -24,17 +24,11 @@ import org.microbean.settings.api.Provider.Value;
 public interface SupplierBroker<T> extends Supplier<T> {
 
   public <U> SupplierBroker<U> plus(final Path path,
-                                    final Supplier<U> defaultSupplier,
-                                    final Consumer<? super Provider> rejectedProviders,
-                                    final Consumer<? super Value<?>> rejectedValues,
-                                    final Consumer<? super Value<?>> ambiguousValues);
+                                    final Supplier<U> defaultSupplier);
   
   public <P, U> SupplierBroker<U> of(final Qualifiers qualifiers,
                                      final Supplier<P> parentSupplier,
                                      final Path path,
-                                     final Supplier<U> defaultSupplier,
-                                     final Consumer<? super Provider> rejectedProviders,
-                                     final Consumer<? super Value<?>> rejectedValues,
-                                     final Consumer<? super Value<?>> ambiguousValues);
+                                     final Supplier<U> defaultSupplier);
 
 }

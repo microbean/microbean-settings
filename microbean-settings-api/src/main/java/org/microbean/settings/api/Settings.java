@@ -63,6 +63,12 @@ public class Settings<P, T> implements SupplierBroker<T> {
 
   private final Path path;
 
+  private final Supplier<? extends Consumer<? super Provider>> rejectedProvidersConsumerSupplier;
+
+  private final Supplier<? extends Consumer<? super Value<?>>> rejectedValuesConsumerSupplier;
+
+  private final Supplier<? extends Consumer<? super Value<?>>> ambiguousValuesConsumerSupplier;
+
 
   /*
    * Constructors.
@@ -87,6 +93,9 @@ public class Settings<P, T> implements SupplierBroker<T> {
     this.supplier = Settings::returnNull;
     this.qualifiers =
       this.of(Qualifiers.of(), this.parentSupplier(), this.path().plus(Accessor.of("supplier"), Qualifiers.class), Qualifiers::of).get();
+    this.rejectedValuesConsumerSupplier = Settings::generateSink;
+    this.rejectedProvidersConsumerSupplier = Settings::generateSink;
+    this.ambiguousValuesConsumerSupplier = Settings::generateSink;
   }
 
   public Settings(final Qualifiers qualifiers) {
@@ -143,6 +152,18 @@ public class Settings<P, T> implements SupplierBroker<T> {
                   final Supplier<P> parentSupplier,
                   final Path path,
                   final Supplier<T> supplier) {
+    this(settingsCache, providers, qualifiers, parentSupplier, path, supplier, Settings::generateSink, Settings::generateSink, Settings::generateSink);
+  }
+
+  public Settings(final BiFunction<? super Qualified.Record<Path>, Function<? super Qualified.Record<Path>, ? extends Settings<?, ?>>, ? extends Settings<?, ?>> settingsCache,
+                  final Collection<? extends Provider> providers,
+                  final Qualifiers qualifiers,
+                  final Supplier<P> parentSupplier,
+                  final Path path,
+                  final Supplier<T> supplier,
+                  final Supplier<? extends Consumer<? super Provider>> rejectedProvidersConsumerSupplier,
+                  final Supplier<? extends Consumer<? super Value<?>>> rejectedValuesConsumerSupplier,
+                  final Supplier<? extends Consumer<? super Value<?>>> ambiguousValuesConsumerSupplier) {
     super();
     this.settingsCache = Objects.requireNonNull(settingsCache, "settingsCache");
     this.providers = List.copyOf(providers);
@@ -150,6 +171,9 @@ public class Settings<P, T> implements SupplierBroker<T> {
     this.parentSupplier = Objects.requireNonNull(parentSupplier, "parentSupplier");
     this.path = Objects.requireNonNull(path, "path");
     this.supplier = Objects.requireNonNull(supplier, "supplier");
+    this.rejectedProvidersConsumerSupplier = Objects.requireNonNull(rejectedProvidersConsumerSupplier, "rejectedProvidersConsumerSupplier");
+    this.rejectedValuesConsumerSupplier = Objects.requireNonNull(rejectedValuesConsumerSupplier, "rejectedValuesConsumerSupplier");
+    this.ambiguousValuesConsumerSupplier = Objects.requireNonNull(ambiguousValuesConsumerSupplier, "ambiguousValuesConsumerSupplier");
   }
 
 
@@ -179,12 +203,12 @@ public class Settings<P, T> implements SupplierBroker<T> {
     return this.supplier.get();
   }
 
+  @Override // SupplierBroker
   public final <U> Settings<T, U> plus(final Path path,
                                        final Supplier<U> defaultSupplier) {
     return this.plus(path, defaultSupplier, Settings::sink, Settings::sink, Settings::sink);
   }
 
-  @Override // SupplierBroker
   public final <U> Settings<T, U> plus(final Path path,
                                        final Supplier<U> defaultSupplier,
                                        final Consumer<? super Provider> rejectedProviders,
@@ -208,6 +232,7 @@ public class Settings<P, T> implements SupplierBroker<T> {
     return this.of(parent.qualifiers(), parent, parent.path().plus(path), defaultSupplier, rejectedProviders, rejectedValues, ambiguousValues);
   }
 
+  @Override // SupplierBroker
   public final <Q, U> Settings<Q, U> of(final Qualifiers qualifiers,
                                         final Supplier<Q> parentSupplier,
                                         final Path path,
@@ -215,7 +240,6 @@ public class Settings<P, T> implements SupplierBroker<T> {
     return this.of(qualifiers, parentSupplier, path, defaultSupplier, Settings::sink, Settings::sink, Settings::sink);
   }
 
-  @Override // SupplierBroker
   @SuppressWarnings("unchecked")
   public final <Q, U> Settings<Q, U> of(final Qualifiers qualifiers,
                                         final Supplier<Q> parentSupplier,
@@ -454,6 +478,10 @@ public class Settings<P, T> implements SupplierBroker<T> {
 
   private static final void sink(final Object ignored) {
 
+  }
+
+  private static final Consumer<Object> generateSink() {
+    return Settings::sink;
   }
 
 
