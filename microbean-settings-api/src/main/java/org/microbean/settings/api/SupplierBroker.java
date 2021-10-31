@@ -23,6 +23,8 @@ import org.microbean.settings.api.Provider.Value;
 
 public interface SupplierBroker<T> extends Supplier<T> {
 
+  public Path path();
+  
   public <U> SupplierBroker<U> plus(final Path path,
                                     final Supplier<U> defaultSupplier);
   

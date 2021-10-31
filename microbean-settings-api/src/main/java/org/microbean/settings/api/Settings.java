@@ -194,6 +194,7 @@ public class Settings<P, T> implements SupplierBroker<T> {
     return this.parentSupplier;
   }
 
+  @Override // SupplierBroker
   public final Path path() {
     return this.path;
   }
