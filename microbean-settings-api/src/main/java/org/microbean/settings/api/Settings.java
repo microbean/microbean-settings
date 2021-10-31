@@ -43,7 +43,7 @@ public class Settings<P, T> implements SupplierBroker<T> {
    */
 
 
-  private static final AtomicReference<Settings<?, ?>> instance = new AtomicReference<>();
+  private static final AtomicReference<Settings<Void, Void>> instance = new AtomicReference<>();
 
 
   /*
@@ -372,6 +372,13 @@ public class Settings<P, T> implements SupplierBroker<T> {
     }
   }
 
+  protected final boolean isSelectable(final Qualifiers qualifiers,
+                                       final Supplier<?> parentSupplier,
+                                       final Path path,
+                                       final Provider provider) {
+    return path.isAssignable(provider.upperBound()) && provider.isSelectable(this, qualifiers, parentSupplier, path);
+  }
+
   protected int score(final Qualifiers contextQualifiers, final Qualifiers valueQualifiers) {
     final int intersectionSize = contextQualifiers.intersectionSize(valueQualifiers);
     if (intersectionSize > 0) {
@@ -407,33 +414,18 @@ public class Settings<P, T> implements SupplierBroker<T> {
     return LoadedProviders.loadedProviders;
   }
 
-  public static final Settings<?, ?> instance() {
-    Settings<?, ?> returnValue = instance.get();
+  public static final Settings<Void, Void> instance() {
+    Settings<Void, Void> returnValue = instance.get();
     if (returnValue == null) {
       final Settings<Void, Void> bootstrapSettings = new Settings<>(Qualifiers.of());
-      instance.compareAndSet(null,
-                             bootstrapSettings.plus(Path.of(Accessor.of("of"), Qualifiers.class), () -> bootstrapSettings)
-                             /*
-                             bootstrapSettings.of(bootstrapSettings.qualifiers(),
-                                                  bootstrapSettings.parentSupplier(),
-                                                  bootstrapSettings.path().plus(Accessor.of("of"), Qualifiers.class),
-                                                  () -> bootstrapSettings,
-                                                  Settings::sink,
-                                                  Settings::sink,
-                                                  Settings::sink)
-                             */
-                             .get());
-      returnValue = instance.get();
+      returnValue =
+        bootstrapSettings.plus(Path.of(Accessor.of("plus"), Settings.class), () -> bootstrapSettings).get();       
+      if (!instance.compareAndSet(null, returnValue)) {
+        returnValue = instance.get();
+      }
       assert returnValue != null;
     }
     return returnValue;
-  }
-
-  protected final boolean isSelectable(final Qualifiers qualifiers,
-                                       final Supplier<?> parentSupplier,
-                                       final Path path,
-                                       final Provider provider) {
-    return path.isAssignable(provider.upperBound()) && provider.isSelectable(this, qualifiers, parentSupplier, path);
   }
 
   protected static final boolean isSelectable(final Qualifiers contextQualifiers,
