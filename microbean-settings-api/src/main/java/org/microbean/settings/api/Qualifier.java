@@ -16,25 +16,87 @@
  */
 package org.microbean.settings.api;
 
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 
-public record Qualifier<T>(String name, T value) implements Assignable<Qualifier<T>> {
+public final class Qualifier {
 
-  public static final String VALUE = "value";
 
-  public Qualifier(final CharSequence name, final T value) {
-    this(name.toString(), value);
+  /*
+   * Static fields.
+   */
+
+
+  private static final String VALUE = "value";
+
+
+  /*
+   * Instance fields.
+   */
+
+
+  private final String name;
+
+  private final String value;
+
+
+  /*
+   * Constructors.
+   */
+
+
+  public Qualifier(final CharSequence value) {
+    this(VALUE, value);
   }
-  
-  public Qualifier {
-    name = Objects.requireNonNull(name, "name");
-    value = Objects.requireNonNull(value, "value"); // value better be immutable
+
+  public Qualifier(final CharSequence name, final CharSequence value) {
+    super();
+    this.name = Objects.requireNonNull(name, "name").toString();
+    this.value = Objects.requireNonNull(value, "value").toString();
   }
 
-  @Override // Assignable<Qualifier>
-  public final Qualifier<T> assignable() {
-    return this;
+
+  /*
+   * Instance methods.
+   */
+
+
+  public final String name() {
+    return this.name;
+  }
+
+  public final String value() {
+    return this.value;
+  }
+
+  @Override
+  public final int hashCode() {
+    int hashCode = 17;
+    Object v = this.name();
+    int c = v == null ? 0 : v.hashCode();
+    hashCode = 37 * hashCode + c;
+    v = this.value();
+    c = v == null ? 0 : v.hashCode();
+    return 37 * hashCode + c;
+  }
+
+  @Override
+  public final boolean equals(final Object other) {
+    if (other == this) {
+      return true;
+    } else if (other == null || this.getClass() != other.getClass()) {
+      return false;
+    } else {
+      final Qualifier her = (Qualifier)other;
+      return
+        Objects.equals(this.name(), her.name()) &&
+        Objects.equals(this.value(), her.value());
+    }
+  }
+
+  public final Entry<String, String> toEntry() {
+    return Map.entry(this.name(), this.value());
   }
 
   @Override // Object
@@ -42,20 +104,26 @@ public record Qualifier<T>(String name, T value) implements Assignable<Qualifier
     return toString(this.name(), this.value());
   }
 
-  public static final String toString(final CharSequence name, final Object value) {
+
+  /*
+   * Static methods.
+   */
+
+
+  public static final String toString(final CharSequence name, final CharSequence value) {
     return String.valueOf(name) + "=" + String.valueOf(value);
   }
-  
-  public static final <T> Qualifier<T> of(final Entry<? extends CharSequence, ? extends T> e) {
+
+  public static final Qualifier of(final Entry<? extends CharSequence, ? extends CharSequence> e) {
     return of(e.getKey(), e.getValue());
   }
 
-  public static final <T> Qualifier<T> of(final T value) {
+  public static final Qualifier of(final CharSequence value) {
     return of(VALUE, value);
   }
 
-  public static final <T> Qualifier<T> of(final CharSequence name, final T value) {
-    return new Qualifier<>(name, value);
+  public static final Qualifier of(final CharSequence name, final CharSequence value) {
+    return new Qualifier(name, value);
   }
-  
+
 }

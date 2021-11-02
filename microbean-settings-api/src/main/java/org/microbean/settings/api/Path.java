@@ -160,7 +160,7 @@ public final class Path implements Assignable<Type> {
       return new Path(this.elements, List.of(Accessor.of()), path.type());
     } else {
       assert size > 1;
-      assert path.isAccessor(0);
+      assert path.isType(0) ? path.getType(0) == void.class : path.isAccessor(0);
       assert path.isType(size - 1);
       final List<Object> newElements = new ArrayList<>(this.elements);
       newElements.addAll(path.elements.subList(0, size - 1));

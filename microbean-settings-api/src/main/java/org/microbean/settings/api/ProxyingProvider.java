@@ -65,66 +65,70 @@ public class ProxyingProvider extends AbstractProvider<Object> {
 
 
   @Override // Provider
-  public final boolean isSelectable(final SupplierBroker<?> broker,
+  public final boolean isSelectable(final ConfiguredSupplier<?> caller,
                                     final Qualifiers qualifiers,
                                     final Supplier<?> parentSupplier,
                                     final Path path) {
     return
-      super.isSelectable(broker, qualifiers, parentSupplier, path) &&
-      this.isProxiable(broker, qualifiers, parentSupplier, path);
+      super.isSelectable(caller, qualifiers, parentSupplier, path) &&
+      this.isProxiable(caller, qualifiers, parentSupplier, path);
   }
 
-  protected boolean isProxiable(final SupplierBroker<?> broker,
+  protected boolean isProxiable(final ConfiguredSupplier<?> caller,
                                 final Qualifiers qualifiers,
                                 final Supplier<?> parentSupplier,
                                 final Path path) {
-    return path.type() instanceof Class<?> c && c.isInterface();
+    return
+      path.type() instanceof Class<?> c &&
+      c.isInterface() &&
+      !c.isHidden() &&
+      !c.isSealed();
   }
 
   @Override // Provider
-  public final Value<?> get(final SupplierBroker<?> broker,
+  public final Value<?> get(final ConfiguredSupplier<?> caller,
                             final Qualifiers qualifiers,
                             final Supplier<?> parentSupplier,
                             final Path path) {
     return
-      new Value<>(this.qualifiers(broker, qualifiers, parentSupplier, path),
-                  this.path(broker, qualifiers, parentSupplier, path),
-                  this.proxies.computeIfAbsent(broker.path().plus(path),
-                                               p -> this.newProxyInstance(broker,
+      new Value<>(this.qualifiers(caller, qualifiers, parentSupplier, path),
+                  this.path(caller, qualifiers, parentSupplier, path),
+                  this.proxies.computeIfAbsent(caller.path().plus(path),
+                                               p -> this.newProxyInstance(caller,
                                                                           qualifiers,
                                                                           parentSupplier,
                                                                           path,
                                                                           Types.erase(path.type()))));
   }
 
-  protected Qualifiers qualifiers(final SupplierBroker<?> broker,
+  protected Qualifiers qualifiers(final ConfiguredSupplier<?> caller,
                                   final Qualifiers qualifiers,
                                   final Supplier<?> parentSupplier,
                                   final Path path) {
     return Qualifiers.of();
   }
 
-  protected Path path(final SupplierBroker<?> broker,
+  protected Path path(final ConfiguredSupplier<?> caller,
                       final Qualifiers qualifiers,
                       final Supplier<?> parentSupplier,
                       final Path path) {
     return Path.of(path.type());
   }
 
-  protected Proxy newProxyInstance(final SupplierBroker<?> broker,
-                                   final Qualifiers qualifiers,
-                                   final Supplier<?> parentSupplier,
-                                   final Path path,
-                                   final Class<?> iface) {
+  protected Object newProxyInstance(final ConfiguredSupplier<?> caller,
+                                    final Qualifiers qualifiers,
+                                    final Supplier<?> parentSupplier,
+                                    final Path path,
+                                    final Class<?> classToProxy) {
     return
-      (Proxy)Proxy.newProxyInstance(iface.getClassLoader(),
-                                    new Class<?>[] { iface },
-                                    new Handler(broker,
-                                                (m, args) -> Path.of(Accessor.of(propertyName(m.getName(),
-                                                                                              boolean.class == m.getReturnType()),
-                                                                                 Arrays.asList(m.getParameterTypes()),
-                                                                                 stringArgs(args)),
-                                                                     m.getGenericReturnType())));
+      Proxy.newProxyInstance(classToProxy.getClassLoader(),
+                             new Class<?>[] { classToProxy },
+                             new Handler(caller,
+                                         (m, args) -> Path.of(Accessor.of(propertyName(m.getName(),
+                                                                                       boolean.class == m.getReturnType()),
+                                                                          Arrays.asList(m.getParameterTypes()),
+                                                                          stringArgs(args)),
+                                                              m.getGenericReturnType())));
   }
 
 
@@ -251,22 +255,21 @@ public class ProxyingProvider extends AbstractProvider<Object> {
 
   private static final class Handler implements InvocationHandler {
 
-    private final SupplierBroker<?> broker;
+    private final ConfiguredSupplier<?> caller;
 
     private final BiFunction<? super Method, ? super Object[], ? extends Path> pathFunction;
 
-    private Handler(final SupplierBroker<?> broker,
+    private Handler(final ConfiguredSupplier<?> caller,
                     final BiFunction<? super Method, ? super Object[], ? extends Path> pathFunction) {
       super();
-      this.broker = Objects.requireNonNull(broker, "broker");
+      this.caller = Objects.requireNonNull(caller, "caller");
       this.pathFunction = Objects.requireNonNull(pathFunction, "pathFunction");
     }
 
     @Override // InvocationHandler
     public final Object invoke(final Object proxy, final Method m, final Object[] args) throws ReflectiveOperationException {
-      final Object returnValue;
       if (m.getDeclaringClass() == Object.class) {
-        returnValue =
+        return
           switch (m.getName()) {
           case "hashCode" -> System.identityHashCode(proxy);
           case "equals" -> proxy == args[0];
@@ -274,19 +277,21 @@ public class ProxyingProvider extends AbstractProvider<Object> {
           default -> throw new AssertionError("method: " + m);
           };
       } else {
-        final SupplierBroker<Object> broker = this.broker.plus(this.pathFunction.apply(m, args), () -> defaultValue(proxy, m, args));
-        returnValue = broker.get();
+        final Object returnType = m.getReturnType();
+        if (returnType == void.class || returnType == Void.class) {
+          return defaultValue(proxy, m, args);
+        } else {
+          return this.caller.plus(this.pathFunction.apply(m, args), () -> defaultValue(proxy, m, args)).get();
+        }
       }
-      return returnValue;
     }
 
     private static final Object defaultValue(final Object proxy, final Method m, final Object[] args) {
-      final Object returnValue;
       if (m.isDefault()) {
         try {
           // If the current method is a default method of the proxied
           // interface, invoke it.
-          returnValue = InvocationHandler.invokeDefault(proxy, m, args);
+          return InvocationHandler.invokeDefault(proxy, m, args);
         } catch (final UnsupportedOperationException | Error e) {
           throw e;
         } catch (final Exception e) {
@@ -296,9 +301,8 @@ public class ProxyingProvider extends AbstractProvider<Object> {
         }
       } else {
         // We have no recourse.
-        throw new UnsupportedOperationException(m.getName());
+        throw new UnsupportedOperationException(m.toString());
       }
-      return returnValue;
     }
 
   }

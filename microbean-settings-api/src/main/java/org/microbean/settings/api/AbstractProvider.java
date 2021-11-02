@@ -27,7 +27,7 @@ public abstract class AbstractProvider<T> implements Provider {
       @Override
       protected final Type computeValue(final Class<?> c) {
         if (c != AbstractProvider.class && AbstractProvider.class.isAssignableFrom(c)) {
-          return ((ParameterizedType)this.getClass().getGenericSuperclass()).getActualTypeArguments()[0];
+          return ((ParameterizedType)c.getGenericSuperclass()).getActualTypeArguments()[0];
         } else {
           return null;
         }
@@ -40,15 +40,16 @@ public abstract class AbstractProvider<T> implements Provider {
 
   @Override // Provider
   public final Type upperBound() {
-    return type.get(this.getClass());
+    final Type upperBound = type.get(this.getClass());
+    return upperBound;
   }
   
   @Override // Provider
-  public boolean isSelectable(final SupplierBroker<?> broker,
+  public boolean isSelectable(final ConfiguredSupplier<?> broker,
                               final Qualifiers qualifiers,
                               final Supplier<?> parentSupplier,
                               final Path path) {
-    return AssignableType.of(path.type()).isAssignable(this.upperBound());
+    return AssignableType.of(this.upperBound()).isAssignable(path.type());
   }
   
 }

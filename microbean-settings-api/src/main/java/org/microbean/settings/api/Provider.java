@@ -34,8 +34,8 @@ public interface Provider {
 
   /**
    * Returns a {@link Type} representing the upper bound of all
-   * possible {@link Value}s {@linkplain #get(Context) supplied} by
-   * this {@link Provider}.
+   * possible {@link Value}s {@linkplain #get(ConfiguredSupplier,
+   * Qualifiers, Supplier, Path) supplied} by this {@link Provider}.
    *
    * <p>Implementations of this method must not return {@code
    * null}.</p>
@@ -44,8 +44,9 @@ public interface Provider {
    * Object Object.class}.</p>
    *
    * @return a {@link Type} representing the upper bound of all
-   * possible {@link Value}s {@linkplain #get(Context) supplied} by
-   * this {@link Provider}; never {@code null}
+   * possible {@link Value}s {@linkplain #get(ConfiguredSupplier,
+   * Qualifiers, Supplier, Path) supplied} by this {@link Provider};
+   * never {@code null}
    *
    * @nullability Implementations of this method must not return
    * {@code null}.
@@ -60,12 +61,12 @@ public interface Provider {
     return Object.class;
   }
 
-  public boolean isSelectable(final SupplierBroker<?> broker,
+  public boolean isSelectable(final ConfiguredSupplier<?> broker,
                               final Qualifiers qualifiers,
                               final Supplier<?> parentSupplier,
                               final Path path);
 
-  public Value<?> get(final SupplierBroker<?> broker,
+  public Value<?> get(final ConfiguredSupplier<?> broker,
                       final Qualifiers qualifiers,
                       final Supplier<?> parentSupplier,
                       final Path path);
