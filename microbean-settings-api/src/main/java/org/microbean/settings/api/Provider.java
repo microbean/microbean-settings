@@ -64,12 +64,10 @@ public interface Provider {
 
   public boolean isSelectable(final ConfiguredSupplier<?> broker,
                               final Qualifiers qualifiers,
-                              final ConfiguredSupplier<?> parentSupplier,
                               final Path path);
 
   public Value<?> get(final ConfiguredSupplier<?> broker,
                       final Qualifiers qualifiers,
-                      final ConfiguredSupplier<?> parentSupplier,
                       final Path path);
 
 

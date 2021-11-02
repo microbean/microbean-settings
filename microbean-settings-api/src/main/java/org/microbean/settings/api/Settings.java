@@ -87,7 +87,7 @@ public class Settings<T> implements ConfiguredSupplier<T> {
     this.ambiguousValuesConsumerSupplier = Settings::generateSink;
     this.qualifiers =
       this.of(Qualifiers.of(),
-              this.parent().orElse(null),
+              this,
               this.path().plus(Accessor.of(), Qualifiers.class),
               Qualifiers::of)
       .get();
@@ -232,13 +232,13 @@ public class Settings<T> implements ConfiguredSupplier<T> {
                                     final Consumer<? super Provider> rejectedProviders,
                                     final Consumer<? super Value<?>> rejectedValues,
                                     final Consumer<? super Value<?>> ambiguousValues) {
-    return this.of(this, path, defaultSupplier, rejectedProviders, rejectedValues, ambiguousValues);
+    return this.of(this, this.path().plus(path), defaultSupplier, rejectedProviders, rejectedValues, ambiguousValues);
   }
 
-  public final <U> Settings<U> of(final ConfiguredSupplier<?> parent,
+  public final <U> Settings<U> of(final ConfiguredSupplier<?> parent, // may very well be "this"
                                   final Path path,
                                   final Supplier<U> defaultSupplier) {
-    return this.of(parent.qualifiers(), parent, parent.path().plus(path), defaultSupplier);
+    return this.of(parent.qualifiers(), parent, path /* NOTE: no plus() */, defaultSupplier);
   }
 
   public final <U> Settings<U> of(final ConfiguredSupplier<?> parent,
@@ -250,7 +250,7 @@ public class Settings<T> implements ConfiguredSupplier<T> {
     return
       this.of(parent.qualifiers(),
               parent,
-              parent.path().plus(path),
+              path, // NOTE: no plus()
               defaultSupplier,
               rejectedProviders,
               rejectedValues,
@@ -259,13 +259,13 @@ public class Settings<T> implements ConfiguredSupplier<T> {
 
   @Override // ConfiguredSupplier
   public final <U> Settings<U> of(final Qualifiers qualifiers,
-                                  final ConfiguredSupplier<?> parent,
+                                  final ConfiguredSupplier<?> parent, // may very well be "this"
                                   final Path path,
                                   final Supplier<U> defaultSupplier) {
     return
       this.of(qualifiers,
               parent,
-              path,
+              path, // NOTE: no plus()
               defaultSupplier,
               this.rejectedProvidersConsumerSupplier.get(),
               this.rejectedValuesConsumerSupplier.get(),
@@ -274,7 +274,7 @@ public class Settings<T> implements ConfiguredSupplier<T> {
 
   @SuppressWarnings("unchecked")
   public final <U> Settings<U> of(final Qualifiers qualifiers,
-                                  final ConfiguredSupplier<?> parent,
+                                  final ConfiguredSupplier<?> parent, // may very well be "this"
                                   final Path path,
                                   final Supplier<U> defaultSupplier,
                                   final Consumer<? super Provider> rejectedProviders,
@@ -282,7 +282,7 @@ public class Settings<T> implements ConfiguredSupplier<T> {
                                   final Consumer<? super Value<?>> ambiguousValues) {
     return (Settings<U>)this.settingsCache.apply(Qualified.Record.of(qualifiers, path),
                                                     qp -> this.computeSettings(qp.qualifiers(),
-                                                                               parent,
+                                                                               parent, // may very well be "this"
                                                                                qp.qualified(),
                                                                                defaultSupplier,
                                                                                rejectedProviders,
@@ -291,7 +291,7 @@ public class Settings<T> implements ConfiguredSupplier<T> {
   }
 
   private final <U> Settings<U> computeSettings(final Qualifiers qualifiers,
-                                                final ConfiguredSupplier<?> parent,
+                                                final ConfiguredSupplier<?> parent, // may very well be "this"
                                                 final Path path,
                                                 final Supplier<U> defaultSupplier,
                                                 final Consumer<? super Provider> rejectedProviders,
@@ -328,7 +328,7 @@ public class Settings<T> implements ConfiguredSupplier<T> {
         rejectedProviders.accept(provider);
         return null;
       } else {
-        final Value<?> value = provider.get(this, qualifiers, parent, path);
+        final Value<?> value = provider.get(parent, qualifiers, path);
         if (value == null) {
           return null;
         } else if (!isSelectable(qualifiers, path, value.qualifiers(), value.path())) {
@@ -347,7 +347,7 @@ public class Settings<T> implements ConfiguredSupplier<T> {
       int candidatePathScore = Integer.MIN_VALUE;
       for (final Provider provider : providers) {
         if (provider != null && this.isSelectable(qualifiers, parent, path, provider)) {
-          Value<?> value = provider.get(this, qualifiers, parent, path);
+          Value<?> value = provider.get(parent, qualifiers, path);
           VALUE_EVALUATION_LOOP:
           while (value != null) { // NOTE INFINITE LOOP POSSIBILITY; read carefully
             if (isSelectable(qualifiers, path, value.qualifiers(), value.path())) {
@@ -439,7 +439,7 @@ public class Settings<T> implements ConfiguredSupplier<T> {
                                        final Provider provider) {
     return
       AssignableType.of(provider.upperBound()).isAssignable(path.type()) &&
-      provider.isSelectable(this, qualifiers, parent, path);
+      provider.isSelectable(parent, qualifiers, path);
   }
 
   protected int score(final Qualifiers contextQualifiers, final Qualifiers valueQualifiers) {

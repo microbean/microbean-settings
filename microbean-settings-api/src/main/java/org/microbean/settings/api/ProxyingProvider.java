@@ -67,16 +67,14 @@ public class ProxyingProvider extends AbstractProvider<Object> {
   @Override // Provider
   public final boolean isSelectable(final ConfiguredSupplier<?> caller,
                                     final Qualifiers qualifiers,
-                                    final ConfiguredSupplier<?> parentSupplier,
                                     final Path path) {
     return
-      super.isSelectable(caller, qualifiers, parentSupplier, path) &&
-      this.isProxiable(caller, qualifiers, parentSupplier, path);
+      super.isSelectable(caller, qualifiers, path) &&
+      this.isProxiable(caller, qualifiers, path);
   }
 
   protected boolean isProxiable(final ConfiguredSupplier<?> caller,
                                 final Qualifiers qualifiers,
-                                final ConfiguredSupplier<?> parentSupplier,
                                 final Path path) {
     return
       path.type() instanceof Class<?> c &&
@@ -88,36 +86,31 @@ public class ProxyingProvider extends AbstractProvider<Object> {
   @Override // Provider
   public final Value<?> get(final ConfiguredSupplier<?> caller,
                             final Qualifiers qualifiers,
-                            final ConfiguredSupplier<?> parentSupplier,
                             final Path path) {
     return
-      new Value<>(this.qualifiers(caller, qualifiers, parentSupplier, path),
-                  this.path(caller, qualifiers, parentSupplier, path),
+      new Value<>(this.qualifiers(caller, qualifiers, path),
+                  this.path(caller, qualifiers, path),
                   this.proxies.computeIfAbsent(caller.path().plus(path),
                                                p -> this.newProxyInstance(caller,
                                                                           qualifiers,
-                                                                          parentSupplier,
                                                                           path,
                                                                           Types.erase(path.type()))));
   }
 
   protected Qualifiers qualifiers(final ConfiguredSupplier<?> caller,
                                   final Qualifiers qualifiers,
-                                  final Supplier<?> parentSupplier,
                                   final Path path) {
     return Qualifiers.of();
   }
 
   protected Path path(final ConfiguredSupplier<?> caller,
                       final Qualifiers qualifiers,
-                      final Supplier<?> parentSupplier,
                       final Path path) {
     return Path.of(path.type());
   }
 
   protected Object newProxyInstance(final ConfiguredSupplier<?> caller,
                                     final Qualifiers qualifiers,
-                                    final Supplier<?> parentSupplier,
                                     final Path path,
                                     final Class<?> classToProxy) {
     return
