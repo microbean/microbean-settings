@@ -31,7 +31,7 @@ public class SystemPropertiesQualifiersProvider extends AbstractProvider<Qualifi
   @Override // AbstractProvider<Qualifiers>
   public Value<?> get(final ConfiguredSupplier<?> caller,
                       final Qualifiers qualifiers,
-                      final Supplier<?> parentSupplier, // caller's parent; rarely useful
+                      final ConfiguredSupplier<?> parentSupplier, // caller's parent; rarely useful
                       final Path path) {
     final String prefix = caller.of(qualifiers, parentSupplier, Path.of(Accessor.of("qualifierPrefix"), String.class), () -> "qualifier.").get();
     final Properties systemProperties = System.getProperties();

@@ -67,7 +67,7 @@ public class ProxyingProvider extends AbstractProvider<Object> {
   @Override // Provider
   public final boolean isSelectable(final ConfiguredSupplier<?> caller,
                                     final Qualifiers qualifiers,
-                                    final Supplier<?> parentSupplier,
+                                    final ConfiguredSupplier<?> parentSupplier,
                                     final Path path) {
     return
       super.isSelectable(caller, qualifiers, parentSupplier, path) &&
@@ -76,7 +76,7 @@ public class ProxyingProvider extends AbstractProvider<Object> {
 
   protected boolean isProxiable(final ConfiguredSupplier<?> caller,
                                 final Qualifiers qualifiers,
-                                final Supplier<?> parentSupplier,
+                                final ConfiguredSupplier<?> parentSupplier,
                                 final Path path) {
     return
       path.type() instanceof Class<?> c &&
@@ -88,7 +88,7 @@ public class ProxyingProvider extends AbstractProvider<Object> {
   @Override // Provider
   public final Value<?> get(final ConfiguredSupplier<?> caller,
                             final Qualifiers qualifiers,
-                            final Supplier<?> parentSupplier,
+                            final ConfiguredSupplier<?> parentSupplier,
                             final Path path) {
     return
       new Value<>(this.qualifiers(caller, qualifiers, parentSupplier, path),

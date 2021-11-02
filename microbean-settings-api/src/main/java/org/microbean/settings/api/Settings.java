@@ -21,6 +21,7 @@ import java.lang.reflect.Type;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.ServiceLoader;
 
 import java.util.concurrent.ConcurrentHashMap;
@@ -33,7 +34,7 @@ import java.util.function.Supplier;
 
 import org.microbean.settings.api.Provider.Value;
 
-public class Settings<P, T> implements ConfiguredSupplier<T> {
+public class Settings<T> implements ConfiguredSupplier<T> {
 
 
   /*
@@ -41,13 +42,13 @@ public class Settings<P, T> implements ConfiguredSupplier<T> {
    */
 
 
-  private final BiFunction<? super Qualified.Record<Path>, Function<? super Qualified.Record<Path>, ? extends Settings<?, ?>>, ? extends Settings<?, ?>> settingsCache;
+  private final BiFunction<? super Qualified.Record<Path>, Function<? super Qualified.Record<Path>, ? extends Settings<?>>, ? extends Settings<?>> settingsCache;
 
   private final List<Provider> providers;
 
   private final Qualifiers qualifiers;
 
-  private final Supplier<P> parentSupplier;
+  private final Optional<?> parent;
 
   private final Supplier<T> supplier;
 
@@ -70,15 +71,15 @@ public class Settings<P, T> implements ConfiguredSupplier<T> {
   }
 
   public Settings(final Collection<? extends Provider> providers) {
-    this(new ConcurrentHashMap<Qualified.Record<Path>, Settings<?, ?>>()::computeIfAbsent, providers);
+    this(new ConcurrentHashMap<Qualified.Record<Path>, Settings<?>>()::computeIfAbsent, providers);
   }
 
-  public Settings(final BiFunction<? super Qualified.Record<Path>, Function<? super Qualified.Record<Path>, ? extends Settings<?, ?>>, ? extends Settings<?, ?>> settingsCache,
+  public Settings(final BiFunction<? super Qualified.Record<Path>, Function<? super Qualified.Record<Path>, ? extends Settings<?>>, ? extends Settings<?>> settingsCache,
                   final Collection<? extends Provider> providers) {
     super();
     this.settingsCache = Objects.requireNonNull(settingsCache, "settingsCache");
     this.providers = List.copyOf(providers);
-    this.parentSupplier = Settings::returnNull;
+    this.parent = Optional.empty();
     this.path = Path.of();
     this.supplier = Settings::returnNull;
     this.rejectedValuesConsumerSupplier = Settings::generateSink;
@@ -86,7 +87,7 @@ public class Settings<P, T> implements ConfiguredSupplier<T> {
     this.ambiguousValuesConsumerSupplier = Settings::generateSink;
     this.qualifiers =
       this.of(Qualifiers.of(),
-              this.parentSupplier(),
+              this.parent().orElse(null),
               this.path().plus(Accessor.of(), Qualifiers.class),
               Qualifiers::of)
       .get();
@@ -97,62 +98,62 @@ public class Settings<P, T> implements ConfiguredSupplier<T> {
   }
 
   public Settings(final Collection<? extends Provider> providers, final Qualifiers qualifiers) {
-    this(providers, qualifiers, Settings::returnNull);
+    this(providers, qualifiers, null);
   }
 
-  public Settings(final Collection<? extends Provider> providers, final Qualifiers qualifiers, final Supplier<P> parentSupplier) {
-    this(new ConcurrentHashMap<Qualified.Record<Path>, Settings<?, ?>>()::computeIfAbsent, providers, qualifiers, parentSupplier);
+  public Settings(final Collection<? extends Provider> providers, final Qualifiers qualifiers, final ConfiguredSupplier<?> parent) {
+    this(new ConcurrentHashMap<Qualified.Record<Path>, Settings<?>>()::computeIfAbsent, providers, qualifiers, parent);
   }
 
   public Settings(final Collection<? extends Provider> providers,
                   final Qualifiers qualifiers,
-                  final Supplier<P> parentSupplier,
+                  final ConfiguredSupplier<?> parent,
                   final Path path) {
-    this(new ConcurrentHashMap<Qualified.Record<Path>, Settings<?, ?>>()::computeIfAbsent, providers, qualifiers, parentSupplier, path);
+    this(new ConcurrentHashMap<Qualified.Record<Path>, Settings<?>>()::computeIfAbsent, providers, qualifiers, parent, path);
   }
 
   public Settings(final Collection<? extends Provider> providers,
                   final Qualifiers qualifiers,
-                  final Supplier<P> parentSupplier,
+                  final ConfiguredSupplier<?> parent,
                   final Path path,
                   final Supplier<T> supplier) {
-    this(new ConcurrentHashMap<Qualified.Record<Path>, Settings<?, ?>>()::computeIfAbsent, providers, qualifiers, parentSupplier, path, supplier);
+    this(new ConcurrentHashMap<Qualified.Record<Path>, Settings<?>>()::computeIfAbsent, providers, qualifiers, parent, path, supplier);
   }
 
-  public Settings(final BiFunction<? super Qualified.Record<Path>, Function<? super Qualified.Record<Path>, ? extends Settings<?, ?>>, ? extends Settings<?, ?>> settingsCache,
+  public Settings(final BiFunction<? super Qualified.Record<Path>, Function<? super Qualified.Record<Path>, ? extends Settings<?>>, ? extends Settings<?>> settingsCache,
                   final Collection<? extends Provider> providers,
                   final Qualifiers qualifiers) {
-    this(settingsCache, providers, qualifiers, Settings::returnNull);
+    this(settingsCache, providers, qualifiers, null);
   }
 
-  public Settings(final BiFunction<? super Qualified.Record<Path>, Function<? super Qualified.Record<Path>, ? extends Settings<?, ?>>, ? extends Settings<?, ?>> settingsCache,
+  public Settings(final BiFunction<? super Qualified.Record<Path>, Function<? super Qualified.Record<Path>, ? extends Settings<?>>, ? extends Settings<?>> settingsCache,
                   final Collection<? extends Provider> providers,
                   final Qualifiers qualifiers,
-                  final Supplier<P> parentSupplier) {
-    this(settingsCache, providers, qualifiers, parentSupplier, Path.of());
+                  final ConfiguredSupplier<?> parent) {
+    this(settingsCache, providers, qualifiers, parent, Path.of());
   }
 
-  public Settings(final BiFunction<? super Qualified.Record<Path>, Function<? super Qualified.Record<Path>, ? extends Settings<?, ?>>, ? extends Settings<?, ?>> settingsCache,
+  public Settings(final BiFunction<? super Qualified.Record<Path>, Function<? super Qualified.Record<Path>, ? extends Settings<?>>, ? extends Settings<?>> settingsCache,
                   final Collection<? extends Provider> providers,
                   final Qualifiers qualifiers,
-                  final Supplier<P> parentSupplier,
+                  final ConfiguredSupplier<?> parent,
                   final Path path) {
-    this(settingsCache, providers, qualifiers, parentSupplier, path, Settings::returnNull);
+    this(settingsCache, providers, qualifiers, parent, path, Settings::returnNull);
   }
 
-  public Settings(final BiFunction<? super Qualified.Record<Path>, Function<? super Qualified.Record<Path>, ? extends Settings<?, ?>>, ? extends Settings<?, ?>> settingsCache,
+  public Settings(final BiFunction<? super Qualified.Record<Path>, Function<? super Qualified.Record<Path>, ? extends Settings<?>>, ? extends Settings<?>> settingsCache,
                   final Collection<? extends Provider> providers,
                   final Qualifiers qualifiers,
-                  final Supplier<P> parentSupplier,
+                  final ConfiguredSupplier<?> parent,
                   final Path path,
                   final Supplier<T> supplier) {
-    this(settingsCache, providers, qualifiers, parentSupplier, path, supplier, Settings::generateSink, Settings::generateSink, Settings::generateSink);
+    this(settingsCache, providers, qualifiers, parent, path, supplier, Settings::generateSink, Settings::generateSink, Settings::generateSink);
   }
 
-  public Settings(final BiFunction<? super Qualified.Record<Path>, Function<? super Qualified.Record<Path>, ? extends Settings<?, ?>>, ? extends Settings<?, ?>> settingsCache,
+  public Settings(final BiFunction<? super Qualified.Record<Path>, Function<? super Qualified.Record<Path>, ? extends Settings<?>>, ? extends Settings<?>> settingsCache,
                   final Collection<? extends Provider> providers,
                   final Qualifiers qualifiers,
-                  final Supplier<P> parentSupplier,
+                  final ConfiguredSupplier<?> parent,
                   final Path path,
                   final Supplier<T> supplier,
                   final Supplier<? extends Consumer<? super Provider>> rejectedProvidersConsumerSupplier,
@@ -162,7 +163,7 @@ public class Settings<P, T> implements ConfiguredSupplier<T> {
     this.settingsCache = Objects.requireNonNull(settingsCache, "settingsCache");
     this.providers = List.copyOf(providers);
     this.qualifiers = Objects.requireNonNull(qualifiers, "qualifiers");
-    this.parentSupplier = Objects.requireNonNull(parentSupplier, "parentSupplier");
+    this.parent = Optional.ofNullable(parent);
     this.path = Objects.requireNonNull(path, "path");
     this.supplier = supplier == null ? Settings::fail : supplier;
     this.rejectedProvidersConsumerSupplier = Objects.requireNonNull(rejectedProvidersConsumerSupplier, "rejectedProvidersConsumerSupplier");
@@ -185,8 +186,10 @@ public class Settings<P, T> implements ConfiguredSupplier<T> {
     return this.qualifiers;
   }
 
-  public final Supplier<P> parentSupplier() {
-    return this.parentSupplier;
+  @Override // ConfiguredSupplier
+  @SuppressWarnings("unchecked")
+  public final <P> Optional<ConfiguredSupplier<P>> parent() {
+    return (Optional<ConfiguredSupplier<P>>)this.parent;
   }
 
   @Override // ConfiguredSupplier
@@ -200,22 +203,22 @@ public class Settings<P, T> implements ConfiguredSupplier<T> {
   }
 
   @Override // ConfiguredSupplier
-  public final <U> Settings<T, U> plus(final Type type) {
+  public final <U> Settings<U> plus(final Type type) {
     return this.plus(type, Settings::fail);
   }
 
   @Override // ConfiguredSupplier
-  public final <U> Settings<T, U> plus(final Type type, final Supplier<U> defaultSupplier) {
+  public final <U> Settings<U> plus(final Type type, final Supplier<U> defaultSupplier) {
     return this.plus(Path.of(Accessor.of(), type), defaultSupplier);
   }
 
   @Override // ConfiguredSupplier
-  public final <U> Settings<T, U> plus(final Path path) {
+  public final <U> Settings<U> plus(final Path path) {
     return this.plus(path, Settings::fail);
   }
 
   @Override // ConfiguredSupplier
-  public final <U> Settings<T, U> plus(final Path path, final Supplier<U> defaultSupplier) {
+  public final <U> Settings<U> plus(final Path path, final Supplier<U> defaultSupplier) {
     return
       this.plus(path,
                 defaultSupplier,
@@ -224,26 +227,26 @@ public class Settings<P, T> implements ConfiguredSupplier<T> {
                 this.ambiguousValuesConsumerSupplier.get());
   }
 
-  public final <U> Settings<T, U> plus(final Path path,
-                                       final Supplier<U> defaultSupplier,
-                                       final Consumer<? super Provider> rejectedProviders,
-                                       final Consumer<? super Value<?>> rejectedValues,
-                                       final Consumer<? super Value<?>> ambiguousValues) {
+  public final <U> Settings<U> plus(final Path path,
+                                    final Supplier<U> defaultSupplier,
+                                    final Consumer<? super Provider> rejectedProviders,
+                                    final Consumer<? super Value<?>> rejectedValues,
+                                    final Consumer<? super Value<?>> ambiguousValues) {
     return this.of(this, path, defaultSupplier, rejectedProviders, rejectedValues, ambiguousValues);
   }
 
-  public final <Q, U> Settings<Q, U> of(final ConfiguredSupplier<Q> parent,
-                                        final Path path,
-                                        final Supplier<U> defaultSupplier) {
+  public final <U> Settings<U> of(final ConfiguredSupplier<?> parent,
+                                  final Path path,
+                                  final Supplier<U> defaultSupplier) {
     return this.of(parent.qualifiers(), parent, parent.path().plus(path), defaultSupplier);
   }
 
-  public final <Q, U> Settings<Q, U> of(final ConfiguredSupplier<Q> parent,
-                                        final Path path,
-                                        final Supplier<U> defaultSupplier,
-                                        final Consumer<? super Provider> rejectedProviders,
-                                        final Consumer<? super Value<?>> rejectedValues,
-                                        final Consumer<? super Value<?>> ambiguousValues) {
+  public final <U> Settings<U> of(final ConfiguredSupplier<?> parent,
+                                  final Path path,
+                                  final Supplier<U> defaultSupplier,
+                                  final Consumer<? super Provider> rejectedProviders,
+                                  final Consumer<? super Value<?>> rejectedValues,
+                                  final Consumer<? super Value<?>> ambiguousValues) {
     return
       this.of(parent.qualifiers(),
               parent,
@@ -255,13 +258,13 @@ public class Settings<P, T> implements ConfiguredSupplier<T> {
   }
 
   @Override // ConfiguredSupplier
-  public final <Q, U> Settings<Q, U> of(final Qualifiers qualifiers,
-                                        final Supplier<Q> parentSupplier,
-                                        final Path path,
-                                        final Supplier<U> defaultSupplier) {
+  public final <U> Settings<U> of(final Qualifiers qualifiers,
+                                  final ConfiguredSupplier<?> parent,
+                                  final Path path,
+                                  final Supplier<U> defaultSupplier) {
     return
       this.of(qualifiers,
-              parentSupplier,
+              parent,
               path,
               defaultSupplier,
               this.rejectedProvidersConsumerSupplier.get(),
@@ -270,16 +273,16 @@ public class Settings<P, T> implements ConfiguredSupplier<T> {
   }
 
   @SuppressWarnings("unchecked")
-  public final <Q, U> Settings<Q, U> of(final Qualifiers qualifiers,
-                                        final Supplier<Q> parentSupplier,
-                                        final Path path,
-                                        final Supplier<U> defaultSupplier,
-                                        final Consumer<? super Provider> rejectedProviders,
-                                        final Consumer<? super Value<?>> rejectedValues,
-                                        final Consumer<? super Value<?>> ambiguousValues) {
-    return (Settings<Q, U>)this.settingsCache.apply(Qualified.Record.of(qualifiers, path),
+  public final <U> Settings<U> of(final Qualifiers qualifiers,
+                                  final ConfiguredSupplier<?> parent,
+                                  final Path path,
+                                  final Supplier<U> defaultSupplier,
+                                  final Consumer<? super Provider> rejectedProviders,
+                                  final Consumer<? super Value<?>> rejectedValues,
+                                  final Consumer<? super Value<?>> ambiguousValues) {
+    return (Settings<U>)this.settingsCache.apply(Qualified.Record.of(qualifiers, path),
                                                     qp -> this.computeSettings(qp.qualifiers(),
-                                                                               parentSupplier,
+                                                                               parent,
                                                                                qp.qualified(),
                                                                                defaultSupplier,
                                                                                rejectedProviders,
@@ -287,14 +290,14 @@ public class Settings<P, T> implements ConfiguredSupplier<T> {
                                                                                ambiguousValues));
   }
 
-  private final <Q, U> Settings<Q, U> computeSettings(final Qualifiers qualifiers,
-                                                      final Supplier<Q> parentSupplier,
-                                                      final Path path,
-                                                      final Supplier<U> defaultSupplier,
-                                                      final Consumer<? super Provider> rejectedProviders,
-                                                      final Consumer<? super Value<?>> rejectedValues,
-                                                      final Consumer<? super Value<?>> ambiguousValues) {
-    final Value<U> value = this.value(qualifiers, parentSupplier, path, rejectedProviders, rejectedValues, ambiguousValues);
+  private final <U> Settings<U> computeSettings(final Qualifiers qualifiers,
+                                                final ConfiguredSupplier<?> parent,
+                                                final Path path,
+                                                final Supplier<U> defaultSupplier,
+                                                final Consumer<? super Provider> rejectedProviders,
+                                                final Consumer<? super Value<?>> rejectedValues,
+                                                final Consumer<? super Value<?>> ambiguousValues) {
+    final Value<U> value = this.value(qualifiers, parent, path, rejectedProviders, rejectedValues, ambiguousValues);
     final Supplier<U> supplier;
     if (value == null) {
       if (defaultSupplier == null) {
@@ -305,15 +308,15 @@ public class Settings<P, T> implements ConfiguredSupplier<T> {
     } else {
       supplier = value;
     }
-    return new Settings<>(this.settingsCache, this.providers, qualifiers, parentSupplier, path, supplier);
+    return new Settings<>(this.settingsCache, this.providers, qualifiers, parent, path, supplier);
   }
 
-  private final <Q, U> Value<U> value(final Qualifiers qualifiers,
-                                      final Supplier<Q> parentSupplier,
-                                      final Path path,
-                                      final Consumer<? super Provider> rejectedProviders,
-                                      final Consumer<? super Value<?>> rejectedValues,
-                                      final Consumer<? super Value<?>> ambiguousValues) {
+  private final <U> Value<U> value(final Qualifiers qualifiers,
+                                   final ConfiguredSupplier<?> parent,
+                                   final Path path,
+                                   final Consumer<? super Provider> rejectedProviders,
+                                   final Consumer<? super Value<?>> rejectedValues,
+                                   final Consumer<? super Value<?>> ambiguousValues) {
     final Collection<? extends Provider> providers = this.providers();
     if (providers.isEmpty()) {
       return null;
@@ -321,11 +324,11 @@ public class Settings<P, T> implements ConfiguredSupplier<T> {
       final Provider provider = providers instanceof List<? extends Provider> list ? list.get(0) : providers.iterator().next();
       if (provider == null) {
         return null;
-      } else if (!this.isSelectable(qualifiers, parentSupplier, path, provider)) {
+      } else if (!this.isSelectable(qualifiers, parent, path, provider)) {
         rejectedProviders.accept(provider);
         return null;
       } else {
-        final Value<?> value = provider.get(this, qualifiers, parentSupplier, path);
+        final Value<?> value = provider.get(this, qualifiers, parent, path);
         if (value == null) {
           return null;
         } else if (!isSelectable(qualifiers, path, value.qualifiers(), value.path())) {
@@ -343,8 +346,8 @@ public class Settings<P, T> implements ConfiguredSupplier<T> {
       int candidateQualifiersScore = Integer.MIN_VALUE;
       int candidatePathScore = Integer.MIN_VALUE;
       for (final Provider provider : providers) {
-        if (provider != null && this.isSelectable(qualifiers, parentSupplier, path, provider)) {
-          Value<?> value = provider.get(this, qualifiers, parentSupplier, path);
+        if (provider != null && this.isSelectable(qualifiers, parent, path, provider)) {
+          Value<?> value = provider.get(this, qualifiers, parent, path);
           VALUE_EVALUATION_LOOP:
           while (value != null) { // NOTE INFINITE LOOP POSSIBILITY; read carefully
             if (isSelectable(qualifiers, path, value.qualifiers(), value.path())) {
@@ -369,7 +372,7 @@ public class Settings<P, T> implements ConfiguredSupplier<T> {
                     value = null; // critical
                   } else if (valuePathScore == 0) {
                     final Value<?> disambiguatedValue =
-                      this.disambiguate(qualifiers, parentSupplier, path, candidateProvider, candidate, provider, value);
+                      this.disambiguate(qualifiers, parent, path, candidateProvider, candidate, provider, value);
                     if (disambiguatedValue == null) {
                       ambiguousValues.accept(candidate);
                       ambiguousValues.accept(value);
@@ -431,12 +434,12 @@ public class Settings<P, T> implements ConfiguredSupplier<T> {
   }
 
   protected final boolean isSelectable(final Qualifiers qualifiers,
-                                       final Supplier<?> parentSupplier,
+                                       final ConfiguredSupplier<?> parent,
                                        final Path path,
                                        final Provider provider) {
     return
       AssignableType.of(provider.upperBound()).isAssignable(path.type()) &&
-      provider.isSelectable(this, qualifiers, parentSupplier, path);
+      provider.isSelectable(this, qualifiers, parent, path);
   }
 
   protected int score(final Qualifiers contextQualifiers, final Qualifiers valueQualifiers) {
@@ -456,7 +459,7 @@ public class Settings<P, T> implements ConfiguredSupplier<T> {
   }
 
   protected Value<?> disambiguate(final Qualifiers qualifiers,
-                                  final Supplier<?> parentSupplier,
+                                  final Supplier<?> parent,
                                   final Path path,
                                   final Provider p0,
                                   final Value<?> v0,

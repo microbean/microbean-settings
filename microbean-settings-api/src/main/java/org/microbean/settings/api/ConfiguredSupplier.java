@@ -18,6 +18,7 @@ package org.microbean.settings.api;
 
 import java.lang.reflect.Type;
 
+import java.util.Optional;
 import java.util.ServiceLoader;
 
 import java.util.function.Supplier;
@@ -26,6 +27,8 @@ public interface ConfiguredSupplier<T> extends Supplier<T> {
 
   public Qualifiers qualifiers();
 
+  public <P> Optional<ConfiguredSupplier<P>> parent();
+  
   public Path path();
 
   public default <U> ConfiguredSupplier<U> plus(final Type type) {
@@ -42,16 +45,16 @@ public interface ConfiguredSupplier<T> extends Supplier<T> {
 
   public <U> ConfiguredSupplier<U> plus(final Path path, final Supplier<U> defaultSupplier);
 
-  public default <P, U> ConfiguredSupplier<U> of(final Qualifiers qualifiers,
-                                                 final Supplier<P> parentSupplier,
-                                                 final Path path) {
-    return this.of(qualifiers, parentSupplier, path, ConfiguredSupplier::fail);
+  public default <U> ConfiguredSupplier<U> of(final Qualifiers qualifiers,
+                                              final ConfiguredSupplier<?> parent,
+                                              final Path path) {
+    return this.of(qualifiers, parent, path, ConfiguredSupplier::fail);
   }
 
-  public <P, U> ConfiguredSupplier<U> of(final Qualifiers qualifiers,
-                                         final Supplier<P> parentSupplier,
-                                         final Path path,
-                                         final Supplier<U> defaultSupplier);
+  public <U> ConfiguredSupplier<U> of(final Qualifiers qualifiers,
+                                      final ConfiguredSupplier<?> parent,
+                                      final Path path,
+                                      final Supplier<U> defaultSupplier);
 
   @SuppressWarnings("static")
   public static ConfiguredSupplier<?> of() {
