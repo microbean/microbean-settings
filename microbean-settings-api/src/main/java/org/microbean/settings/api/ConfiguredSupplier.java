@@ -37,9 +37,7 @@ public interface ConfiguredSupplier<T> extends Supplier<T> {
 
   public Path path();
 
-  // Effectively a constructor.
-  public <U> ConfiguredSupplier<U> of(final Qualifiers qualifiers,
-                                      final ConfiguredSupplier<?> parent,
+  public <U> ConfiguredSupplier<U> of(final ConfiguredSupplier<?> parent,
                                       final Path path,
                                       final Supplier<U> defaultSupplier);
 
@@ -71,38 +69,9 @@ public interface ConfiguredSupplier<T> extends Supplier<T> {
   public default <U> ConfiguredSupplier<U> plus(final Path path,
                                                 final Supplier<U> defaultSupplier) {
     return
-      this.of(this.qualifiers(),
-              this,
+      this.of(this,
               this.path().plus(path),
               defaultSupplier);
-  }
-
-  public default <U> ConfiguredSupplier<U> of(final Qualifiers qualifiers,
-                                              final Path path) {
-    return
-      this.of(qualifiers,
-              path,
-              ConfiguredSupplier::fail);
-  }
-
-  public default <U> ConfiguredSupplier<U> of(final Qualifiers qualifiers,
-                                              final Path path,
-                                              final Supplier<U> defaultSupplier) {
-    return
-      this.of(qualifiers,
-              this.root(),
-              path,
-              defaultSupplier);
-  }
-
-  public default <U> ConfiguredSupplier<U> of(final Qualifiers qualifiers,
-                                              final ConfiguredSupplier<?> parent,
-                                              final Path path) {
-    return
-      this.of(qualifiers,
-              parent,
-              path,
-              ConfiguredSupplier::fail);
   }
 
   public default <U> ConfiguredSupplier<U> of(final ConfiguredSupplier<?> parent,
@@ -113,28 +82,16 @@ public interface ConfiguredSupplier<T> extends Supplier<T> {
               ConfiguredSupplier::fail);
   }
 
-  public default <U> ConfiguredSupplier<U> of(final ConfiguredSupplier<?> parent,
-                                              final Path path,
-                                              final Supplier<U> defaultSupplier) {
-    return
-      this.of(parent.qualifiers(),
-              parent,
-              path,
-              defaultSupplier);
-  }
-
   public default <U> ConfiguredSupplier<U> of(final Path path) {
     return
       this.of(path,
               ConfiguredSupplier::fail);
   }
-  
+
   public default <U> ConfiguredSupplier<U> of(final Path path,
                                               final Supplier<U> defaultSupplier) {
-    final ConfiguredSupplier<?> root = this.root();
     return
-      this.of(root.qualifiers(),
-              root,
+      this.of(this.root(),
               path,
               defaultSupplier);
   }

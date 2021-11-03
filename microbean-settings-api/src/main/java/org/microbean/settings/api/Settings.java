@@ -115,7 +115,7 @@ public class Settings<T> implements ConfiguredSupplier<T> {
       // instance field will be null.  Note that the qualifiers()
       // method accounts for this and will return Qualifiers.of()
       // instead.
-      this.qualifiers = this.of(Qualifiers.of(), this, this.path.plus(Path.of(Qualifiers.class)), Qualifiers::of).get();
+      this.qualifiers = this.of(/*Qualifiers.of(),*/ this, this.path.plus(Path.of(Qualifiers.class)), Qualifiers::of).get();
     } else {
       this.qualifiers = qualifiers;
     }
@@ -159,13 +159,11 @@ public class Settings<T> implements ConfiguredSupplier<T> {
   }
 
   @Override // ConfiguredSupplier
-  public final <U> Settings<U> of(final Qualifiers qualifiers,
-                                  final ConfiguredSupplier<?> parent,
+  public final <U> Settings<U> of(final ConfiguredSupplier<?> parent,
                                   final Path path,
                                   final Supplier<U> defaultSupplier) {
     return
-      this.of(qualifiers,
-              parent,
+      this.of(parent,
               path, // NOTE: no plus()
               defaultSupplier,
               this.rejectedProvidersConsumerSupplier.get(),
@@ -174,23 +172,18 @@ public class Settings<T> implements ConfiguredSupplier<T> {
   }
 
   @SuppressWarnings("unchecked")
-  public final <U> Settings<U> of(final Qualifiers qualifiers,
-                                  final ConfiguredSupplier<?> parent,
+  public final <U> Settings<U> of(final ConfiguredSupplier<?> parent,
                                   final Path path,
                                   final Supplier<U> defaultSupplier,
                                   final Consumer<? super Provider> rejectedProviders,
                                   final Consumer<? super Value<?>> rejectedValues,
                                   final Consumer<? super Value<?>> ambiguousValues) {
     Objects.requireNonNull(parent, "parent");
-    // Tentative assertion; if it ends up holding everywhere then we
-    // can eliminate Qualifiers from all the of() methods and the
-    // Provider methods.
-    assert parent.qualifiers().equals(qualifiers) : "!parent.qualifiers().equals(qualifiers): " + parent.qualifiers() + " != " + qualifiers;
     if (Path.of().equals(path)) {
       throw new IllegalArgumentException("path: " + path);
     }
     return
-      (Settings<U>)this.settingsCache.apply(Qualified.Record.of(qualifiers, path),
+      (Settings<U>)this.settingsCache.apply(Qualified.Record.of(parent.qualifiers(), path),
                                             qp -> this.computeSettings(parent,
                                                                        qp.qualified(),
                                                                        defaultSupplier,
