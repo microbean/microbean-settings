@@ -25,36 +25,104 @@ import java.util.function.Supplier;
 
 public interface ConfiguredSupplier<T> extends Supplier<T> {
 
+
+  /*
+   * Abstract instance methods.
+   */
+
+
   public Qualifiers qualifiers();
 
   public <P> Optional<ConfiguredSupplier<P>> parent();
-  
+
   public Path path();
 
-  public default <U> ConfiguredSupplier<U> plus(final Type type) {
-    return this.plus(Path.of(Accessor.of(), type), ConfiguredSupplier::fail);
-  }
-
-  public default <U> ConfiguredSupplier<U> plus(final Type type, final Supplier<U> defaultSupplier) {
-    return this.plus(Path.of(Accessor.of(), type), defaultSupplier);
-  }
-
-  public default <U> ConfiguredSupplier<U> plus(final Path path) {
-    return this.plus(path, ConfiguredSupplier::fail);
-  }
-
-  public <U> ConfiguredSupplier<U> plus(final Path path, final Supplier<U> defaultSupplier);
-
-  public default <U> ConfiguredSupplier<U> of(final Qualifiers qualifiers,
-                                              final ConfiguredSupplier<?> parent,
-                                              final Path path) {
-    return this.of(qualifiers, parent, path, ConfiguredSupplier::fail);
-  }
-
+  // Effectively a constructor.
   public <U> ConfiguredSupplier<U> of(final Qualifiers qualifiers,
                                       final ConfiguredSupplier<?> parent,
                                       final Path path,
                                       final Supplier<U> defaultSupplier);
+
+
+  /*
+   * Default instance methods.
+   */
+
+
+  public default <U> ConfiguredSupplier<U> plus(final Type type) {
+    return
+      this.plus(type,
+                ConfiguredSupplier::fail);
+  }
+
+  public default <U> ConfiguredSupplier<U> plus(final Type type,
+                                                final Supplier<U> defaultSupplier) {
+    return
+      this.plus(Path.of(Accessor.of(), type),
+                defaultSupplier);
+  }
+
+  public default <U> ConfiguredSupplier<U> plus(final Path path) {
+    return
+      this.plus(path,
+                ConfiguredSupplier::fail);
+  }
+
+  public default <U> ConfiguredSupplier<U> plus(final Path path,
+                                                final Supplier<U> defaultSupplier) {
+    return
+      this.of(this.qualifiers(),
+              this,
+              this.path().plus(path),
+              defaultSupplier);
+  }
+
+  public default <U> ConfiguredSupplier<U> of(final Qualifiers qualifiers,
+                                              final Path path) {
+    return
+      this.of(qualifiers,
+              path,
+              ConfiguredSupplier::fail);
+  }
+
+  public default <U> ConfiguredSupplier<U> of(final Qualifiers qualifiers,
+                                              final Path path,
+                                              final Supplier<U> defaultSupplier) {
+    return
+      this.of(qualifiers,
+              this.root(),
+              path,
+              defaultSupplier);
+  }
+
+  public default <U> ConfiguredSupplier<U> of(final Qualifiers qualifiers,
+                                              final ConfiguredSupplier<?> parent,
+                                              final Path path) {
+    return
+      this.of(qualifiers,
+              parent,
+              path,
+              ConfiguredSupplier::fail);
+  }
+
+  public default ConfiguredSupplier<?> root() {
+    ConfiguredSupplier<?> root = this;
+    Optional<ConfiguredSupplier<Object>> parent = this.parent();
+    while (parent.isPresent()) {
+      root = parent.orElseThrow();
+      parent = root.parent();
+    }
+    assert root.path().equals(Path.of());
+    assert this != root ? !this.path().equals(Path.of()) : true;
+    assert this.qualifiers().equals(root.qualifiers());
+    return root;
+  }
+
+
+  /*
+   * Static methods.
+   */
+
 
   @SuppressWarnings("static")
   public static ConfiguredSupplier<?> of() {
@@ -63,7 +131,12 @@ public interface ConfiguredSupplier<T> extends Supplier<T> {
       static {
         final ConfiguredSupplier<?> bootstrapConfiguredSupplier =
           ServiceLoader.load(ConfiguredSupplier.class, ConfiguredSupplier.class.getClassLoader()).findFirst().orElseThrow();
-        instance = bootstrapConfiguredSupplier.plus(ConfiguredSupplier.class, () -> bootstrapConfiguredSupplier);
+        if (!Path.of().equals(bootstrapConfiguredSupplier.path())) {
+          throw new IllegalStateException("path(): " + bootstrapConfiguredSupplier.path());
+        }
+        final ConfiguredSupplier<ConfiguredSupplier<?>> configuredSupplierSupplier =
+          bootstrapConfiguredSupplier.plus(ConfiguredSupplier.class, () -> bootstrapConfiguredSupplier);
+        instance = configuredSupplierSupplier.get();
       }
     }.instance;
   }

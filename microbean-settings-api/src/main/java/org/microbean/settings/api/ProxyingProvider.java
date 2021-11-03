@@ -76,11 +76,41 @@ public class ProxyingProvider extends AbstractProvider<Object> {
   protected boolean isProxiable(final ConfiguredSupplier<?> caller,
                                 final Qualifiers qualifiers,
                                 final Path path) {
+    if (path.type() instanceof Class<?> c && c.isInterface() && !c.isHidden() && !c.isSealed()) {
+      // Weed out otherwise proxiable interfaces that have public
+      // methods that take parameters that are anything other than
+      // things that could be conceivably used as indices into
+      // array-like and map-like and list-like structures.
+      //
+      // So a class with Foo getFoo(Blatz b) will not be proxiable, but
+      // a class with Foo getFoo(int i) will be.
+      //
+      // The end result of this isProxiable() implementation is highly
+      // predictive of proxiability but not exhaustively predictive.
+      for (final Method m : c.getMethods()) {
+        final Type returnType = m.getReturnType();
+        if (returnType != void.class && returnType != Void.class && m.getParameterCount() <= 1) {
+          // Leave void-returning methods behind; configuration use cases
+          // won't tend to touch them, and if they do, well, they'll
+          // probably get an UnsupportedOperationException.
+          for (final Class<?> parameterType : m.getParameterTypes()) {
+            if (!this.isIndexLike(parameterType)) {
+              return false;
+            }
+          }
+        }
+      }
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  protected boolean isIndexLike(final Class<?> parameterType) {
     return
-      path.type() instanceof Class<?> c &&
-      c.isInterface() &&
-      !c.isHidden() &&
-      !c.isSealed();
+      parameterType == int.class ||
+      parameterType == Integer.class ||
+      CharSequence.class.isAssignableFrom(parameterType);
   }
 
   @Override // Provider

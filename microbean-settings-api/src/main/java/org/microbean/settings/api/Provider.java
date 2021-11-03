@@ -35,8 +35,7 @@ public interface Provider {
   /**
    * Returns a {@link Type} representing the upper bound of all
    * possible {@link Value}s {@linkplain #get(ConfiguredSupplier,
-   * Qualifiers, ConfiguredSupplier, Path) supplied} by this {@link
-   * Provider}.
+   * Qualifiers, Path) supplied} by this {@link Provider}.
    *
    * <p>Implementations of this method must not return {@code
    * null}.</p>
@@ -46,8 +45,8 @@ public interface Provider {
    *
    * @return a {@link Type} representing the upper bound of all
    * possible {@link Value}s {@linkplain #get(ConfiguredSupplier,
-   * Qualifiers, ConfiguredSupplier, Path) supplied} by this {@link
-   * Provider}; never {@code null}
+   * Qualifiers, Path) supplied} by this {@link Provider}; never
+   * {@code null}
    *
    * @nullability Implementations of this method must not return
    * {@code null}.

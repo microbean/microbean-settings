@@ -32,19 +32,23 @@ public class SystemPropertiesQualifiersProvider extends AbstractProvider<Qualifi
   public Value<?> get(final ConfiguredSupplier<?> caller,
                       final Qualifiers qualifiers,
                       final Path path) {
+    // Tentative assertions; if they end up holding everywhere then we
+    // can eliminate Qualifiers from all the of() methods and the
+    // Provider methods.
+    assert caller.qualifiers().equals(qualifiers) : "!caller.qualifiers().equals(qualifiers): " + caller.qualifiers() + " != " + qualifiers;
+    assert caller.root().qualifiers().equals(qualifiers) : "!caller.root().qualifiers().equals(qualifiers): " + caller.root().qualifiers() + " != " + qualifiers;
     final String prefix =
       caller.of(qualifiers,
-                caller.parent().orElse(null),
                 Path.of(Accessor.of("qualifierPrefix"), String.class),
                 () -> "qualifier.")
       .get();
     final Properties systemProperties = System.getProperties();
     final SortedMap<String, String> map = new TreeMap<>();
     for (final String propertyName : systemProperties.stringPropertyNames()) {
-      if (propertyName.startsWith("qualifier.") && propertyName.length() > "qualifier.".length()) {
+      if (propertyName.startsWith(prefix) && propertyName.length() > prefix.length()) {
         final String qualifierValue = systemProperties.getProperty(propertyName);
         if (qualifierValue != null) {
-          map.put(propertyName.substring("qualifier.".length()), qualifierValue);
+          map.put(propertyName.substring(prefix.length()), qualifierValue);
         }
       }
     }
