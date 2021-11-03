@@ -66,6 +66,7 @@ public class Settings<T> implements ConfiguredSupplier<T> {
    */
 
 
+  @Deprecated // intended for use by ServiceLoader only
   public Settings() {
     this(new ConcurrentHashMap<Qualified.Record<Path>, Settings<?>>()::computeIfAbsent,
          loadedProviders(),
@@ -78,21 +79,17 @@ public class Settings<T> implements ConfiguredSupplier<T> {
          Settings::generateSink);
   }
 
-  public Settings(final BiFunction<? super Qualified.Record<Path>, Function<? super Qualified.Record<Path>, ? extends Settings<?>>, ? extends Settings<?>> settingsCache,
-                  final Collection<? extends Provider> providers,
-                  final Qualifiers qualifiers,
-                  final ConfiguredSupplier<?> parent,
-                  final Path path,
-                  final Supplier<T> supplier,
-                  final Supplier<? extends Consumer<? super Provider>> rejectedProvidersConsumerSupplier,
-                  final Supplier<? extends Consumer<? super Value<?>>> rejectedValuesConsumerSupplier,
-                  final Supplier<? extends Consumer<? super Value<?>>> ambiguousValuesConsumerSupplier) {
+  Settings(final BiFunction<? super Qualified.Record<Path>, Function<? super Qualified.Record<Path>, ? extends Settings<?>>, ? extends Settings<?>> settingsCache,
+           final Collection<? extends Provider> providers,
+           final Qualifiers qualifiers,
+           final ConfiguredSupplier<?> parent,
+           final Path path,
+           final Supplier<T> supplier,
+           final Supplier<? extends Consumer<? super Provider>> rejectedProvidersConsumerSupplier,
+           final Supplier<? extends Consumer<? super Value<?>>> rejectedValuesConsumerSupplier,
+           final Supplier<? extends Consumer<? super Value<?>>> ambiguousValuesConsumerSupplier) {
     super();
-    if (settingsCache == null) {
-      this.settingsCache = new ConcurrentHashMap<Qualified.Record<Path>, Settings<?>>()::computeIfAbsent;
-    } else {
-      this.settingsCache = settingsCache;
-    }
+    this.settingsCache = settingsCache == null ? new ConcurrentHashMap<Qualified.Record<Path>, Settings<?>>()::computeIfAbsent : settingsCache;
     this.supplier = supplier == null ? Settings::fail : supplier;
     this.rejectedProvidersConsumerSupplier = Objects.requireNonNull(rejectedProvidersConsumerSupplier, "rejectedProvidersConsumerSupplier");
     this.rejectedValuesConsumerSupplier = Objects.requireNonNull(rejectedValuesConsumerSupplier, "rejectedValuesConsumerSupplier");
@@ -110,15 +107,11 @@ public class Settings<T> implements ConfiguredSupplier<T> {
       this.path = path;
     }
     this.providers = List.copyOf(providers == null ? loadedProviders() : providers);
-    if (qualifiers == null) {
-      // While the following call is in effect, our qualifiers
-      // instance field will be null.  Note that the qualifiers()
-      // method accounts for this and will return Qualifiers.of()
-      // instead.
-      this.qualifiers = this.of(/*Qualifiers.of(),*/ this, this.path.plus(Path.of(Qualifiers.class)), Qualifiers::of).get();
-    } else {
-      this.qualifiers = qualifiers;
-    }
+    // While the following call is in effect, our qualifiers
+    // instance field will be null.  Note that the qualifiers()
+    // method accounts for this and will return Qualifiers.of()
+    // instead.
+    this.qualifiers = qualifiers == null ? this.plus(Qualifiers.class, Qualifiers::of).get() : qualifiers;
   }
 
 
@@ -133,10 +126,10 @@ public class Settings<T> implements ConfiguredSupplier<T> {
 
   @Override // ConfiguredSupplier
   public final Qualifiers qualifiers() {
-    // This null check is critical.  We check for null here because
-    // during bootstrapping the qualifiers may not have been loaded
-    // yet, and yet the bootstrapping mechanism may still end up
-    // calling this.qualifiers().  The alternative would be to make
+    // NOTE: This null check is critical.  We check for null here
+    // because during bootstrapping the qualifiers will not have been
+    // loaded yet, and yet the bootstrapping mechanism may still end
+    // up calling this.qualifiers().  The alternative would be to make
     // the qualifiers field non-final and I don't want to do that.
     final Qualifiers qualifiers = this.qualifiers;
     return qualifiers == null ? Qualifiers.of() : qualifiers;

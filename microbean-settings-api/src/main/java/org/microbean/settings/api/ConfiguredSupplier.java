@@ -23,6 +23,8 @@ import java.util.ServiceLoader;
 
 import java.util.function.Supplier;
 
+import org.microbean.development.annotation.Convenience;
+
 public interface ConfiguredSupplier<T> extends Supplier<T> {
 
 
@@ -94,6 +96,33 @@ public interface ConfiguredSupplier<T> extends Supplier<T> {
       this.of(this.root(),
               path,
               defaultSupplier);
+  }
+
+  @Convenience
+  public default <U> ConfiguredSupplier<U> of(final String path,
+                                              final Type type) {
+    return
+      this.of(path,
+              type,
+              ConfiguredSupplier::fail);
+  }
+
+  @Convenience
+  public default <U> ConfiguredSupplier<U> of(final String path,
+                                              final Type type,
+                                              final Supplier<U> defaultSupplier) {
+    return
+      this.of(Path.of(Accessor.of(path), type),
+              defaultSupplier);
+  }
+
+  @Convenience
+  public default <U> ConfiguredSupplier<U> of(final String path,
+                                              final Type type,
+                                              final U defaultValue) {
+    return
+      this.of(Path.of(Accessor.of(path), type),
+              () -> defaultValue);
   }
 
   public default ConfiguredSupplier<?> root() {

@@ -24,6 +24,7 @@ import java.util.function.Supplier;
 
 import org.microbean.development.annotation.Convenience;
 
+@FunctionalInterface
 public interface Provider {
 
 
@@ -36,6 +37,9 @@ public interface Provider {
    * Returns a {@link Type} representing the upper bound of all
    * possible {@link Value}s {@linkplain #get(ConfiguredSupplier,
    * Path) supplied} by this {@link Provider}.
+   *
+   * <p>Often the value returned by implementations of this method is
+   * no more specific than simply {@link Object Object.class}.</p>
    *
    * <p>Implementations of this method must not return {@code
    * null}.</p>
@@ -60,13 +64,11 @@ public interface Provider {
     return Object.class;
   }
 
-  public boolean isSelectable(final ConfiguredSupplier<?> broker,
-                              // final Qualifiers qualifiers,
-                              final Path path);
+  public default boolean isSelectable(final ConfiguredSupplier<?> supplier, final Path path) {
+    return AssignableType.of(this.upperBound()).isAssignable(path.type());
+  }
 
-  public Value<?> get(final ConfiguredSupplier<?> broker,
-                      // final Qualifiers qualifiers,
-                      final Path path);
+  public Value<?> get(final ConfiguredSupplier<?> supplier, final Path path);
 
 
   /*
@@ -94,7 +96,7 @@ public interface Provider {
    * @param supplier the {@link Supplier} underlying this {@link
    * Value}; must not be {@code null}
    */
-  public record Value<T>(Qualifiers qualifiers, Path path, Supplier<T> supplier) implements Supplier<T> {
+  public static record Value<T>(Qualifiers qualifiers, Path path, Supplier<T> supplier) implements Supplier<T> {
 
 
     /*

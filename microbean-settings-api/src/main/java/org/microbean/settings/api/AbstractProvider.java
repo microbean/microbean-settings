@@ -40,14 +40,7 @@ public abstract class AbstractProvider<T> implements Provider {
 
   @Override // Provider
   public final Type upperBound() {
-    final Type upperBound = type.get(this.getClass());
-    return upperBound;
-  }
-  
-  @Override // Provider
-  public boolean isSelectable(final ConfiguredSupplier<?> broker,
-                              final Path path) {
-    return AssignableType.of(this.upperBound()).isAssignable(path.type());
+    return type.get(this.getClass());
   }
   
 }
