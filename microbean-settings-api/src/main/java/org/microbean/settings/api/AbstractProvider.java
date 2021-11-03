@@ -46,7 +46,6 @@ public abstract class AbstractProvider<T> implements Provider {
   
   @Override // Provider
   public boolean isSelectable(final ConfiguredSupplier<?> broker,
-                              final Qualifiers qualifiers,
                               final Path path) {
     return AssignableType.of(this.upperBound()).isAssignable(path.type());
   }

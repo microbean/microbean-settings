@@ -191,8 +191,7 @@ public class Settings<T> implements ConfiguredSupplier<T> {
     }
     return
       (Settings<U>)this.settingsCache.apply(Qualified.Record.of(qualifiers, path),
-                                            qp -> this.computeSettings(qp.qualifiers(),
-                                                                       parent,
+                                            qp -> this.computeSettings(parent,
                                                                        qp.qualified(),
                                                                        defaultSupplier,
                                                                        rejectedProviders,
@@ -200,14 +199,13 @@ public class Settings<T> implements ConfiguredSupplier<T> {
                                                                        ambiguousValues));
   }
 
-  private final <U> Settings<U> computeSettings(final Qualifiers qualifiers,
-                                                final ConfiguredSupplier<?> parent,
+  private final <U> Settings<U> computeSettings(final ConfiguredSupplier<?> parent,
                                                 final Path path,
                                                 final Supplier<U> defaultSupplier,
                                                 final Consumer<? super Provider> rejectedProviders,
                                                 final Consumer<? super Value<?>> rejectedValues,
                                                 final Consumer<? super Value<?>> ambiguousValues) {
-    final Value<U> value = this.value(qualifiers, parent, path, rejectedProviders, rejectedValues, ambiguousValues);
+    final Value<U> value = this.value(parent, path, rejectedProviders, rejectedValues, ambiguousValues);
     final Supplier<U> supplier;
     if (value == null) {
       if (defaultSupplier == null) {
@@ -221,7 +219,7 @@ public class Settings<T> implements ConfiguredSupplier<T> {
     return
       new Settings<>(this.settingsCache,
                      this.providers,
-                     qualifiers,
+                     parent.qualifiers(),
                      parent,
                      path,
                      supplier,
@@ -230,8 +228,7 @@ public class Settings<T> implements ConfiguredSupplier<T> {
                      this.ambiguousValuesConsumerSupplier);
   }
 
-  private final <U> Value<U> value(final Qualifiers qualifiers,
-                                   final ConfiguredSupplier<?> parent,
+  private final <U> Value<U> value(final ConfiguredSupplier<?> parent,
                                    final Path path,
                                    final Consumer<? super Provider> rejectedProviders,
                                    final Consumer<? super Value<?>> rejectedValues,
@@ -243,14 +240,14 @@ public class Settings<T> implements ConfiguredSupplier<T> {
       final Provider provider = providers instanceof List<? extends Provider> list ? list.get(0) : providers.iterator().next();
       if (provider == null) {
         return null;
-      } else if (!this.isSelectable(qualifiers, parent, path, provider)) {
+      } else if (!this.isSelectable(parent, path, provider)) {
         rejectedProviders.accept(provider);
         return null;
       } else {
-        final Value<?> value = provider.get(parent, qualifiers, path);
+        final Value<?> value = provider.get(parent, path);
         if (value == null) {
           return null;
-        } else if (!isSelectable(qualifiers, path, value.qualifiers(), value.path())) {
+        } else if (!isSelectable(parent.qualifiers(), path, value.qualifiers(), value.path())) {
           rejectedValues.accept(value);
           return null;
         } else {
@@ -260,13 +257,14 @@ public class Settings<T> implements ConfiguredSupplier<T> {
         }
       }
     } else {
+      final Qualifiers qualifiers = parent.qualifiers();
       Value<?> candidate = null;
       Provider candidateProvider = null;
       int candidateQualifiersScore = Integer.MIN_VALUE;
       int candidatePathScore = Integer.MIN_VALUE;
       for (final Provider provider : providers) {
-        if (provider != null && this.isSelectable(qualifiers, parent, path, provider)) {
-          Value<?> value = provider.get(parent, qualifiers, path);
+        if (provider != null && this.isSelectable(parent, path, provider)) {
+          Value<?> value = provider.get(parent, path);
           VALUE_EVALUATION_LOOP:
           while (value != null) { // NOTE INFINITE LOOP POSSIBILITY; read carefully
             if (isSelectable(qualifiers, path, value.qualifiers(), value.path())) {
@@ -291,7 +289,7 @@ public class Settings<T> implements ConfiguredSupplier<T> {
                     value = null; // critical
                   } else if (valuePathScore == 0) {
                     final Value<?> disambiguatedValue =
-                      this.disambiguate(qualifiers, parent, path, candidateProvider, candidate, provider, value);
+                      this.disambiguate(parent, path, candidateProvider, candidate, provider, value);
                     if (disambiguatedValue == null) {
                       ambiguousValues.accept(candidate);
                       ambiguousValues.accept(value);
@@ -352,13 +350,12 @@ public class Settings<T> implements ConfiguredSupplier<T> {
     }
   }
 
-  protected final boolean isSelectable(final Qualifiers qualifiers,
-                                       final ConfiguredSupplier<?> parent,
+  protected final boolean isSelectable(final ConfiguredSupplier<?> parent,
                                        final Path path,
                                        final Provider provider) {
     return
       AssignableType.of(provider.upperBound()).isAssignable(path.type()) &&
-      provider.isSelectable(parent, qualifiers, path);
+      provider.isSelectable(parent, path);
   }
 
   protected int score(final Qualifiers contextQualifiers, final Qualifiers valueQualifiers) {
@@ -377,8 +374,7 @@ public class Settings<T> implements ConfiguredSupplier<T> {
     return contextPath.size() - valuePath.size();
   }
 
-  protected Value<?> disambiguate(final Qualifiers qualifiers,
-                                  final Supplier<?> parent,
+  protected Value<?> disambiguate(final ConfiguredSupplier<?> parent,
                                   final Path path,
                                   final Provider p0,
                                   final Value<?> v0,

@@ -30,16 +30,9 @@ public class SystemPropertiesQualifiersProvider extends AbstractProvider<Qualifi
 
   @Override // AbstractProvider<Qualifiers>
   public Value<?> get(final ConfiguredSupplier<?> caller,
-                      final Qualifiers qualifiers,
                       final Path path) {
-    // Tentative assertions; if they end up holding everywhere then we
-    // can eliminate Qualifiers from all the of() methods and the
-    // Provider methods.
-    assert caller.qualifiers().equals(qualifiers) : "!caller.qualifiers().equals(qualifiers): " + caller.qualifiers() + " != " + qualifiers;
-    assert caller.root().qualifiers().equals(qualifiers) : "!caller.root().qualifiers().equals(qualifiers): " + caller.root().qualifiers() + " != " + qualifiers;
     final String prefix =
-      caller.of(qualifiers,
-                Path.of(Accessor.of("qualifierPrefix"), String.class),
+      caller.of(Path.of(Accessor.of("qualifierPrefix"), String.class),
                 () -> "qualifier.")
       .get();
     final Properties systemProperties = System.getProperties();

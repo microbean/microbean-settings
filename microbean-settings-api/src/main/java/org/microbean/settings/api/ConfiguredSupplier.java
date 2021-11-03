@@ -105,6 +105,40 @@ public interface ConfiguredSupplier<T> extends Supplier<T> {
               ConfiguredSupplier::fail);
   }
 
+  public default <U> ConfiguredSupplier<U> of(final ConfiguredSupplier<?> parent,
+                                              final Path path) {
+    return
+      this.of(parent,
+              path,
+              ConfiguredSupplier::fail);
+  }
+
+  public default <U> ConfiguredSupplier<U> of(final ConfiguredSupplier<?> parent,
+                                              final Path path,
+                                              final Supplier<U> defaultSupplier) {
+    return
+      this.of(parent.qualifiers(),
+              parent,
+              path,
+              defaultSupplier);
+  }
+
+  public default <U> ConfiguredSupplier<U> of(final Path path) {
+    return
+      this.of(path,
+              ConfiguredSupplier::fail);
+  }
+  
+  public default <U> ConfiguredSupplier<U> of(final Path path,
+                                              final Supplier<U> defaultSupplier) {
+    final ConfiguredSupplier<?> root = this.root();
+    return
+      this.of(root.qualifiers(),
+              root,
+              path,
+              defaultSupplier);
+  }
+
   public default ConfiguredSupplier<?> root() {
     ConfiguredSupplier<?> root = this;
     Optional<ConfiguredSupplier<Object>> parent = this.parent();
