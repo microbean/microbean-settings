@@ -31,7 +31,7 @@ final class TestProxyingProvider {
 
   @Test
   final void explore() {
-    final ConfiguredSupplier<Car> carCs = ConfiguredSupplier.of(Car.class);
+    final ConfiguredSupplier<Car> carCs = ConfiguredSupplier.of().plus(Car.class);
     final Car car = carCs.get();
     assertNotNull(car);
     assertSame(car, carCs.get());

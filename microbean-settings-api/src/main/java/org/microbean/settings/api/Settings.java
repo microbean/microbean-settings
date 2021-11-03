@@ -73,40 +73,45 @@ public class Settings<T> implements ConfiguredSupplier<T> {
          null, // qualifiers
          null, // parent,
          Path.of(),
-         Settings::returnNull, // supplier
+         null, // supplier
          Settings::generateSink,
          Settings::generateSink,
          Settings::generateSink);
   }
 
-  Settings(final BiFunction<? super Qualified.Record<Path>, Function<? super Qualified.Record<Path>, ? extends Settings<?>>, ? extends Settings<?>> settingsCache,
-           final Collection<? extends Provider> providers,
-           final Qualifiers qualifiers,
-           final ConfiguredSupplier<?> parent,
-           final Path path,
-           final Supplier<T> supplier,
-           final Supplier<? extends Consumer<? super Provider>> rejectedProvidersConsumerSupplier,
-           final Supplier<? extends Consumer<? super Value<?>>> rejectedValuesConsumerSupplier,
-           final Supplier<? extends Consumer<? super Value<?>>> ambiguousValuesConsumerSupplier) {
+  @SuppressWarnings("unchecked")
+  private Settings(final BiFunction<? super Qualified.Record<Path>, Function<? super Qualified.Record<Path>, ? extends Settings<?>>, ? extends Settings<?>> settingsCache,
+                   final Collection<? extends Provider> providers,
+                   final Qualifiers qualifiers,
+                   final ConfiguredSupplier<?> parent,
+                   final Path path,
+                   final Supplier<T> supplier,
+                   final Supplier<? extends Consumer<? super Provider>> rejectedProvidersConsumerSupplier,
+                   final Supplier<? extends Consumer<? super Value<?>>> rejectedValuesConsumerSupplier,
+                   final Supplier<? extends Consumer<? super Value<?>>> ambiguousValuesConsumerSupplier) {
     super();
-    this.settingsCache = settingsCache == null ? new ConcurrentHashMap<Qualified.Record<Path>, Settings<?>>()::computeIfAbsent : settingsCache;
-    this.supplier = supplier == null ? Settings::fail : supplier;
+    this.settingsCache = Objects.requireNonNull(settingsCache, "settingsCache");
     this.rejectedProvidersConsumerSupplier = Objects.requireNonNull(rejectedProvidersConsumerSupplier, "rejectedProvidersConsumerSupplier");
     this.rejectedValuesConsumerSupplier = Objects.requireNonNull(rejectedValuesConsumerSupplier, "rejectedValuesConsumerSupplier");
     this.ambiguousValuesConsumerSupplier = Objects.requireNonNull(ambiguousValuesConsumerSupplier, "ambiguousValuesConsumerSupplier");
-    this.parent = Optional.ofNullable(parent);
+    this.providers = List.copyOf(providers);
     if (parent == null) {
       if (path == null || path.equals(Path.of())) {
         this.path = Path.of();
+        this.supplier = supplier == null ? () -> (T)this : supplier;
+        this.parent = Optional.of(this);
       } else {
         throw new IllegalArgumentException("path: " + path);
       }
     } else if (path == null) {
       this.path = Path.of();
+      this.supplier = Objects.requireNonNull(supplier, "supplier");
+      this.parent = Optional.of(parent);
     } else {
       this.path = path;
+      this.supplier = Objects.requireNonNull(supplier, "supplier");
+      this.parent = Optional.of(parent);
     }
-    this.providers = List.copyOf(providers == null ? loadedProviders() : providers);
     // While the following call is in effect, our qualifiers
     // instance field will be null.  Note that the qualifiers()
     // method accounts for this and will return Qualifiers.of()
@@ -165,12 +170,12 @@ public class Settings<T> implements ConfiguredSupplier<T> {
   }
 
   @SuppressWarnings("unchecked")
-  public final <U> Settings<U> of(final ConfiguredSupplier<?> parent,
-                                  final Path path,
-                                  final Supplier<U> defaultSupplier,
-                                  final Consumer<? super Provider> rejectedProviders,
-                                  final Consumer<? super Value<?>> rejectedValues,
-                                  final Consumer<? super Value<?>> ambiguousValues) {
+  private final <U> Settings<U> of(final ConfiguredSupplier<?> parent,
+                                   final Path path,
+                                   final Supplier<U> defaultSupplier,
+                                   final Consumer<? super Provider> rejectedProviders,
+                                   final Consumer<? super Value<?>> rejectedValues,
+                                   final Consumer<? super Value<?>> ambiguousValues) {
     Objects.requireNonNull(parent, "parent");
     if (Path.of().equals(path)) {
       throw new IllegalArgumentException("path: " + path);

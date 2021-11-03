@@ -49,10 +49,41 @@ public interface ConfiguredSupplier<T> extends Supplier<T> {
    */
 
 
+  public default ClassLoader classLoader() {
+    return this.path().classLoader();
+  }
+  
   public default <U> ConfiguredSupplier<U> plus(final Type type) {
     return
       this.plus(type,
                 ConfiguredSupplier::fail);
+  }
+
+  @Convenience
+  public default <U> ConfiguredSupplier<U> plus(final String accessor,
+                                                final Type type) {
+    return
+      this.plus(accessor,
+                type,
+                ConfiguredSupplier::fail);
+  }
+
+  @Convenience
+  public default <U> ConfiguredSupplier<U> plus(final String accessor,
+                                                final Type type,
+                                                final Supplier<U> defaultSupplier) {
+    return
+      this.plus(Path.of(Accessor.of(accessor), type),
+                defaultSupplier);
+  }
+
+  @Convenience
+  public default <U> ConfiguredSupplier<U> plus(final String accessor,
+                                                final Type type,
+                                                final U defaultValue) {
+    return
+      this.plus(Path.of(Accessor.of(accessor), type),
+                defaultValue);
   }
 
   public default <U> ConfiguredSupplier<U> plus(final Type type,
@@ -60,6 +91,14 @@ public interface ConfiguredSupplier<T> extends Supplier<T> {
     return
       this.plus(Path.of(Accessor.of(), type),
                 defaultSupplier);
+  }
+
+  @Convenience
+  public default <U> ConfiguredSupplier<U> plus(final Type type,
+                                                final U defaultValue) {
+    return
+      this.plus(Path.of(Accessor.of(), type),
+                () -> defaultValue);
   }
 
   public default <U> ConfiguredSupplier<U> plus(final Path path) {
@@ -76,12 +115,66 @@ public interface ConfiguredSupplier<T> extends Supplier<T> {
               defaultSupplier);
   }
 
+  @Convenience
+  public default <U> ConfiguredSupplier<U> plus(final Path path,
+                                                final U defaultValue) {
+    return
+      this.of(this,
+              this.path().plus(path),
+              () -> defaultValue);
+  }
+
   public default <U> ConfiguredSupplier<U> of(final ConfiguredSupplier<?> parent,
                                               final Path path) {
     return
       this.of(parent,
               path,
               ConfiguredSupplier::fail);
+  }
+
+  @Convenience
+  public default <U> ConfiguredSupplier<U> of(final ConfiguredSupplier<?> parent,
+                                              final String accessor,
+                                              final Type type) {
+    return
+      this.of(parent,
+              accessor,
+              type,
+              ConfiguredSupplier::fail);
+  }
+
+  @Convenience
+  public default <U> ConfiguredSupplier<U> of(final ConfiguredSupplier<?> parent,
+                                              final String accessor,
+                                              final Type type,
+                                              final Supplier<U> defaultSupplier) {
+    return
+      this.of(parent,
+              accessor,
+              type,
+              defaultSupplier);
+  }
+
+  @Convenience
+  public default <U> ConfiguredSupplier<U> of(final ConfiguredSupplier<?> parent,
+                                              final String accessor,
+                                              final Type type,
+                                              final U defaultValue) {
+    return
+      this.of(parent,
+              accessor,
+              type,
+              defaultValue);
+  }
+
+  @Convenience
+  public default <U> ConfiguredSupplier<U> of(final ConfiguredSupplier<?> parent,
+                                              final Path path,
+                                              final U defaultValue) {
+    return
+      this.of(parent,
+              path,
+              () -> defaultValue);
   }
 
   public default <U> ConfiguredSupplier<U> of(final Path path) {
@@ -99,36 +192,69 @@ public interface ConfiguredSupplier<T> extends Supplier<T> {
   }
 
   @Convenience
-  public default <U> ConfiguredSupplier<U> of(final String path,
+  public default <U> ConfiguredSupplier<U> of(final Path path,
+                                              final U defaultValue) {
+    return
+      this.of(this.root(),
+              path,
+              () -> defaultValue);
+  }
+
+  @Convenience
+  public default <U> ConfiguredSupplier<U> of(final Type type) {
+    return
+      this.of(Path.of(Accessor.of(), type),
+              ConfiguredSupplier::fail);
+  }
+
+  @Convenience
+  public default <U> ConfiguredSupplier<U> of(final Type type,
+                                              final Supplier<U> defaultSupplier) {
+    return
+      this.of(Path.of(Accessor.of(), type),
+              defaultSupplier);
+  }
+
+  @Convenience
+  public default <U> ConfiguredSupplier<U> of(final Type type,
+                                              final U defaultValue) {
+    return
+      this.of(Path.of(Accessor.of(), type),
+              () -> defaultValue);
+  }
+  
+  @Convenience
+  public default <U> ConfiguredSupplier<U> of(final String accessor,
                                               final Type type) {
     return
-      this.of(path,
+      this.of(accessor,
               type,
               ConfiguredSupplier::fail);
   }
 
   @Convenience
-  public default <U> ConfiguredSupplier<U> of(final String path,
-                                              final Type type,
-                                              final Supplier<U> defaultSupplier) {
-    return
-      this.of(Path.of(Accessor.of(path), type),
-              defaultSupplier);
-  }
-
-  @Convenience
-  public default <U> ConfiguredSupplier<U> of(final String path,
+  public default <U> ConfiguredSupplier<U> of(final String accessor,
                                               final Type type,
                                               final U defaultValue) {
     return
-      this.of(Path.of(Accessor.of(path), type),
+      this.of(accessor,
+              type,
               () -> defaultValue);
+  }
+
+  @Convenience
+  public default <U> ConfiguredSupplier<U> of(final String accessor,
+                                              final Type type,
+                                              final Supplier<U> defaultSupplier) {
+    return
+      this.of(Path.of(Accessor.of(accessor), type),
+              defaultSupplier);
   }
 
   public default ConfiguredSupplier<?> root() {
     ConfiguredSupplier<?> root = this;
-    Optional<ConfiguredSupplier<Object>> parent = this.parent();
-    while (parent.isPresent()) {
+    Optional<ConfiguredSupplier<Object>> parent = root.parent();
+    while (parent.isPresent() && parent.orElseThrow() != root) {
       root = parent.orElseThrow();
       parent = root.parent();
     }
@@ -154,15 +280,13 @@ public interface ConfiguredSupplier<T> extends Supplier<T> {
         if (!Path.of().equals(bootstrapConfiguredSupplier.path())) {
           throw new IllegalStateException("path(): " + bootstrapConfiguredSupplier.path());
         }
-        final ConfiguredSupplier<ConfiguredSupplier<?>> configuredSupplierSupplier =
-          bootstrapConfiguredSupplier.plus(ConfiguredSupplier.class, () -> bootstrapConfiguredSupplier);
-        instance = configuredSupplierSupplier.get();
+        assert bootstrapConfiguredSupplier.parent().orElseThrow() == bootstrapConfiguredSupplier;
+        assert bootstrapConfiguredSupplier.get() == bootstrapConfiguredSupplier;
+        instance = bootstrapConfiguredSupplier.of(ConfiguredSupplier.class, () -> bootstrapConfiguredSupplier).get();
+        assert instance.get() instanceof ConfiguredSupplier;
+        assert instance.parent().orElseThrow() == bootstrapConfiguredSupplier;
       }
     }.instance;
-  }
-
-  public static <U> ConfiguredSupplier<U> of(final Type type) {
-    return of().plus(type);
   }
 
   private static <U> U fail() {

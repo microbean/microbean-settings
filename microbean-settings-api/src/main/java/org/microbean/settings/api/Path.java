@@ -25,6 +25,8 @@ import java.util.Objects;
 
 import java.util.function.BiPredicate;
 
+import org.microbean.type.Types;
+
 public final class Path implements Assignable<Type> {
 
   private static final Path ROOT = new Path();
@@ -103,6 +105,10 @@ public final class Path implements Assignable<Type> {
     return AssignableType.of(this.assignable()).isAssignable(type);
   }
 
+  public final ClassLoader classLoader() {
+    return Types.erase(this.type()).getClassLoader();
+  }
+  
   public final int indexOf(final Path path, final BiPredicate<? super Object, ? super Object> p) {
     final int pathSize = path.size();
     final int sizeDiff = this.size() - pathSize;
