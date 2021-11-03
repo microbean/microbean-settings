@@ -21,7 +21,6 @@ import java.lang.reflect.Type;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.ServiceLoader;
 
 import java.util.concurrent.ConcurrentHashMap;
@@ -48,7 +47,7 @@ public class Settings<T> implements ConfiguredSupplier<T> {
 
   private final Qualifiers qualifiers;
 
-  private final Optional<?> parent;
+  private final ConfiguredSupplier<?> parent;
 
   private final Supplier<T> supplier;
 
@@ -99,18 +98,18 @@ public class Settings<T> implements ConfiguredSupplier<T> {
       if (path == null || path.equals(Path.of())) {
         this.path = Path.of();
         this.supplier = supplier == null ? () -> (T)this : supplier;
-        this.parent = Optional.of(this);
+        this.parent = this;
       } else {
         throw new IllegalArgumentException("path: " + path);
       }
     } else if (path == null) {
       this.path = Path.of();
       this.supplier = Objects.requireNonNull(supplier, "supplier");
-      this.parent = Optional.of(parent);
+      this.parent = parent;
     } else {
       this.path = path;
       this.supplier = Objects.requireNonNull(supplier, "supplier");
-      this.parent = Optional.of(parent);
+      this.parent = parent;
     }
     // While the following call is in effect, our qualifiers
     // instance field will be null.  Note that the qualifiers()
@@ -142,8 +141,8 @@ public class Settings<T> implements ConfiguredSupplier<T> {
 
   @Override // ConfiguredSupplier
   @SuppressWarnings("unchecked")
-  public final <P> Optional<ConfiguredSupplier<P>> parent() {
-    return (Optional<ConfiguredSupplier<P>>)this.parent;
+  public final <P> ConfiguredSupplier<P> parent() {
+    return (ConfiguredSupplier<P>)this.parent;
   }
 
   @Override // ConfiguredSupplier

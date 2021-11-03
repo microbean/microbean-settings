@@ -35,7 +35,8 @@ public interface ConfiguredSupplier<T> extends Supplier<T> {
 
   public Qualifiers qualifiers();
 
-  public <P> Optional<ConfiguredSupplier<P>> parent();
+  // Note that the root will have itself as its parent.
+  public <P> ConfiguredSupplier<P> parent();
 
   public Path path();
 
@@ -253,9 +254,9 @@ public interface ConfiguredSupplier<T> extends Supplier<T> {
 
   public default ConfiguredSupplier<?> root() {
     ConfiguredSupplier<?> root = this;
-    Optional<ConfiguredSupplier<Object>> parent = root.parent();
-    while (parent.isPresent() && parent.orElseThrow() != root) {
-      root = parent.orElseThrow();
+    ConfiguredSupplier<?> parent = root.parent();
+    while (parent != null && parent != root) {
+      root = parent;
       parent = root.parent();
     }
     assert root.path().equals(Path.of());
@@ -280,11 +281,11 @@ public interface ConfiguredSupplier<T> extends Supplier<T> {
         if (!Path.of().equals(bootstrapConfiguredSupplier.path())) {
           throw new IllegalStateException("path(): " + bootstrapConfiguredSupplier.path());
         }
-        assert bootstrapConfiguredSupplier.parent().orElseThrow() == bootstrapConfiguredSupplier;
+        assert bootstrapConfiguredSupplier.parent() == bootstrapConfiguredSupplier;
         assert bootstrapConfiguredSupplier.get() == bootstrapConfiguredSupplier;
         instance = bootstrapConfiguredSupplier.of(ConfiguredSupplier.class, () -> bootstrapConfiguredSupplier).get();
         assert instance.get() instanceof ConfiguredSupplier;
-        assert instance.parent().orElseThrow() == bootstrapConfiguredSupplier;
+        assert instance.parent() == bootstrapConfiguredSupplier;
       }
     }.instance;
   }
