@@ -24,6 +24,22 @@ import java.util.function.Supplier;
 
 import org.microbean.development.annotation.Convenience;
 
+/**
+ * A provider of {@link Supplier}s that might be suitable for a {@link
+ * ConfiguredSupplier} implementation to return.
+ *
+ * <p>{@link Provider} instances are subordinate to {@link
+ * Settings}.</p>
+ *
+ * @author <a href="https://about.me/lairdnelson"
+ * target="_parent">Laird Nelson</a>
+ *
+ * @see #isSelectable(ConfiguredSupplier, Path)
+ *
+ * @see #get(ConfiguredSupplier, Path)
+ *
+ * @see Settings
+ */
 @FunctionalInterface
 public interface Provider {
 
@@ -35,7 +51,7 @@ public interface Provider {
 
   /**
    * Returns a {@link Type} representing the upper bound of all
-   * possible {@link Value}s {@linkplain #get(ConfiguredSupplier,
+   * possible {@linkplain Value values} {@linkplain #get(ConfiguredSupplier,
    * Path) supplied} by this {@link Provider}.
    *
    * <p>Often the value returned by implementations of this method is
@@ -48,7 +64,7 @@ public interface Provider {
    * Object Object.class}.</p>
    *
    * @return a {@link Type} representing the upper bound of all
-   * possible {@link Value}s {@linkplain #get(ConfiguredSupplier,
+   * possible {@linkplain Value values} {@linkplain #get(ConfiguredSupplier,
    * Path) supplied} by this {@link Provider}; never {@code null}
    *
    * @nullability Implementations of this method must not return
@@ -86,6 +102,8 @@ public interface Provider {
    *
    * @author <a href="https://about.me/lairdnelson"
    * target="_parent">Laird Nelson</a>
+   *
+   * @param <T> the type of value this {@link Value} returns
    *
    * @param qualifiers the {@link Qualifiers} this {@link Value} is
    * suitable for; must not be {@code null}

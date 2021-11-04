@@ -18,13 +18,22 @@ package org.microbean.settings.api;
 
 import java.lang.reflect.Type;
 
-import java.util.Optional;
 import java.util.ServiceLoader;
 
 import java.util.function.Supplier;
 
 import org.microbean.development.annotation.Convenience;
+import org.microbean.development.annotation.EntryPoint;
+import org.microbean.development.annotation.OverridingDiscouraged;
 
+/**
+ * A {@link Supplier} of configured objects.
+ *
+ * @author <a href="https://about.me/lairdnelson"
+ * target="_parent">Laird Nelson</a>
+ *
+ * @see #of()
+ */
 public interface ConfiguredSupplier<T> extends Supplier<T> {
 
 
@@ -50,10 +59,13 @@ public interface ConfiguredSupplier<T> extends Supplier<T> {
    */
 
 
+  @Convenience
+  @OverridingDiscouraged
   public default ClassLoader classLoader() {
     return this.path().classLoader();
   }
-  
+
+  @OverridingDiscouraged
   public default <U> ConfiguredSupplier<U> plus(final Type type) {
     return
       this.plus(type,
@@ -61,6 +73,7 @@ public interface ConfiguredSupplier<T> extends Supplier<T> {
   }
 
   @Convenience
+  @OverridingDiscouraged
   public default <U> ConfiguredSupplier<U> plus(final String accessor,
                                                 final Type type) {
     return
@@ -70,6 +83,7 @@ public interface ConfiguredSupplier<T> extends Supplier<T> {
   }
 
   @Convenience
+  @OverridingDiscouraged
   public default <U> ConfiguredSupplier<U> plus(final String accessor,
                                                 final Type type,
                                                 final Supplier<U> defaultSupplier) {
@@ -79,6 +93,7 @@ public interface ConfiguredSupplier<T> extends Supplier<T> {
   }
 
   @Convenience
+  @OverridingDiscouraged
   public default <U> ConfiguredSupplier<U> plus(final String accessor,
                                                 final Type type,
                                                 final U defaultValue) {
@@ -87,6 +102,7 @@ public interface ConfiguredSupplier<T> extends Supplier<T> {
                 defaultValue);
   }
 
+  @OverridingDiscouraged
   public default <U> ConfiguredSupplier<U> plus(final Type type,
                                                 final Supplier<U> defaultSupplier) {
     return
@@ -95,6 +111,7 @@ public interface ConfiguredSupplier<T> extends Supplier<T> {
   }
 
   @Convenience
+  @OverridingDiscouraged
   public default <U> ConfiguredSupplier<U> plus(final Type type,
                                                 final U defaultValue) {
     return
@@ -102,12 +119,14 @@ public interface ConfiguredSupplier<T> extends Supplier<T> {
                 () -> defaultValue);
   }
 
+  @OverridingDiscouraged
   public default <U> ConfiguredSupplier<U> plus(final Path path) {
     return
       this.plus(path,
                 ConfiguredSupplier::fail);
   }
 
+  @OverridingDiscouraged
   public default <U> ConfiguredSupplier<U> plus(final Path path,
                                                 final Supplier<U> defaultSupplier) {
     return
@@ -117,6 +136,7 @@ public interface ConfiguredSupplier<T> extends Supplier<T> {
   }
 
   @Convenience
+  @OverridingDiscouraged
   public default <U> ConfiguredSupplier<U> plus(final Path path,
                                                 final U defaultValue) {
     return
@@ -125,6 +145,7 @@ public interface ConfiguredSupplier<T> extends Supplier<T> {
               () -> defaultValue);
   }
 
+  @OverridingDiscouraged
   public default <U> ConfiguredSupplier<U> of(final ConfiguredSupplier<?> parent,
                                               final Path path) {
     return
@@ -134,6 +155,7 @@ public interface ConfiguredSupplier<T> extends Supplier<T> {
   }
 
   @Convenience
+  @OverridingDiscouraged
   public default <U> ConfiguredSupplier<U> of(final ConfiguredSupplier<?> parent,
                                               final String accessor,
                                               final Type type) {
@@ -145,6 +167,7 @@ public interface ConfiguredSupplier<T> extends Supplier<T> {
   }
 
   @Convenience
+  @OverridingDiscouraged
   public default <U> ConfiguredSupplier<U> of(final ConfiguredSupplier<?> parent,
                                               final String accessor,
                                               final Type type,
@@ -157,6 +180,7 @@ public interface ConfiguredSupplier<T> extends Supplier<T> {
   }
 
   @Convenience
+  @OverridingDiscouraged
   public default <U> ConfiguredSupplier<U> of(final ConfiguredSupplier<?> parent,
                                               final String accessor,
                                               final Type type,
@@ -169,6 +193,7 @@ public interface ConfiguredSupplier<T> extends Supplier<T> {
   }
 
   @Convenience
+  @OverridingDiscouraged
   public default <U> ConfiguredSupplier<U> of(final ConfiguredSupplier<?> parent,
                                               final Path path,
                                               final U defaultValue) {
@@ -178,12 +203,14 @@ public interface ConfiguredSupplier<T> extends Supplier<T> {
               () -> defaultValue);
   }
 
+  @OverridingDiscouraged
   public default <U> ConfiguredSupplier<U> of(final Path path) {
     return
       this.of(path,
               ConfiguredSupplier::fail);
   }
 
+  @OverridingDiscouraged
   public default <U> ConfiguredSupplier<U> of(final Path path,
                                               final Supplier<U> defaultSupplier) {
     return
@@ -193,6 +220,7 @@ public interface ConfiguredSupplier<T> extends Supplier<T> {
   }
 
   @Convenience
+  @OverridingDiscouraged
   public default <U> ConfiguredSupplier<U> of(final Path path,
                                               final U defaultValue) {
     return
@@ -202,6 +230,7 @@ public interface ConfiguredSupplier<T> extends Supplier<T> {
   }
 
   @Convenience
+  @OverridingDiscouraged
   public default <U> ConfiguredSupplier<U> of(final Type type) {
     return
       this.of(Path.of(Accessor.of(), type),
@@ -209,6 +238,7 @@ public interface ConfiguredSupplier<T> extends Supplier<T> {
   }
 
   @Convenience
+  @OverridingDiscouraged
   public default <U> ConfiguredSupplier<U> of(final Type type,
                                               final Supplier<U> defaultSupplier) {
     return
@@ -217,14 +247,16 @@ public interface ConfiguredSupplier<T> extends Supplier<T> {
   }
 
   @Convenience
+  @OverridingDiscouraged
   public default <U> ConfiguredSupplier<U> of(final Type type,
                                               final U defaultValue) {
     return
       this.of(Path.of(Accessor.of(), type),
               () -> defaultValue);
   }
-  
+
   @Convenience
+  @OverridingDiscouraged
   public default <U> ConfiguredSupplier<U> of(final String accessor,
                                               final Type type) {
     return
@@ -234,6 +266,7 @@ public interface ConfiguredSupplier<T> extends Supplier<T> {
   }
 
   @Convenience
+  @OverridingDiscouraged
   public default <U> ConfiguredSupplier<U> of(final String accessor,
                                               final Type type,
                                               final U defaultValue) {
@@ -244,6 +277,7 @@ public interface ConfiguredSupplier<T> extends Supplier<T> {
   }
 
   @Convenience
+  @OverridingDiscouraged
   public default <U> ConfiguredSupplier<U> of(final String accessor,
                                               final Type type,
                                               final Supplier<U> defaultSupplier) {
@@ -252,6 +286,12 @@ public interface ConfiguredSupplier<T> extends Supplier<T> {
               defaultSupplier);
   }
 
+  @OverridingDiscouraged
+  public default boolean isRoot() {
+    return this.parent() == this;
+  }
+
+  @OverridingDiscouraged
   public default ConfiguredSupplier<?> root() {
     ConfiguredSupplier<?> root = this;
     ConfiguredSupplier<?> parent = root.parent();
@@ -271,6 +311,7 @@ public interface ConfiguredSupplier<T> extends Supplier<T> {
    */
 
 
+  @EntryPoint
   @SuppressWarnings("static")
   public static ConfiguredSupplier<?> of() {
     return new Object() {
@@ -280,12 +321,21 @@ public interface ConfiguredSupplier<T> extends Supplier<T> {
           ServiceLoader.load(ConfiguredSupplier.class, ConfiguredSupplier.class.getClassLoader()).findFirst().orElseThrow();
         if (!Path.of().equals(bootstrapConfiguredSupplier.path())) {
           throw new IllegalStateException("path(): " + bootstrapConfiguredSupplier.path());
+        } else if (bootstrapConfiguredSupplier.parent() != bootstrapConfiguredSupplier) {
+          throw new IllegalStateException("parent(): " + bootstrapConfiguredSupplier.parent());
+        } else if (bootstrapConfiguredSupplier.get() != bootstrapConfiguredSupplier) {
+          throw new IllegalStateException("bootstrapConfiguredSupplier.get(): " + bootstrapConfiguredSupplier.get());
+        } else if (!bootstrapConfiguredSupplier.isRoot()) {
+          throw new IllegalStateException("!bootstrapConfiguredSupplier.isRoot()");
+        } else if (bootstrapConfiguredSupplier.root() != bootstrapConfiguredSupplier) {
+          throw new IllegalStateException("root(): " + bootstrapConfiguredSupplier.root());
         }
-        assert bootstrapConfiguredSupplier.parent() == bootstrapConfiguredSupplier;
-        assert bootstrapConfiguredSupplier.get() == bootstrapConfiguredSupplier;
         instance = bootstrapConfiguredSupplier.of(ConfiguredSupplier.class, () -> bootstrapConfiguredSupplier).get();
-        assert instance.get() instanceof ConfiguredSupplier;
-        assert instance.parent() == bootstrapConfiguredSupplier;
+        if (instance.parent() != bootstrapConfiguredSupplier) {
+          throw new IllegalStateException("instance.parent(): " + instance.parent());
+        } else if (!(instance.get() instanceof ConfiguredSupplier)) {
+          throw new IllegalStateException("instance.get(): " + instance.get());
+        }
       }
     }.instance;
   }

@@ -108,7 +108,11 @@ public final class Path implements Assignable<Type> {
   public final ClassLoader classLoader() {
     return Types.erase(this.type()).getClassLoader();
   }
-  
+
+  public final int indexOf(final Path other) {
+    return Collections.indexOfSubList(this.elements, other.elements);
+  }
+
   public final int indexOf(final Path path, final BiPredicate<? super Object, ? super Object> p) {
     final int pathSize = path.size();
     final int sizeDiff = this.size() - pathSize;
@@ -122,6 +126,24 @@ public final class Path implements Assignable<Type> {
       return i;
     }
     return -1;
+  }
+
+  public final boolean startsWith(final Path other) {
+    if (other == this) {
+      return true;
+    } else if (other == null) {
+      return false;
+    } else {
+      return this.indexOf(other) == 0;
+    }
+  }
+
+  public final boolean startsWith(final Path other, final BiPredicate<? super Object, ? super Object> p) {
+    return this.indexOf(other, p) == 0;
+  }
+
+  public final int lastIndexOf(final Path other) {
+    return Collections.lastIndexOfSubList(this.elements, other.elements);
   }
 
   public final int lastIndexOf(final Path path, final BiPredicate<? super Object, ? super Object> p) {
@@ -139,14 +161,26 @@ public final class Path implements Assignable<Type> {
     return -1;
   }
 
-  public final int indexOf(final Path other) {
-    return Collections.indexOfSubList(this.elements, other.elements);
+  public final boolean endsWith(final Path other) {
+    if (other == this) {
+      return true;
+    } else if (other == null) {
+      return false;
+    } else {
+      final int lastIndex = this.lastIndexOf(other);
+      return lastIndex >= 0 && lastIndex + other.size() == this.size();
+    }
   }
 
-  public final int lastIndexOf(final Path other) {
-    return Collections.lastIndexOfSubList(this.elements, other.elements);
+  public final boolean endsWith(final Path other, final BiPredicate<? super Object, ? super Object> p) {
+    final int lastIndex = this.lastIndexOf(other, p);
+    return lastIndex >= 0 && lastIndex + other.size() == this.size();
   }
 
+  public final Path plus(final Type type) {
+    return this.plus(Accessor.of(), type);
+  }
+  
   public final Path plus(final String accessor, final Type type) {
     return this.plus(Accessor.of(accessor), type);
   }
@@ -166,7 +200,7 @@ public final class Path implements Assignable<Type> {
       return new Path(this.elements, List.of(Accessor.of()), path.type());
     } else {
       assert size > 1;
-      assert path.isType(0) ? path.getType(0) == void.class : path.isAccessor(0);
+      assert path.isType(0) ? path.type(0) == void.class : path.isAccessor(0);
       assert path.isType(size - 1);
       final List<Object> newElements = new ArrayList<>(this.elements);
       newElements.addAll(path.elements.subList(0, size - 1));
@@ -201,12 +235,16 @@ public final class Path implements Assignable<Type> {
     return this.elements.get(index) instanceof Type;
   }
 
-  public final Accessor getAccessor(final int index) {
+  public final Accessor accessor(final int index) {
     final Object o = this.elements.get(index);
     return o instanceof Accessor a ? a : null;
   }
 
-  public final Type getType(final int index) {
+  public final Accessor lastAccessor() {
+    return this.accessor(this.size() - 2);
+  }
+
+  public final Type type(final int index) {
     final Object o = this.elements.get(index);
     return o instanceof Type type ? type : null;
   }
@@ -243,6 +281,10 @@ public final class Path implements Assignable<Type> {
 
   public static final Path of(final Type type) {
     return new Path(type);
+  }
+
+  public static final Path of(final String accessor, final Type type) {
+    return new Path(Accessor.of(accessor), type);
   }
 
   public static final Path of(final Accessor accessor, final Type type) {

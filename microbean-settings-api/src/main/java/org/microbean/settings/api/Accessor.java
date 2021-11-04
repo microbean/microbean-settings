@@ -20,10 +20,20 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
+import java.util.SortedMap;
+import java.util.TreeMap;
+
+import org.microbean.development.annotation.Experimental;
 
 // Arguments are Strings because they are informative only and
 // Accessors are contained by Paths which are often keys in maps.
 public record Accessor(String name, List<Class<?>> parameters, List<String> arguments) {
+
+
+  /*
+   * Constructors.
+   */
+
 
   public Accessor(final String name) {
     this(name, List.of(), List.of());
@@ -32,7 +42,7 @@ public record Accessor(String name, List<Class<?>> parameters, List<String> argu
   public Accessor(final int index) {
     this("[" + index + "]", List.of(Integer.class), List.of(Integer.toString(index)));
   }
-  
+
   public Accessor {
     Objects.requireNonNull(name, "name");
     Objects.requireNonNull(parameters, "parameters");
@@ -42,10 +52,48 @@ public record Accessor(String name, List<Class<?>> parameters, List<String> argu
     }
   }
 
+
+  /*
+   * Instance methods.
+   */
+
+
+  public final int parameterCount() {
+    return this.parameters().size();
+  }
+
+  public final Class<?> parameter(final int index) {
+    return this.parameters().get(index);
+  }
+
+  public final String argument(final int index) {
+    return this.arguments().get(index);
+  }
+
+  // You can look at an Accessor as a pile of qualifiers.  That lets
+  // us score them in the same way.  This can come in useful when path
+  // matching.
+  @Experimental
+  public final Qualifiers toQualifiers() {
+    final SortedMap<String, String> map = new TreeMap<>();
+    map.put("name", this.name());
+    final List<String> arguments = this.arguments();
+    for (int i = 0; i < arguments.size(); i++) {
+      map.put("arg" + i, arguments.get(i));
+    }
+    return Qualifiers.of(map);
+  }
+
+
+  /*
+   * Static methods.
+   */
+
+
   public static final Accessor of() {
     return new Accessor("");
   }
-  
+
   public static final Accessor of(final String name) {
     return new Accessor(name);
   }
@@ -53,7 +101,7 @@ public record Accessor(String name, List<Class<?>> parameters, List<String> argu
   public static final List<Accessor> of(final String name0, final String name1) {
     return List.of(Accessor.of(name0), Accessor.of(name1));
   }
-  
+
   public static final List<Accessor> of(final String name0, final String name1, final String name2) {
     return List.of(Accessor.of(name0), Accessor.of(name1), Accessor.of(name2));
   }
@@ -81,5 +129,5 @@ public record Accessor(String name, List<Class<?>> parameters, List<String> argu
   public static final Accessor of(final String name, final List<Class<?>> parameters, final List<String> arguments) {
     return new Accessor(name, parameters, arguments);
   }
-  
+
 }

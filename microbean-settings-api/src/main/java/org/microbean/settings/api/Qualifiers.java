@@ -37,6 +37,19 @@ import static java.util.Collections.emptySortedSet;
 import static java.util.Collections.unmodifiableSortedMap;
 import static java.util.Collections.unmodifiableSortedSet;
 
+/**
+ * An immutable set of {@link String}-typed key-value pair coordinates
+ * that locate configuration in configuration space.
+ *
+ * <p>This is a <a
+ * href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/doc-files/ValueBased.html">value-based
+ * class</a>.</p>
+ *
+ * @author <a href="https://about.me/lairdnelson"
+ * target="_parent">Laird Nelson</a>
+ *
+ * @see #of(CharSequence, CharSequence)
+ */
 public final class Qualifiers {
 
 
@@ -104,20 +117,20 @@ public final class Qualifiers {
     return this.toMap().keySet();
   }
 
-  public final boolean contains(final Qualifiers her) {
-    return this.size() >= her.size() && this.entrySet().containsAll(her.entrySet());
-  }
-
-  public final Object get(final String name) {
-    return this.qualifiers.get(name);
+  public final Object get(final CharSequence name) {
+    return this.qualifiers.get(name.toString());
   }
 
   public final Stream<Qualifier> stream() {
     return this.toMap().entrySet().stream().map(Qualifier::of);
   }
 
+  public final boolean contains(final Qualifiers other) {
+    return this == other || this.size() >= other.size() && this.entrySet().containsAll(other.entrySet());
+  }
+
   public final boolean isSubsetOf(final Qualifiers other) {
-    return other.contains(this);
+    return other == this || other.contains(this);
   }
 
   public final SortedSet<Qualifier> toQualifiers() {
@@ -125,32 +138,32 @@ public final class Qualifiers {
     return q.isEmpty() ? emptySortedSet() : unmodifiableSortedSet(new TreeSet<>(q.entrySet().stream().map(Qualifier::of).toList()));
   }
 
-  public final int intersectionSize(final Qualifiers q1) {
-    if (q1 == null || q1.isEmpty()) {
-      return 0;
-    } else if (this == q1) {
+  public final int intersectionSize(final Qualifiers other) {
+    if (other == this) {
       // Just an identity check to rule this easy case out.
       return this.size();
+    } else if (other == null || other.isEmpty()) {
+      return 0;
     } else {
-      final Set<? extends Entry<String, String>> q1EntrySet = q1.entrySet();
+      final Set<? extends Entry<String, String>> otherEntrySet = other.entrySet();
       return (int)this.entrySet().stream()
-        .filter(q1EntrySet::contains)
+        .filter(otherEntrySet::contains)
         .count();
     }
   }
 
-  public final int symmetricDifferenceSize(final Qualifiers q1) {
-    if (q1 == null || q1.isEmpty()) {
-      return this.size();
-    } else if (this == q1) {
+  public final int symmetricDifferenceSize(final Qualifiers other) {
+    if (other == this) {
       // Just an identity check to rule this easy case out.
       return 0;
+    } else if (other == null || other.isEmpty()) {
+      return this.size();
     } else {
-      final Set<Entry<?, ?>> q1SymmetricDifference = new HashSet<>(this.entrySet());
-      q1.entrySet().stream()
-        .filter(Predicate.not(q1SymmetricDifference::add))
-        .forEach(q1SymmetricDifference::remove);
-      return q1SymmetricDifference.size();
+      final Set<Entry<?, ?>> otherSymmetricDifference = new HashSet<>(this.entrySet());
+      other.entrySet().stream()
+        .filter(Predicate.not(otherSymmetricDifference::add))
+        .forEach(otherSymmetricDifference::remove);
+      return otherSymmetricDifference.size();
     }
   }
 
@@ -204,7 +217,7 @@ public final class Qualifiers {
   public static final Qualifiers of(final CharSequence value0) {
     return of("value", value0);
   }
-  
+
   public static final Qualifiers of(final CharSequence name0, final CharSequence value0) {
     return new Qualifiers(Qualifier.of(name0, value0));
   }

@@ -26,13 +26,23 @@ import java.util.ServiceLoader;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
 import org.microbean.settings.api.Provider.Value;
 
+/**
+ * A subclassable default {@link ConfiguredSupplier} implementation
+ * that delegates its work to {@link Provider}s.
+ *
+ * @author <a href="https://about.me/lairdnelson"
+ * target="_parent">Laird Nelson</a>
+ *
+ * @see ConfiguredSupplier
+ *
+ * @see Provider
+ */
 public class Settings<T> implements ConfiguredSupplier<T> {
 
 
@@ -41,7 +51,8 @@ public class Settings<T> implements ConfiguredSupplier<T> {
    */
 
 
-  private final BiFunction<? super Qualified.Record<Path>, Function<? super Qualified.Record<Path>, ? extends Settings<?>>, ? extends Settings<?>> settingsCache;
+  // Package-private for testing only.
+  final ConcurrentMap<Qualified.Record<Path>, Settings<?>> settingsCache;
 
   private final List<Provider> providers;
 
@@ -65,9 +76,17 @@ public class Settings<T> implements ConfiguredSupplier<T> {
    */
 
 
+  /**
+   * Creates a new {@link Settings}.
+   *
+   * @deprecated This constructor should be invoked by subclasses and
+   * {@link ServiceLoader java.util.ServiceLoader} instances only.
+   *
+   * @see ConfiguredSupplier#of()
+   */
   @Deprecated // intended for use by ServiceLoader only
   public Settings() {
-    this(new ConcurrentHashMap<Qualified.Record<Path>, Settings<?>>()::computeIfAbsent,
+    this(new ConcurrentHashMap<Qualified.Record<Path>, Settings<?>>(),
          loadedProviders(),
          null, // qualifiers
          null, // parent,
@@ -79,12 +98,12 @@ public class Settings<T> implements ConfiguredSupplier<T> {
   }
 
   @SuppressWarnings("unchecked")
-  private Settings(final BiFunction<? super Qualified.Record<Path>, Function<? super Qualified.Record<Path>, ? extends Settings<?>>, ? extends Settings<?>> settingsCache,
+  private Settings(final ConcurrentMap<Qualified.Record<Path>, Settings<?>> settingsCache,
                    final Collection<? extends Provider> providers,
                    final Qualifiers qualifiers,
-                   final ConfiguredSupplier<?> parent,
+                   final ConfiguredSupplier<?> parent, // if null, will end up being "this" if path is Path.of()
                    final Path path,
-                   final Supplier<T> supplier,
+                   final Supplier<T> supplier, // if null, will end up being () -> this if path is Path.of()
                    final Supplier<? extends Consumer<? super Provider>> rejectedProvidersConsumerSupplier,
                    final Supplier<? extends Consumer<? super Value<?>>> rejectedValuesConsumerSupplier,
                    final Supplier<? extends Consumer<? super Value<?>>> ambiguousValuesConsumerSupplier) {
@@ -95,27 +114,31 @@ public class Settings<T> implements ConfiguredSupplier<T> {
     this.ambiguousValuesConsumerSupplier = Objects.requireNonNull(ambiguousValuesConsumerSupplier, "ambiguousValuesConsumerSupplier");
     this.providers = List.copyOf(providers);
     if (parent == null) {
-      if (path == null || path.equals(Path.of())) {
+      // Bootstrap case, i.e. the zero-argument constructor called us.
+      // Pay attention.
+      if (path.equals(Path.of())) {
         this.path = Path.of();
-        this.supplier = supplier == null ? () -> (T)this : supplier;
-        this.parent = this;
+        this.supplier = supplier == null ? () -> (T)this : supplier; // NOTE
+        this.parent = this; // NOTE
+        final Qualified.Record<Path> qp = Qualified.Record.of(Qualifiers.of(), Path.of());
+        this.settingsCache.put(qp, this); // NOTE
+        // While the following call is in effect, our
+        // final-but-as-yet-uninitialized qualifiers instance field will
+        // be null.  Note that the qualifiers() accessor method accounts
+        // for this and will return Qualifiers.of() instead.
+        this.qualifiers = this.plus(Qualifiers.class, Qualifiers::of).get();
+        this.settingsCache.remove(qp);
       } else {
         throw new IllegalArgumentException("path: " + path);
       }
-    } else if (path == null) {
-      this.path = Path.of();
-      this.supplier = Objects.requireNonNull(supplier, "supplier");
-      this.parent = parent;
+    } else if (path.equals(Path.of())) {
+      throw new IllegalArgumentException("path: " + path);
     } else {
       this.path = path;
       this.supplier = Objects.requireNonNull(supplier, "supplier");
       this.parent = parent;
+      this.qualifiers = Objects.requireNonNull(qualifiers, "qualifiers");
     }
-    // While the following call is in effect, our qualifiers
-    // instance field will be null.  Note that the qualifiers()
-    // method accounts for this and will return Qualifiers.of()
-    // instead.
-    this.qualifiers = qualifiers == null ? this.plus(Qualifiers.class, Qualifiers::of).get() : qualifiers;
   }
 
 
@@ -124,6 +147,26 @@ public class Settings<T> implements ConfiguredSupplier<T> {
    */
 
 
+  /**
+   * Returns an {@linkplain
+   * java.util.Collections#unmodifiableCollection(Collection)
+   * unmodifiable} {@link Collection} of {@link Provider}s that this
+   * {@link Settings} will use to supply objects.
+   *
+   * <p>This method never returns {@code null}.</p>
+   *
+   * @return an {@linkplain
+   * java.util.Collections#unmodifiableCollection(Collection)
+   * unmodifiable} {@link Collection} of {@link Provider}s that this
+   * {@link Settings} will use to supply objects; never {@code null}
+   *
+   * @nullability This method never returns {@code null}.
+   *
+   * @threadsafety This method is safe for concurrent use by multiple
+   * threads.
+   *
+   * @idempotency This method is idempotent and deterministic.
+   */
   public final Collection<Provider> providers() {
     return this.providers;
   }
@@ -168,25 +211,45 @@ public class Settings<T> implements ConfiguredSupplier<T> {
               this.ambiguousValuesConsumerSupplier.get());
   }
 
-  @SuppressWarnings("unchecked")
   private final <U> Settings<U> of(final ConfiguredSupplier<?> parent,
                                    final Path path,
                                    final Supplier<U> defaultSupplier,
                                    final Consumer<? super Provider> rejectedProviders,
                                    final Consumer<? super Value<?>> rejectedValues,
                                    final Consumer<? super Value<?>> ambiguousValues) {
-    Objects.requireNonNull(parent, "parent");
-    if (Path.of().equals(path)) {
+    if (path.equals(Path.of())) {
       throw new IllegalArgumentException("path: " + path);
     }
-    return
-      (Settings<U>)this.settingsCache.apply(Qualified.Record.of(parent.qualifiers(), path),
-                                            qp -> this.computeSettings(parent,
-                                                                       qp.qualified(),
-                                                                       defaultSupplier,
-                                                                       rejectedProviders,
-                                                                       rejectedValues,
-                                                                       ambiguousValues));
+    // We deliberately do not use computeIfAbsent() because of()
+    // operations can kick off other of() operations, and then you'd
+    // have a cache mutating operation occuring within a cache
+    // mutating operation, which is forbidden.  Sometimes you get an
+    // IllegalStateException as you are supposed to; other times you
+    // do not, which is a JDK bug.  See
+    // https://blog.jooq.org/avoid-recursion-in-concurrenthashmap-computeifabsent/.
+    //
+    // This obviously can result in unnecessary work, but most
+    // configuration use cases will cause this work to happen anyway.
+    final Qualified.Record<Path> qp = Qualified.Record.of(parent.qualifiers(), path);
+    Settings<?> settings = this.settingsCache.get(qp);
+    if (settings == null) {
+      settings =
+        this.settingsCache.putIfAbsent(qp,
+                                       this.computeSettings(parent,
+                                                            path,
+                                                            defaultSupplier,
+                                                            rejectedProviders,
+                                                            rejectedValues,
+                                                            ambiguousValues));
+      if (settings == null) {
+        settings = this.settingsCache.get(qp);
+      }
+    }
+    assert settings != null;
+    assert settings == this.settingsCache.get(qp);
+    @SuppressWarnings("unchecked")
+    final Settings<U> returnValue = (Settings<U>)settings;
+    return returnValue;
   }
 
   private final <U> Settings<U> computeSettings(final ConfiguredSupplier<?> parent,
@@ -230,7 +293,7 @@ public class Settings<T> implements ConfiguredSupplier<T> {
       final Provider provider = providers instanceof List<? extends Provider> list ? list.get(0) : providers.iterator().next();
       if (provider == null) {
         return null;
-      } else if (!this.isSelectable(parent, path, provider)) {
+      } else if (!this.isSelectable(provider, parent, path)) {
         rejectedProviders.accept(provider);
         return null;
       } else {
@@ -248,13 +311,15 @@ public class Settings<T> implements ConfiguredSupplier<T> {
       }
     } else {
       final Qualifiers qualifiers = parent.qualifiers();
-      Value<?> candidate = null;
+      Value<U> candidate = null;
       Provider candidateProvider = null;
       int candidateQualifiersScore = Integer.MIN_VALUE;
       int candidatePathScore = Integer.MIN_VALUE;
       for (final Provider provider : providers) {
-        if (provider != null && this.isSelectable(parent, path, provider)) {
-          Value<?> value = provider.get(parent, path);
+        if (provider != null && this.isSelectable(provider, parent, path)) {
+          @SuppressWarnings("unchecked")
+          final Value<U> v = (Value<U>)provider.get(parent, path);
+          Value<U> value = v;
           VALUE_EVALUATION_LOOP:
           while (value != null) { // NOTE INFINITE LOOP POSSIBILITY; read carefully
             if (isSelectable(qualifiers, path, value.qualifiers(), value.path())) {
@@ -265,7 +330,6 @@ public class Settings<T> implements ConfiguredSupplier<T> {
                 candidatePathScore = this.score(path, candidate.path());
                 value = null; // critical
               } else {
-                final Path valuePath = value.path();
                 // Let's do qualifiers first.  This is an arbitrary decision.
                 final int valueQualifiersScore = this.score(qualifiers, value.qualifiers());
                 if (valueQualifiersScore < candidateQualifiersScore) {
@@ -273,12 +337,16 @@ public class Settings<T> implements ConfiguredSupplier<T> {
                   value = null; // critical
                 } else if (valueQualifiersScore == candidateQualifiersScore) {
                   // Same qualifiers score; let's now do paths.
-                  final int valuePathScore = this.score(path, valuePath);
-                  if (valuePathScore > 0) {
+                  //
+                  // TODO: wait a minute, why are we scoring the value
+                  // path against the incoming path?  Shouldn't it be
+                  // against the candidate path?
+                  final int valuePathScore = this.score(path, value.path());
+                  if (valuePathScore < 0) {
                     rejectedValues.accept(value);
                     value = null; // critical
                   } else if (valuePathScore == 0) {
-                    final Value<?> disambiguatedValue =
+                    final Value<U> disambiguatedValue =
                       this.disambiguate(parent, path, candidateProvider, candidate, provider, value);
                     if (disambiguatedValue == null) {
                       ambiguousValues.accept(candidate);
@@ -303,11 +371,17 @@ public class Settings<T> implements ConfiguredSupplier<T> {
                       candidatePathScore = valuePathScore;
                       value = null; // critical
                     } else {
+                      // Disambiguation came up with an entirely
+                      // different value, so run it through the
+                      // machine.
                       value = disambiguatedValue;
                       assert value != null;
                       continue VALUE_EVALUATION_LOOP; // NOTE
                     }
                   } else {
+                    // TODO: I think this indicates that I should have
+                    // scored the candidate path, not the supplied
+                    // path.
                     rejectedValues.accept(candidate);
                     candidate = value;
                     candidateProvider = provider;
@@ -328,24 +402,23 @@ public class Settings<T> implements ConfiguredSupplier<T> {
               rejectedValues.accept(value);
               value = null; // critical
             }
+            assert value == null;
           } // end while(value != null)
           assert value == null;
         } else {
           rejectedProviders.accept(provider);
         }
       }
-      @SuppressWarnings("unchecked")
-      final Value<U> c = (Value<U>)candidate;
-      return c;
+      return candidate;
     }
   }
 
-  protected final boolean isSelectable(final ConfiguredSupplier<?> parent,
-                                       final Path path,
-                                       final Provider provider) {
+  protected final boolean isSelectable(final Provider provider,
+                                       final ConfiguredSupplier<?> supplier,
+                                       final Path path) {
     return
       AssignableType.of(provider.upperBound()).isAssignable(path.type()) &&
-      provider.isSelectable(parent, path);
+      provider.isSelectable(supplier, path);
   }
 
   protected int score(final Qualifiers contextQualifiers, final Qualifiers valueQualifiers) {
@@ -360,16 +433,25 @@ public class Settings<T> implements ConfiguredSupplier<T> {
     }
   }
 
-  protected int score(final Path contextPath, final Path valuePath) {
-    return contextPath.size() - valuePath.size();
+  protected int score(final Path path, final Path valuePath) {
+    assert path.type(0) == void.class; // it's an absolute path
+    assert path.endsWith(valuePath);
+    final int sizeDiff = path.size() - valuePath.size();
+    assert sizeDiff >= 0;
+    if (sizeDiff == 0) {
+      // TODO: handwave: compare args
+      return sizeDiff;
+    } else {
+      return sizeDiff;
+    }
   }
 
-  protected Value<?> disambiguate(final ConfiguredSupplier<?> parent,
-                                  final Path path,
-                                  final Provider p0,
-                                  final Value<?> v0,
-                                  final Provider p1,
-                                  final Value<?> v1) {
+  protected <U> Value<U> disambiguate(final ConfiguredSupplier<?> parent,
+                                      final Path path,
+                                      final Provider p0,
+                                      final Value<U> v0,
+                                      final Provider p1,
+                                      final Value<U> v1) {
     return null;
   }
 
@@ -383,20 +465,14 @@ public class Settings<T> implements ConfiguredSupplier<T> {
     return LoadedProviders.loadedProviders;
   }
 
-  protected static final boolean isSelectable(final Qualifiers contextQualifiers,
-                                              final Path contextPath,
-                                              final Qualifiers valuePathQualifiers,
+  protected static final boolean isSelectable(final Qualifiers qualifiers,
+                                              final Path path,
+                                              final Qualifiers valueQualifiers,
                                               final Path valuePath) {
-    if (AssignableType.of(contextPath.type()).isAssignable(valuePath.type())) {
-      if (contextQualifiers.isEmpty() ||
-          valuePathQualifiers.isEmpty() ||
-          contextQualifiers.intersectionSize(valuePathQualifiers) > 0) {
-        // TODO: this is just endsWith()
-        final int lastIndex = contextPath.lastIndexOf(valuePath);
-        return lastIndex >= 0 && lastIndex + valuePath.size() == contextPath.size();
-      }
-    }
-    return false;
+    return
+      AssignableType.of(path.type()).isAssignable(valuePath.type()) &&
+      path.endsWith(valuePath) && // This ideally isn't just endsWith but endsWithAssignableType or something
+      (qualifiers.isEmpty() || valueQualifiers.isEmpty() || qualifiers.intersectionSize(valueQualifiers) > 0);
   }
 
   private static final <T> T fail() {

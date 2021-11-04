@@ -16,6 +16,8 @@
  */
 package org.microbean.settings.api;
 
+import java.lang.reflect.Type;
+
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
@@ -39,7 +41,30 @@ final class TestPath {
     assertEquals(1, pf.size());
   }
 
+  @Test
+  final void testEndsWith() {
+    final Path path = Path.of().plus(Car.class).plus("shape", Shape.class);
+    final Path other = Path.of("shape", Square.class);
+    assertTrue(path.endsWith(other, (o1, o2) -> {
+          if (o1 instanceof Accessor) {
+            return o1.equals(o2);
+          } else if (o1 instanceof Type t1 && o2 instanceof Type t2) {
+            return AssignableType.of(t1).isAssignable(t2);
+          } else {
+            return false;
+          }
+        }));
+  }
+
   private static interface Car {
+
+  }
+
+  private static interface Shape {
+
+  }
+
+  private static interface Square extends Shape {
 
   }
 

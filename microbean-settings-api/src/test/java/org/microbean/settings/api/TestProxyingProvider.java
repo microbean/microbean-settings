@@ -17,11 +17,16 @@
 package org.microbean.settings.api;
 
 import java.util.Collection;
+import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
+import org.microbean.settings.api.Provider.Value;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 final class TestProxyingProvider {
 
@@ -42,6 +47,8 @@ final class TestProxyingProvider {
     assertNotNull(engine);
     assertSame(engine, pt.getEngine());
     engine.start();
+    assertEquals(18, car.getWheel("LF").getDiameterInInches());
+    assertEquals(24, car.getWheel("LR").getDiameterInInches());
   }
 
   public static interface Car {
@@ -70,6 +77,47 @@ final class TestProxyingProvider {
 
     public default int getDiameterInInches() {
       return 18;
+    }
+    
+  }
+
+  public static final class LRWheelProvider extends AbstractProvider<Wheel> {
+
+    public LRWheelProvider() {
+      super();
+    }
+    
+    @Override
+    public final boolean isSelectable(final ConfiguredSupplier<?> supplier,
+                                      final Path path) {
+      if (super.isSelectable(supplier, path)) {
+        assertSame(Wheel.class, path.type());
+        final Accessor a = path.lastAccessor();
+        return "wheel".equals(a.name()) && "LR".equals(a.argument(0));
+      } else {
+        return false;
+      }
+    }
+
+    public final Value<Wheel> get(final ConfiguredSupplier<?> supplier,
+                                  final Path path) {
+      assertSame(Wheel.class, path.type());
+      final Accessor a = path.lastAccessor();
+      assertSame(a, path.accessor(path.size() - 2));
+      assertEquals("wheel", a.name());
+      assertEquals(List.of(String.class), a.parameters());
+      assertEquals("LR", a.argument(0));
+      return new Value<>(Qualifiers.of(),
+                         Path.of(Accessor.of("wheel",
+                                             List.of(String.class),
+                                             List.of("LR")),
+                                 Wheel.class),
+                         new Wheel() {
+                           @Override
+                           public final int getDiameterInInches() {
+                             return 24;
+                           }
+                         });
     }
     
   }
