@@ -26,11 +26,16 @@ import java.util.ServiceLoader;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import org.microbean.development.annotation.SubordinateTo;
+
 import org.microbean.settings.api.Provider.Value;
+
+import org.microbean.type.Types;
 
 /**
  * A subclassable default {@link ConfiguredSupplier} implementation
@@ -337,15 +342,11 @@ public class Settings<T> implements ConfiguredSupplier<T> {
                   value = null; // critical
                 } else if (valueQualifiersScore == candidateQualifiersScore) {
                   // Same qualifiers score; let's now do paths.
-                  //
-                  // TODO: wait a minute, why are we scoring the value
-                  // path against the incoming path?  Shouldn't it be
-                  // against the candidate path?
                   final int valuePathScore = this.score(path, value.path());
-                  if (valuePathScore < 0) {
+                  if (valuePathScore < candidatePathScore) {
                     rejectedValues.accept(value);
                     value = null; // critical
-                  } else if (valuePathScore == 0) {
+                  } else if (valuePathScore == candidatePathScore) {
                     final Value<U> disambiguatedValue =
                       this.disambiguate(parent, path, candidateProvider, candidate, provider, value);
                     if (disambiguatedValue == null) {
@@ -379,9 +380,6 @@ public class Settings<T> implements ConfiguredSupplier<T> {
                       continue VALUE_EVALUATION_LOOP; // NOTE
                     }
                   } else {
-                    // TODO: I think this indicates that I should have
-                    // scored the candidate path, not the supplied
-                    // path.
                     rejectedValues.accept(candidate);
                     candidate = value;
                     candidateProvider = provider;
@@ -421,29 +419,143 @@ public class Settings<T> implements ConfiguredSupplier<T> {
       provider.isSelectable(supplier, path);
   }
 
-  protected int score(final Qualifiers contextQualifiers, final Qualifiers valueQualifiers) {
-    final int intersectionSize = contextQualifiers.intersectionSize(valueQualifiers);
+  @SubordinateTo("#of(ConfiguredSupplier, Path, Supplier)")
+  protected int score(final Qualifiers referenceQualifiers, final Qualifiers valueQualifiers) {
+    final int intersectionSize = referenceQualifiers.intersectionSize(valueQualifiers);
     if (intersectionSize > 0) {
       return
         intersectionSize == valueQualifiers.size() ?
         intersectionSize :
-        intersectionSize - contextQualifiers.symmetricDifferenceSize(valueQualifiers);
+        intersectionSize - referenceQualifiers.symmetricDifferenceSize(valueQualifiers);
     } else {
-      return -(contextQualifiers.size() + valueQualifiers.size());
+      return -(referenceQualifiers.size() + valueQualifiers.size());
     }
   }
 
-  protected int score(final Path path, final Path valuePath) {
-    assert path.type(0) == void.class; // it's an absolute path
-    assert path.endsWith(valuePath);
-    final int sizeDiff = path.size() - valuePath.size();
-    assert sizeDiff >= 0;
-    if (sizeDiff == 0) {
-      // TODO: handwave: compare args
-      return sizeDiff;
-    } else {
-      return sizeDiff;
+  /**
+   * Returns a score indicating the relative specificity of {@code
+   * valuePath} with respect to {@code referencePath}.
+   *
+   * <p>This is <em>not</em> a comparison method.</p>
+   *
+   * <p>The following preconditions must hold or undefined behavior
+   * will result:</p>
+   *
+   * <ul>
+   *
+   * <li>Neither parameter's value may be {@code null}.</li>
+   *
+   * <li>{@code referencePath} must have {@code void.class} as its
+   * first {@linkplain Path#type(int) element}</li>
+   *
+   * <li>{@code valuePath} must be selectable with respect to {@code
+   * referencePath}, where the definition of selectability is
+   * described below</li>
+   *
+   * </ul>
+   *
+   * <p>For {@code valuePath} to "be selectable" with respect to
+   * {@code referencePath} for the purposes of this method and for no
+   * other purpose, a hypothetical invocation of {@link
+   * #isSelectable(Path, Path)} must return {@code true} when supplied
+   * with {@code referencePath} and {@code valuePath} respectively.
+   * Note that such an invocation is <em>not</em> made by this method,
+   * but logically precedes it when this method is called in the
+   * natural course of events by the {@link #of(ConfiguredSupplier,
+   * Path, Supplier)} method.</p>
+   *
+   * @param referencePath the {@link Path} against which to score the
+   * supplied {@code valuePath}; must not be {@code null}; must adhere
+   * to the preconditions above
+   *
+   * @param valuePath the {@link Path} to score against the supplied
+   * {@code referencePath}; must not be {@code null}; must adhere to
+   * the preconditions above
+   *
+   * @return a relative score for {@code valuePath} with respect to
+   * {@code referencePath}; meaningless on its own
+   *
+   * @exception NullPointerException if either parameter is {@code
+   * null}
+   *
+   * @exception IllegalArgumentException if certain preconditions have
+   * been violated
+   *
+   * @see #of(ConfiguredSupplier, Path, Supplier)
+   *
+   * @see #isSelectable(Path, Path)
+   *
+   * @threadsafety This method is and its overrides must be safe for
+   * concurrent use by multiple threads.
+   *
+   * @idempotency This method is idempotent and deterministic.
+   * Specifically, the same score is returned whenever this method is
+   * invoked with the same paths.  Overrides must preserve this
+   * property.
+   */
+  @SubordinateTo("#of(ConfiguredSupplier, Path, Supplier)")
+  protected int score(final Path referencePath, final Path valuePath) {
+    assert referencePath.type(0) == void.class : "referencePath: " + referencePath;
+
+    final int lastValuePathIndex = referencePath.lastIndexOf(valuePath, AccessorsMatchBiPredicate.INSTANCE);
+    assert lastValuePathIndex >= 0 : "referencePath: " + referencePath + "; valuePath: " + valuePath;
+    assert lastValuePathIndex + valuePath.size() == referencePath.size() : "referencePath: " + referencePath + "; valuePath: " + valuePath;
+
+    int score = valuePath.size();
+    for (int valuePathIndex = 0; valuePathIndex < valuePath.size(); valuePathIndex++) {
+      final int referencePathIndex = lastValuePathIndex + valuePathIndex;
+      if (referencePath.isAccessor(referencePathIndex)) {
+        if (valuePath.isAccessor(valuePathIndex)) {
+          final Accessor referenceAccessor = referencePath.accessor(referencePathIndex);
+          final Accessor valueAccessor = valuePath.accessor(valuePathIndex);
+
+          assert referenceAccessor.name().equals(valueAccessor.name()) : "referenceAccessor: " + referenceAccessor + "; valueAccessor: " + valueAccessor;
+          assert referenceAccessor.parameters().size() == valueAccessor.parameters().size() : "referenceAccessor: " + referenceAccessor + "; valueAccessor: " + valueAccessor;
+
+          final List<String> referenceArgs = referenceAccessor.arguments();
+          final int referenceArgsSize = referenceArgs.size();
+          final List<String> valueArgs = valueAccessor.arguments();
+          final int valueArgsSize = valueArgs.size();
+          if (referenceArgsSize < valueArgsSize) {
+            // The value path is unsuitable because it provided too
+            // many arguments.
+            return Integer.MIN_VALUE;
+          } else if (referenceArgs.equals(valueArgs)) {
+            score += referenceArgsSize;
+          } else if (referenceArgsSize == valueArgsSize) {
+            // Same sizes, but different arguments.  The value is not suitable.
+            return Integer.MIN_VALUE;
+          } else if (valueArgsSize == 0) {
+            // The value is indifferent with respect to arguments. It
+            // *could* be suitable but not *as* suitable as one that
+            // matched.  Don't adjust the score.
+          } else {
+            // The reference accessor had, say, two arguments, and the
+            // value had, say, one.  We treat this as a mismatch.
+            return Integer.MIN_VALUE;
+          }
+        } else {
+          throw new IllegalArgumentException("valuePath: " + valuePath);
+        }
+      } else if (referencePath.isType(referencePathIndex)) {
+        if (valuePath.isType(valuePathIndex)) {
+          final Type referenceType = referencePath.type(referencePathIndex);
+          final Type valueType = valuePath.type(valuePathIndex);
+          if (Types.equals(referenceType, valueType)) {
+            score++;
+          } else {
+            // valueType is a subtype of referenceType. Don't adjust
+            // the score.
+            assert AssignableType.of(referenceType).isAssignable(valueType) : "referenceType: " + referenceType + "; valueType: " + valueType;
+          }
+        } else {
+          throw new IllegalArgumentException("valuePath: " + valuePath);
+        }
+      } else {
+        throw new IllegalArgumentException("referencePath: " + referencePath);
+      }
     }
+    return score;
   }
 
   protected <U> Value<U> disambiguate(final ConfiguredSupplier<?> parent,
@@ -465,14 +577,74 @@ public class Settings<T> implements ConfiguredSupplier<T> {
     return LoadedProviders.loadedProviders;
   }
 
-  protected static final boolean isSelectable(final Qualifiers qualifiers,
-                                              final Path path,
+  private static final boolean isSelectable(final Qualifiers referenceQualifiers,
+                                              final Path referencePath,
                                               final Qualifiers valueQualifiers,
                                               final Path valuePath) {
-    return
-      AssignableType.of(path.type()).isAssignable(valuePath.type()) &&
-      path.endsWith(valuePath) && // This ideally isn't just endsWith but endsWithAssignableType or something
-      (qualifiers.isEmpty() || valueQualifiers.isEmpty() || qualifiers.intersectionSize(valueQualifiers) > 0);
+    return isSelectable(referenceQualifiers, valueQualifiers) && isSelectable(referencePath, valuePath);
+  }
+
+  protected static final boolean isSelectable(final Qualifiers referenceQualifiers,
+                                              final Qualifiers valueQualifiers) {
+    return referenceQualifiers.isEmpty() || valueQualifiers.isEmpty() || referenceQualifiers.intersectionSize(valueQualifiers) > 0;
+  }
+
+  /**
+   * Returns {@code true} if the supplied {@code valuePath} is
+   * <em>selectable</em> (for further consideration and scoring) with
+   * respect to the supplied {@code referencePath}.
+   *
+   * <p>This method calls {@link Path#endsWith(Path, BiPredicate)} on
+   * the supplied {@code referencePath} with {@code valuePath} as its
+   * {@link Path}-typed first argument, and a {@link BiPredicate} that
+   * returns {@code true} if and only if any of the following
+   * conditions is true:</p>
+   *
+   * <ul>
+   *
+   * <li>The first argument is an {@link Accessor}, the second
+   * argument is also an {@link Accessor}, both have equal {@linkplain
+   * Accessor#name() names}, both have equal numbers of {@linkplain
+   * Accessor#parameters() parameters}, both have equal numbers of
+   * {@linkplain Accessor#arguments() arguments}, and each parameter
+   * found in {@code valuePath} {@linkplain
+   * Class#isAssignableFrom(Class) is assignable to} the corresponding
+   * parameter found in {@code referencePath}</li>
+   *
+   * <li>The first argument is a {@link Type}, the second argument is
+   * also a {@link Type} and the second {@link Type} {@linkplain
+   * Assignable#isAssignable(Object) is assignable to} the first</li>
+   *
+   * </ul>
+   *
+   * <p>In all other cases this method returns {@code false} or throws
+   * an exception.</p>
+   *
+   * @param referencePath the reference path; must not be {@code
+   * null}; must have {@code void.class} as its first {@linkplain
+   * Path#type(int) element}
+   *
+   * @param valuePath the {@link Path} to test; must not be {@code
+   * null}
+   *
+   * @return {@code true} if {@code valuePath} is selectable (for
+   * further consideration and scoring) with respect to {@code
+   * referencePath}; {@code false} in all other cases
+   *
+   * @exception NullPointerException if either parameter is {@code
+   * null}
+   *
+   * @exception IllegalArgumentException if {@code referencePath}'s
+   * first {@linkplain Path#type(int) element} is not {@code
+   * void.class}
+   */
+  protected static final boolean isSelectable(final Path referencePath,
+                                              final Path valuePath) {
+    if (referencePath.isType(0) && referencePath.type(0) == void.class) {
+      return referencePath.endsWith(valuePath, AccessorsMatchBiPredicate.INSTANCE);
+    } else {
+      throw new IllegalArgumentException("refernecePath: " + referencePath);
+    }
   }
 
   private static final <T> T fail() {
@@ -507,6 +679,48 @@ public class Settings<T> implements ConfiguredSupplier<T> {
       .map(ServiceLoader.Provider::get)
       .sorted(Prioritized.COMPARATOR_DESCENDING)
       .toList();
+
+  }
+
+  // Matches accessor names (equality), parameter types
+  // (isAssignableFrom) and Types (AssignableType.isAssignable()).
+  // Argument values themselves are deliberately ignored.
+  private static final class AccessorsMatchBiPredicate implements BiPredicate<Object, Object> {
+
+    private static final AccessorsMatchBiPredicate INSTANCE = new AccessorsMatchBiPredicate();
+
+    private AccessorsMatchBiPredicate() {
+      super();
+    }
+
+    @Override // BiPredicate
+    public final boolean test(final Object o1, final Object o2) {
+      if (o1 instanceof Accessor a1) {
+        if (o2 instanceof Accessor a2 && a1.name().equals(a2.name()) && a1.arguments().size() == a2.arguments().size()) {
+          final List<Class<?>> p1 = a1.parameters();
+          final List<Class<?>> p2 = a2.parameters();
+          if (p1.size() == p2.size()) {
+            for (int i = 0; i < p1.size(); i++) {
+              if (!p1.get(i).isAssignableFrom(p2.get(i))) {
+                return false;
+              }
+            }
+            return true;
+          }
+        } else if (!(o2 instanceof Type)) {
+          throw new IllegalArgumentException("o2: " + o2);
+        }
+      } else if (o1 instanceof Type t1) {
+        if (o2 instanceof Type t2) {
+          return AssignableType.of(t1).isAssignable(t2);
+        } else if (!(o2 instanceof Accessor)) {
+          throw new IllegalArgumentException("o2: " + o2);
+        }
+      } else {
+        throw new IllegalArgumentException("o1: " + o1);
+      }
+      return false;
+    }
 
   }
 
