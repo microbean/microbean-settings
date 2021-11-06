@@ -630,14 +630,19 @@ public final class Path implements Assignable<Type> {
         }
       }
 
+      // Cleanup
       switch (state) {
       case START:
         // empty
         throw new IllegalArgumentException(s);
       case NAME:
+        assert name == null;
+        assert params.isEmpty();
+        assert args.isEmpty();
         if (!sb.isEmpty()) {
           throw new IllegalArgumentException(s);
         }
+        type = null;
         break;
       case TYPE:
         assert name == null;
@@ -654,7 +659,14 @@ public final class Path implements Assignable<Type> {
       default:
         throw new IllegalStateException();
       }
+      assert name == null;
+      assert type == null;
+      assert params.isEmpty();
+      assert args.isEmpty();
+      assert sb.isEmpty();
+      
       if (elements.size() == 1 && elements.get(0) == void.class) {
+        // Cheap and easy normalization
         return Path.of();
       } else {
         return new Path(elements.subList(0, elements.size() - 1), List.of(), (Type)elements.get(elements.size() - 1));
