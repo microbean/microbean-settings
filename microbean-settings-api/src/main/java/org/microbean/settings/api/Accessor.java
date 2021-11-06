@@ -91,7 +91,7 @@ public record Accessor(String name, List<Class<?>> parameters, List<String> argu
 
   @Override
   public final String toString() {
-    final StringBuilder sb = new StringBuilder(this.name());
+    final StringBuilder sb = new StringBuilder(this.name().replace(".", "\\."));
     final int parameterCount = this.parameterCount();
     if (parameterCount > 0) {
       sb.append(":");

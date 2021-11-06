@@ -70,72 +70,79 @@ final class TestPath {
 
   @Test
   final void testParseRoot() throws ClassNotFoundException {
-    assertEquals(Path.of(), new Path.Parser().parse("/", this.getClass().getClassLoader()));
+    assertEquals(Path.of(), new Path.Parser(this.getClass().getClassLoader()).parse("/"));
   }
 
   @Test
   final void testParseInteger() throws ClassNotFoundException {
-    assertEquals(Path.of(Integer.class), new Path.Parser().parse("java.lang.Integer", this.getClass().getClassLoader()));
+    assertEquals(Path.of(Integer.class), new Path.Parser(this.getClass().getClassLoader()).parse("java.lang.Integer"));
   }
 
   @Test
   final void testParseRootInteger() throws ClassNotFoundException {
-    assertEquals(Path.of().plus(Integer.class), new Path.Parser().parse("//java.lang.Integer", this.getClass().getClassLoader()));
+    assertEquals(Path.of().plus(Integer.class), new Path.Parser(this.getClass().getClassLoader()).parse("//java.lang.Integer"));
   }
 
   @Test
   final void testRelativeNoTypesBackToBack() throws ClassNotFoundException {
     assertThrows(IllegalArgumentException.class, () -> {
-        new Path.Parser().parse("java.lang.Integer/java.lang.Integer", this.getClass().getClassLoader());
+        new Path.Parser(this.getClass().getClassLoader()).parse("java.lang.Integer/java.lang.Integer");
       });
   }
 
   @Test
   final void testAbsoluteNoTypesBackToBack1() throws ClassNotFoundException {
     assertThrows(IllegalArgumentException.class, () -> {
-        new Path.Parser().parse("/java.lang.Integer", this.getClass().getClassLoader());
+        new Path.Parser(this.getClass().getClassLoader()).parse("/java.lang.Integer");
       });
   }
 
   @Test
   final void testAbsoluteNoTypesBackToBack2() throws ClassNotFoundException {
     assertThrows(IllegalArgumentException.class, () -> {
-        new Path.Parser().parse("/java.lang.Integer/java.lang.Integer", this.getClass().getClassLoader());
+        new Path.Parser(this.getClass().getClassLoader()).parse("/java.lang.Integer/java.lang.Integer");
       });
   }
 
   @Test
   final void testAbsoluteNoTypesBackToBack3() throws ClassNotFoundException {
     assertThrows(IllegalArgumentException.class, () -> {
-        new Path.Parser().parse("/java.lang.Integer/java.lang.Integer/java.lang.Integer", this.getClass().getClassLoader());
+        new Path.Parser(this.getClass().getClassLoader()).parse("/java.lang.Integer/java.lang.Integer/java.lang.Integer");
       });
   }
 
   @Test
   final void testNoTypeParams() throws ClassNotFoundException {
     assertThrows(IllegalArgumentException.class, () -> {
-        new Path.Parser().parse("java.lang.Integer:java.lang.Object=", this.getClass().getClassLoader());
+        new Path.Parser(this.getClass().getClassLoader()).parse("java.lang.Integer:java.lang.Object=");
       });
   }
 
   @Test
   final void testParamsButNoArgumentsOK() throws ClassNotFoundException {
     assertEquals(Path.of(Accessor.of("wheel", String.class), Integer.class),
-                 new Path.Parser().parse("wheel:java.lang.String=/java.lang.Integer", this.getClass().getClassLoader()));
+                 new Path.Parser(this.getClass().getClassLoader()).parse("wheel:java.lang.String=/java.lang.Integer"));
   }
 
   @Test
   final void testSimpleParamAndArgument() throws ClassNotFoundException {
     assertEquals(Path.of(Accessor.of("wheel", String.class, "LR"), Integer.class),
-                 new Path.Parser().parse("wheel:java.lang.String=\"LR\"/java.lang.Integer", this.getClass().getClassLoader()));
+                 new Path.Parser(this.getClass().getClassLoader()).parse("wheel:java.lang.String=\"LR\"/java.lang.Integer"));
   }
 
   @Test
   final void testMultipleParamsAndArguments() throws ClassNotFoundException {
     assertEquals(Path.of(Accessor.of("wheel", List.of(String.class, String.class), List.of("LR", "LF")), Integer.class),
-                 new Path.Parser().parse("wheel:java.lang.String=\"LR\";java.lang.String=\"LF\"/java.lang.Integer", this.getClass().getClassLoader()));
+                 new Path.Parser(this.getClass().getClassLoader()).parse("wheel:java.lang.String=\"LR\";java.lang.String=\"LF\"/java.lang.Integer"));
   }
 
+  @Test
+  final void testSimpleParamAndArgumentWithoutQuotes() throws ClassNotFoundException {
+    assertEquals(Path.of(Accessor.of("wheel", String.class, "LR"), Integer.class),
+                 new Path.Parser(this.getClass().getClassLoader()).parse("wheel:java.lang.String=LR/java.lang.Integer"));
+  }
+
+  
   private static interface Car {
 
   }

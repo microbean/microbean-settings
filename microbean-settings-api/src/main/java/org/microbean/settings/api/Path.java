@@ -351,16 +351,24 @@ public final class Path implements Assignable<Type> {
     return ROOT;
   }
 
+  public static final Path of(final String s, final ClassLoader cl) throws ClassNotFoundException {
+    return of(s, new Path.Parser(cl));
+  }
+
+  public static final Path of(final String s, final Parser p) throws ClassNotFoundException {
+    return p.parse(s);
+  }
+
   public static final Path of(final Type type) {
     return new Path(type);
   }
 
   public static final Path of(final String accessor, final Type type) {
-    return new Path(Accessor.of(accessor), type);
+    return of(Accessor.of(accessor), type);
   }
 
   public static final Path of(final Accessor accessor, final Type type) {
-    return new Path(accessor, type);
+    return of(List.of(accessor), type);
   }
 
   public static final Path of(final List<? extends Accessor> accessors, final Type type) {
@@ -388,8 +396,8 @@ public final class Path implements Assignable<Type> {
     }
   }
 
-  @Incomplete
-  static final class Parser {
+  @Experimental
+  public static final class Parser {
 
     private static final int START = 0;
 
@@ -401,11 +409,14 @@ public final class Path implements Assignable<Type> {
 
     private static final int ARGUMENTS = 4;
 
-    Parser() {
+    private final ClassLoader cl;
+
+    public Parser(final ClassLoader cl) {
       super();
+      this.cl = Objects.requireNonNull(cl, "cl");
     }
 
-    public final Path parse(final String s, final ClassLoader cl) throws ClassNotFoundException {
+    public final Path parse(final String s) throws ClassNotFoundException {
       int state = START;
       final List<Object> elements = new ArrayList<>(11);
       final StringBuilder sb = new StringBuilder();
@@ -415,6 +426,7 @@ public final class Path implements Assignable<Type> {
       final List<String> args = new ArrayList<>(3);
       for (int i = 0; i < s.length(); i++) {
         final int c = s.charAt(i);
+        final int next = i + 1 < s.length() ? s.charAt(i + 1) : -1;
         switch (c) {
 
         case '/':
@@ -444,16 +456,11 @@ public final class Path implements Assignable<Type> {
             if (type != null) {
               throw new IllegalArgumentException(s);
             }
-            type = typeFor(sb.toString(), cl);
+            type = this.typeFor(sb.toString());
             elements.add(type);
             sb.setLength(0);
             name = null;
             state = NAME;
-            break;
-          case PARAMETERS:
-            assert type == null;
-            assert args.isEmpty();
-            state = ARGUMENTS;
             break;
           case ARGUMENTS:
             assert name != null;
@@ -467,20 +474,19 @@ public final class Path implements Assignable<Type> {
               sb.setLength(0);
             }
             name = null;
-            // type = null;
             params.clear();
             args.clear();
             state = NAME;
             break;
+          case PARAMETERS:
+            throw new IllegalArgumentException(s);
           default:
-            sb.append((char)c);
+            throw new IllegalStateException();
           }
           break;
 
         case ':':
           switch (state) {
-          case START:
-            throw new IllegalArgumentException(s);
           case NAME:
             assert params.isEmpty();
             assert args.isEmpty();
@@ -489,14 +495,14 @@ public final class Path implements Assignable<Type> {
             type = null;
             state = PARAMETERS;
             break;
-          case TYPE:
-            throw new IllegalArgumentException(s);
-          case PARAMETERS:
-            throw new IllegalArgumentException(s);
           case ARGUMENTS:
             assert !params.isEmpty();
             sb.append((char)c);
             break;
+          case START:
+          case TYPE:
+          case PARAMETERS:
+            throw new IllegalArgumentException(s);
           default:
             throw new IllegalStateException();
           }
@@ -504,8 +510,6 @@ public final class Path implements Assignable<Type> {
 
         case '.':
           switch (state) {
-          case START:
-            throw new IllegalArgumentException(s);
           case NAME:
             assert params.isEmpty();
             assert args.isEmpty();
@@ -514,34 +518,43 @@ public final class Path implements Assignable<Type> {
             }
             sb.append((char)c);
             name = null;
-            state = TYPE;
+            if (i != 0) {
+              state = TYPE;
+            }
+            break;
+          case TYPE:
+            assert params.isEmpty();
+            assert args.isEmpty();
+            sb.append((char)c);
             break;
           case PARAMETERS:
             assert type == null;
             sb.append((char)c);
             break;
-          default:
+          case ARGUMENTS:
+            assert type == null;
             sb.append((char)c);
             break;
+          case START:
+            throw new IllegalArgumentException(s);
+          default:
+            throw new IllegalStateException();
           }
           break;
 
         case ';':
           switch (state) {
-          case START:
-            throw new IllegalArgumentException(s);
-          case NAME:
-            throw new IllegalArgumentException(s);
-          case TYPE:
-            throw new IllegalArgumentException(s);
-          case PARAMETERS:
-            throw new IllegalArgumentException(s);
           case ARGUMENTS:
             assert !params.isEmpty();
             args.add(sb.toString());
             sb.setLength(0);
             state = PARAMETERS;
             break;
+          case START:
+          case NAME:
+          case TYPE:
+          case PARAMETERS:
+            throw new IllegalArgumentException(s);
           default:
             throw new IllegalStateException();
           }
@@ -549,23 +562,30 @@ public final class Path implements Assignable<Type> {
 
         case '\\':
           switch (state) {
-          case START:
-            throw new IllegalArgumentException(s);
           case NAME:
-            sb.append((char)c);
-            break;
-          case TYPE:
-            throw new IllegalArgumentException(s);
-          case PARAMETERS:
-            throw new IllegalArgumentException(s);
-          case ARGUMENTS:
-            if (i + 1 < s.length() && s.charAt(i + 1) == '"') {
-              i++;
-              sb.append("\"");
-            } else {
-              sb.append('\\');
+            switch (next) {
+            case -1:
+              sb.append((char)c);
+              break;
+            default:
+              ++i;
+              sb.append((char)next);
             }
             break;
+          case ARGUMENTS:
+            switch (next) {
+            case -1:
+              sb.append((char)c);
+              break;
+            default:
+              i++;
+              sb.append((char)next);
+            }
+            break;
+          case START:
+          case TYPE:
+          case PARAMETERS:
+            throw new IllegalArgumentException(s);
           default:
             throw new IllegalStateException();
           }
@@ -573,14 +593,14 @@ public final class Path implements Assignable<Type> {
 
         case '\"':
           switch (state) {
+          case ARGUMENTS:
+            // skip it
+            break;
           case START:
           case NAME:
           case TYPE:
           case PARAMETERS:
             throw new IllegalArgumentException(s);
-          case ARGUMENTS:
-            // skip it
-            break;
           default:
             throw new IllegalStateException();
           }
@@ -588,20 +608,18 @@ public final class Path implements Assignable<Type> {
 
         case '=':
           switch (state) {
-          case START:
-            throw new IllegalArgumentException(s);
-          case NAME:
-            throw new IllegalArgumentException(s);
-          case TYPE:
-            throw new IllegalArgumentException(s);
           case PARAMETERS:
             assert name != null;
             assert type == null;
-            params.add(typeFor(sb.toString(), cl));
+            params.add(this.typeFor(sb.toString()));
             sb.setLength(0);
-            if (i + 1 < s.length()) {
-              if (s.charAt(i + 1) == '\"') {
+            if (next > 0) {
+              switch (next) {
+              case '\"':
                 ++i;
+                break;
+              default:
+                break;
               }
               state = ARGUMENTS;
             }
@@ -612,6 +630,10 @@ public final class Path implements Assignable<Type> {
             assert !params.isEmpty();
             sb.append((char)c);
             break;
+          case START:
+          case NAME:
+          case TYPE:
+            throw new IllegalArgumentException(s);
           default:
             throw new IllegalStateException();
           }
@@ -632,9 +654,6 @@ public final class Path implements Assignable<Type> {
 
       // Cleanup
       switch (state) {
-      case START:
-        // empty
-        throw new IllegalArgumentException(s);
       case NAME:
         assert name == null;
         assert params.isEmpty();
@@ -649,11 +668,11 @@ public final class Path implements Assignable<Type> {
         assert type == null;
         assert params.isEmpty();
         assert args.isEmpty();
-        elements.add(typeFor(sb.toString(), cl));
+        elements.add(this.typeFor(sb.toString()));
         sb.setLength(0);
         break;
+      case START:
       case PARAMETERS:
-        throw new IllegalArgumentException(s);
       case ARGUMENTS:
         throw new IllegalArgumentException(s);
       default:
@@ -664,29 +683,33 @@ public final class Path implements Assignable<Type> {
       assert params.isEmpty();
       assert args.isEmpty();
       assert sb.isEmpty();
-      
-      if (elements.size() == 1 && elements.get(0) == void.class) {
-        // Cheap and easy normalization
-        return Path.of();
+
+      final int size = elements.size();
+      assert size > 0;
+      final Type pathType = (Type)elements.get(size - 1);
+      if (size == 1) {
+        return pathType == void.class ? Path.of() : Path.of(pathType);
+      } else if (size == 2) {
+        return Path.of((Accessor)elements.get(0), pathType);
       } else {
-        return new Path(elements.subList(0, elements.size() - 1), List.of(), (Type)elements.get(elements.size() - 1));
+        return new Path(elements.subList(0, size - 1), List.of(), pathType);
       }
     }
 
+    private final Class<?> typeFor(final String s) throws ClassNotFoundException {
+      return switch (s) {
+      case "boolean" -> boolean.class;
+      case "char" -> char.class;
+      case "double" -> double.class;
+      case "float" -> float.class;
+      case "int" -> int.class;
+      case "long" -> long.class;
+      case "short" -> short.class;
+      case "void" -> void.class;
+      default -> Class.forName(s, false, this.cl);
+      };
   }
 
-  private static final Class<?> typeFor(final String s, final ClassLoader cl) throws ClassNotFoundException {
-    return switch (s) {
-    case "boolean" -> boolean.class;
-    case "char" -> char.class;
-    case "double" -> double.class;
-    case "float" -> float.class;
-    case "int" -> int.class;
-    case "long" -> long.class;
-    case "short" -> short.class;
-    case "void" -> void.class;
-    default -> Class.forName(s, false, cl);
-    };
   }
 
 }
