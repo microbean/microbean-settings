@@ -20,6 +20,7 @@ import java.lang.reflect.Type;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.ServiceLoader;
@@ -295,6 +296,13 @@ public class Settings<T> implements ConfiguredSupplier<T> {
         supplier = defaultSupplier;
       }
     } else {
+      // TODO: if we could tell that defaultSupplier was something
+      // like () -> "foo", then perhaps the user's intent is to use
+      // "foo" not just for when a Value can't be found, but when a
+      // Value's value (Value#get() return value) is null.  In such a
+      // case, perhaps supplier should be something like:
+      // () -> { U v = value.get(); return v == null ? defaultSupplier.get() : v; }
+      // Or maybe just leave it up to the user.
       supplier = value;
     }
     return

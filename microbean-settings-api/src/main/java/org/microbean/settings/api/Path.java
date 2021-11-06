@@ -95,7 +95,7 @@ public final class Path implements Assignable<Type> {
     this(existingElements, accessors, type, false);
   }
 
-  private Path(final List<?> existingElements, final List<? extends Accessor> accessors, final Type type, final boolean transliterated) {
+  private Path(final List<?> existingElements, final List<? extends Accessor> accessors, final Type type, boolean transliterated) {
     super();
     if (Objects.requireNonNull(type, "type") == void.class) {
       throw new IllegalArgumentException("type: " + type);
@@ -108,6 +108,9 @@ public final class Path implements Assignable<Type> {
       switch (accessorsSize) {
       case 0: // existingElementsSize == 0; accessorsSize == 0
         this.elements = List.of(type);
+        if (!transliterated) {
+          transliterated = true;
+        }
         break;
       case 1: // existingElementsSize == 0; accessorsSize == 1
         this.elements = List.of(accessors.get(0), type);
@@ -142,6 +145,9 @@ public final class Path implements Assignable<Type> {
         case 1: // accessorsSize == 0; existingElementsSize == 1
           if (lastElement.equals(type)) {
             this.elements = List.of(type);
+            if (!transliterated) {
+              transliterated = true;
+            }
           } else if (lastElement instanceof Accessor) {
             this.elements = List.of(lastElement, type);
           } else {
@@ -174,7 +180,9 @@ public final class Path implements Assignable<Type> {
               break;
             default: // accessorsSize == 0; existingElementsSize >= 6;
               elements = new ArrayList<>(existingElementsSize + 1);
-              elements.addAll(existingElements);
+              for (final Object e : existingElements) {
+                elements.add(Objects.requireNonNull(e, "e"));
+              }
               elements.add(type);
               this.elements = Collections.unmodifiableList(elements);
               break;
@@ -197,9 +205,10 @@ public final class Path implements Assignable<Type> {
           case 0: // existingElementsSize > 0; accessorsSize == 0
             throw new AssertionError();
           default: // existingElementsSize > 0; accessorsSize > 0
-            // Many existing elements; many accessors.
             elements = new ArrayList<>(existingElementsSize + accessorsSize + 1);
-            elements.addAll(existingElements);
+            for (final Object e : existingElements) {
+              elements.add(Objects.requireNonNull(e, "e"));
+            }
             for (final Accessor a : accessors) {
               elements.add(Objects.requireNonNull(a, "accessor"));
             }      

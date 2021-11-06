@@ -16,6 +16,7 @@
  */
 package org.microbean.settings.api;
 
+import java.util.Optional;
 import java.util.Properties;
 import java.util.SortedMap;
 import java.util.TreeMap;
@@ -30,8 +31,11 @@ public class SystemPropertiesQualifiersProvider extends AbstractProvider<Qualifi
 
   @Override // AbstractProvider<Qualifiers>
   public Value<?> get(final ConfiguredSupplier<?> supplier, final Path path) {
+
     // Use the configuration system to find a String under the path /qualifierPrefix.
-    final String prefix = supplier.of("qualifierPrefix", String.class, "qualifier.").get();
+    // I am not happy about the verbosity here.
+    final String prefix = Optional.ofNullable(supplier.of("qualifierPrefix", String.class, "qualifier.").get()).orElse("qualifier.");
+    
     final Properties systemProperties = System.getProperties();
     final SortedMap<String, String> map = new TreeMap<>();
     for (final String propertyName : systemProperties.stringPropertyNames()) {

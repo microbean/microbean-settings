@@ -37,7 +37,7 @@ import org.microbean.development.annotation.SubordinateTo;
  *
  * @see #of()
  */
-public interface ConfiguredSupplier<T> extends Supplier<T> {
+public interface ConfiguredSupplier<T> extends OptionalSupplier<T> {
 
 
   /*
