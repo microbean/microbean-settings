@@ -32,19 +32,36 @@ import java.util.function.BiPredicate;
 import java.util.stream.Stream;
 
 import org.microbean.development.annotation.Experimental;
-import org.microbean.development.annotation.Incomplete;
 
 import org.microbean.type.Types;
 
 public final class Path implements Assignable<Type> {
 
+
+  /*
+   * Static fields.
+   */
+
+
   private static final Path ROOT = new Path();
 
   private static final StackWalker stackWalker = StackWalker.getInstance();
 
+
+  /*
+   * Instance fields.
+   */
+
+
   private final List<Object> elements;
 
   private final boolean transliterated;
+
+
+  /*
+   * Constructors.
+   */
+
 
   private Path() {
     super();
@@ -53,11 +70,21 @@ public final class Path implements Assignable<Type> {
   }
 
   private Path(final Type type) {
-    this(List.of(), List.of(), type, false);
+    super();
+    if (Objects.requireNonNull(type, "type") == void.class) {
+      throw new IllegalArgumentException("type: " + type);
+    }
+    this.elements = List.of(type);
+    this.transliterated = true;
   }
 
   private Path(final Accessor accessor, final Type type) {
-    this(List.of(), List.of(accessor), type, false);
+    super();
+    if (Objects.requireNonNull(type, "type") == void.class) {
+      throw new IllegalArgumentException("type: " + type);
+    }
+    this.elements = List.of(accessor, type);
+    this.transliterated = false;
   }
 
   private Path(final List<? extends Accessor> accessors, final Type type) {
@@ -73,46 +100,126 @@ public final class Path implements Assignable<Type> {
     if (Objects.requireNonNull(type, "type") == void.class) {
       throw new IllegalArgumentException("type: " + type);
     }
-    if (existingElements == null || existingElements.isEmpty()) {
-      final int accessorsSize = accessors == null ? 0 : accessors.size();
+    final int existingElementsSize = existingElements == null ? 0 : existingElements.size();
+    final int accessorsSize = accessors == null ? 0 : accessors.size();
+    List<Object> elements = null;
+    switch (existingElementsSize) {
+    case 0: // existingElementsSize == 0
       switch (accessorsSize) {
-      case 0:
+      case 0: // existingElementsSize == 0; accessorsSize == 0
         this.elements = List.of(type);
         break;
-      case 1:
+      case 1: // existingElementsSize == 0; accessorsSize == 1
         this.elements = List.of(accessors.get(0), type);
         break;
-      case 2:
+      case 2: // existingElementsSize == 0; accessorsSize == 2
         this.elements = List.of(accessors.get(0), accessors.get(1), type);
         break;
-      case 3:
+      case 3: // existingElementsSize == 0; accessorsSize == 3
         this.elements = List.of(accessors.get(0), accessors.get(1), accessors.get(2), type);
         break;
-      case 4:
+      case 4: // existingElementsSize == 0; accessorsSize == 4
         this.elements = List.of(accessors.get(0), accessors.get(1), accessors.get(2), accessors.get(3), type);
         break;
-      case 5:
+      case 5: // existingElementsSize == 0; accessorsSize == 5
         this.elements = List.of(accessors.get(0), accessors.get(1), accessors.get(2), accessors.get(3), accessors.get(4), type);
         break;
-      default:
-        final List<Object> elements = new ArrayList<>(accessors.size() + 1);
+      default: // existingElementsSize == 0; accessorsSize >= 6
+        // No existing elements; more than 5 accessors
+        elements = new ArrayList<>(accessors.size() + 1);
         for (final Accessor a : accessors) {
           elements.add(Objects.requireNonNull(a, "accessor"));
         }
         elements.add(type);
         this.elements = Collections.unmodifiableList(elements);
       }
-    } else {
-      final List<Object> elements = new ArrayList<>(existingElements.size() + accessors.size() + 1);
-      elements.addAll(existingElements);
-      for (final Accessor a : accessors) {
-        elements.add(Objects.requireNonNull(a, "accessor"));
+      break;
+    default: // existingElementsSize > 0
+      final Object lastElement = Objects.requireNonNull(existingElements.get(existingElementsSize - 1));
+      switch (accessorsSize) {
+      case 0: // existingElementsSize > 0; accessorsSize == 0
+        switch (existingElementsSize) {
+        case 1: // accessorsSize == 0; existingElementsSize == 1
+          if (lastElement.equals(type)) {
+            this.elements = List.of(type);
+          } else if (lastElement instanceof Accessor) {
+            this.elements = List.of(lastElement, type);
+          } else {
+            throw new IllegalArgumentException("existingElements: " + existingElements + "; type: " + type);
+          }
+          break;
+        default: // accessorsSize == 0; existingElementsSize > 1
+          if (lastElement instanceof Type lastType) {
+            if (lastType.equals(type)) {
+              this.elements = List.copyOf(existingElements);
+            } else {
+              throw new IllegalArgumentException("existingElements: " + existingElements + "; type: " + type);
+            }
+          } else if (lastElement instanceof Accessor lastAccessor) {
+            switch (existingElementsSize) {
+            case 0: // accessorsSize == 0; existingElementsSize == 0
+            case 1: // accessorsSize == 0; existingElementsSize == 1
+              throw new AssertionError();
+            case 2: // accessorsSize == 0; existingElementsSize == 2
+              this.elements = List.of(existingElements.get(0), lastAccessor, type);
+              break;
+            case 3: // accessorsSize == 0; existingElementsSize == 3
+              this.elements = List.of(existingElements.get(0), existingElements.get(1), lastAccessor, type);
+              break;
+            case 4: // accessorsSize == 0; existingElementsSize == 4
+              this.elements = List.of(existingElements.get(0), existingElements.get(1), existingElements.get(2), lastAccessor, type);
+              break;
+            case 5: // accessorsSize == 0; existingElementsSize == 5
+              this.elements = List.of(existingElements.get(0), existingElements.get(1), existingElements.get(2), existingElements.get(3), lastAccessor, type);
+              break;
+            default: // accessorsSize == 0; existingElementsSize >= 6;
+              elements = new ArrayList<>(existingElementsSize + 1);
+              elements.addAll(existingElements);
+              elements.add(type);
+              this.elements = Collections.unmodifiableList(elements);
+              break;
+            }
+          } else {
+            throw new IllegalArgumentException("existingElements: " + existingElements);
+          }
+          break;
+        }
+        break;
+      default: // existingElementsSize > 0; accessorsSize > 0
+        switch (existingElementsSize) {
+        case 0: // existingElementsSize == 0; accessorsSize > 0
+          throw new AssertionError();
+        default: // existingElementsSize > 0; accessorsSize > 0
+          if (!(lastElement instanceof Type)) {
+            throw new IllegalArgumentException("existingElements: " + existingElements);
+          }
+          switch (accessorsSize) {
+          case 0: // existingElementsSize > 0; accessorsSize == 0
+            throw new AssertionError();
+          default: // existingElementsSize > 0; accessorsSize > 0
+            // Many existing elements; many accessors.
+            elements = new ArrayList<>(existingElementsSize + accessorsSize + 1);
+            elements.addAll(existingElements);
+            for (final Accessor a : accessors) {
+              elements.add(Objects.requireNonNull(a, "accessor"));
+            }      
+            elements.add(type);
+            this.elements = Collections.unmodifiableList(elements);
+            break;
+          }
+          break;
+        }
+        break;
       }
-      elements.add(type);
-      this.elements = Collections.unmodifiableList(elements);
     }
     this.transliterated = transliterated;
   }
+
+
+  /*
+   * Instance methods.
+   */
+
 
   @Override // Assignable<Type>
   public final Type assignable() {
@@ -347,14 +454,22 @@ public final class Path implements Assignable<Type> {
     return sj.toString();
   }
 
+
+  /*
+   * Static methods.
+   */
+
+
   public static final Path of() {
     return ROOT;
   }
 
+  @Experimental
   public static final Path of(final String s, final ClassLoader cl) throws ClassNotFoundException {
     return of(s, new Path.Parser(cl));
   }
 
+  @Experimental
   public static final Path of(final String s, final Parser p) throws ClassNotFoundException {
     return p.parse(s);
   }
@@ -395,6 +510,12 @@ public final class Path implements Assignable<Type> {
       }
     }
   }
+
+
+  /*
+   * Inner and nested classes.
+   */
+
 
   @Experimental
   public static final class Parser {
