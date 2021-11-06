@@ -518,7 +518,6 @@ public final class Path implements Assignable<Type> {
             break;
           case PARAMETERS:
             assert type == null;
-            assert args.isEmpty();
             sb.append((char)c);
             break;
           default:
@@ -538,7 +537,7 @@ public final class Path implements Assignable<Type> {
           case PARAMETERS:
             throw new IllegalArgumentException(s);
           case ARGUMENTS:
-            assert params.isEmpty();
+            assert !params.isEmpty();
             args.add(sb.toString());
             sb.setLength(0);
             state = PARAMETERS;
@@ -598,7 +597,6 @@ public final class Path implements Assignable<Type> {
           case PARAMETERS:
             assert name != null;
             assert type == null;
-            assert args.isEmpty();
             params.add(typeFor(sb.toString(), cl));
             sb.setLength(0);
             if (i + 1 < s.length()) {

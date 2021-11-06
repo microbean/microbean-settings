@@ -25,6 +25,8 @@ import java.net.URISyntaxException;
 
 import java.security.CodeSource;
 
+import java.util.List;
+
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
@@ -39,7 +41,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 final class TestPath {
 
   private static final StackWalker stackWalker = StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE);
-  
+
   private TestPath() {
     super();
   }
@@ -68,17 +70,17 @@ final class TestPath {
 
   @Test
   final void testParseRoot() throws ClassNotFoundException {
-    assertEquals(Path.of(), new Path.Parser().parse("/", this.getClass().getClassLoader()));    
+    assertEquals(Path.of(), new Path.Parser().parse("/", this.getClass().getClassLoader()));
   }
 
   @Test
   final void testParseInteger() throws ClassNotFoundException {
-    assertEquals(Path.of(Integer.class), new Path.Parser().parse("java.lang.Integer", this.getClass().getClassLoader()));    
+    assertEquals(Path.of(Integer.class), new Path.Parser().parse("java.lang.Integer", this.getClass().getClassLoader()));
   }
 
   @Test
   final void testParseRootInteger() throws ClassNotFoundException {
-    assertEquals(Path.of().plus(Integer.class), new Path.Parser().parse("//java.lang.Integer", this.getClass().getClassLoader()));    
+    assertEquals(Path.of().plus(Integer.class), new Path.Parser().parse("//java.lang.Integer", this.getClass().getClassLoader()));
   }
 
   @Test
@@ -123,11 +125,16 @@ final class TestPath {
   }
 
   @Test
-  final void frob() throws ClassNotFoundException {
+  final void testSimpleParamAndArgument() throws ClassNotFoundException {
     assertEquals(Path.of(Accessor.of("wheel", String.class, "LR"), Integer.class),
                  new Path.Parser().parse("wheel:java.lang.String=\"LR\"/java.lang.Integer", this.getClass().getClassLoader()));
   }
-  
+
+  @Test
+  final void testMultipleParamsAndArguments() throws ClassNotFoundException {
+    assertEquals(Path.of(Accessor.of("wheel", List.of(String.class, String.class), List.of("LR", "LF")), Integer.class),
+                 new Path.Parser().parse("wheel:java.lang.String=\"LR\";java.lang.String=\"LF\"/java.lang.Integer", this.getClass().getClassLoader()));
+  }
 
   private static interface Car {
 
