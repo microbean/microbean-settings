@@ -84,6 +84,24 @@ public record Accessor(String name, List<Class<?>> parameters, List<String> argu
     return Qualifiers.of(map);
   }
 
+  @Override
+  public final String toString() {
+    final StringBuilder sb = new StringBuilder(this.name());
+    final int parameterCount = this.parameterCount();
+    if (parameterCount > 0) {
+      sb.append(":");
+      for (int i = 0; i < parameterCount; i++) {
+        sb.append("param").append(i).append("=").append(this.parameter(i).getName()).append(";");
+      }
+      for (int i = 0; i < parameterCount; i++) {
+        sb.append("arg").append(i).append("=").append("\"").append(this.argument(i).replace("\"", "\\\"")).append("\"");
+        if (i + 1 < parameterCount) {
+          sb.append(";");
+        }
+      }
+    }
+    return sb.toString();
+  }
 
   /*
    * Static methods.
@@ -126,6 +144,10 @@ public record Accessor(String name, List<Class<?>> parameters, List<String> argu
     return new Accessor(index);
   }
 
+  public static final <T> Accessor of(final String name, final Class<T> parameter, final T argument) {
+    return of(name, List.of(parameter), List.of(argument.toString()));
+  }
+  
   public static final Accessor of(final String name, final List<Class<?>> parameters, final List<String> arguments) {
     return new Accessor(name, parameters, arguments);
   }

@@ -21,6 +21,7 @@ import java.lang.reflect.Type;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.ServiceLoader;
 
 import java.util.concurrent.ConcurrentHashMap;
@@ -31,6 +32,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import org.microbean.development.annotation.Experimental;
 import org.microbean.development.annotation.SubordinateTo;
 
 import org.microbean.settings.api.Provider.Value;
@@ -217,14 +219,19 @@ public class Settings<T> implements ConfiguredSupplier<T> {
   }
 
   private final <U> Settings<U> of(final ConfiguredSupplier<?> parent,
-                                   final Path path,
+                                   Path path,
                                    final Supplier<U> defaultSupplier,
                                    final Consumer<? super Provider> rejectedProviders,
                                    final Consumer<? super Value<?>> rejectedValues,
                                    final Consumer<? super Value<?>> ambiguousValues) {
-    if (path.equals(Path.of())) {
-      throw new IllegalArgumentException("path: " + path);
+    if (path.isAbsolute()) {
+      if (path.size() == 1 && parent != this) {
+        throw new IllegalArgumentException("path.isRoot(): " + path);
+      }
+    } else {
+      throw new IllegalArgumentException("!path.isAbsolute(): " + path);
     }
+    path = this.transliterate(path);
     // We deliberately do not use computeIfAbsent() because of()
     // operations can kick off other of() operations, and then you'd
     // have a cache mutating operation occuring within a cache
@@ -255,6 +262,22 @@ public class Settings<T> implements ConfiguredSupplier<T> {
     @SuppressWarnings("unchecked")
     final Settings<U> returnValue = (Settings<U>)settings;
     return returnValue;
+  }
+
+  @Experimental
+  @Override
+  public final Path transliterate(final Path path) {
+    if (!path.isAbsolute() || path.isTransliterated() || path.type() == Path.class) {
+      final Accessor a = path.accessor(1);
+      if (a.name().equals("transliterate") && a.parameterCount() == 1 && a.parameter(0) == Path.class) {
+        return path;
+      }
+    }
+    return
+      this.of(Accessor.of("transliterate", Path.class, path),
+              Path.class,
+              () -> path)
+      .get();
   }
 
   private final <U> Settings<U> computeSettings(final ConfiguredSupplier<?> parent,

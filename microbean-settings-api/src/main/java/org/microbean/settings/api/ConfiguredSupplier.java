@@ -24,7 +24,10 @@ import java.util.function.Supplier;
 
 import org.microbean.development.annotation.Convenience;
 import org.microbean.development.annotation.EntryPoint;
+import org.microbean.development.annotation.Experimental;
 import org.microbean.development.annotation.OverridingDiscouraged;
+import org.microbean.development.annotation.OverridingEncouraged;
+import org.microbean.development.annotation.SubordinateTo;
 
 /**
  * A {@link Supplier} of configured objects.
@@ -58,6 +61,78 @@ public interface ConfiguredSupplier<T> extends Supplier<T> {
    * Default instance methods.
    */
 
+
+  /**
+   * <em>Transliterates</em> the supplied {@linkplain
+   * Path#isAbsolute() absolute <code>Path</code>} into some other
+   * {@link Path} whose meaning is the same but whose representation
+   * may be different that will be used instead.
+   *
+   * <p>The {@link Path} that is returned may be the {@link Path} that
+   * was supplied.</p>
+   *
+   * <p>Path transliteration is needed because the {@link
+   * Accessor#name() name()} components of {@link Accessor}s may
+   * unintentionally clash when two components are combined into a
+   * single application.</p>
+   *
+   * <p>Path transliteration must occur during the execution of the
+   * {@link #of(ConfiguredSupplier, Path, Supplier)} method, such that
+   * the {@link Path} supplied to that method, once it has been
+   * verified to be {@linkplain Path#isAbsolute() absolute}, is
+   * supplied to an implementation of this method. The {@link Path}
+   * returned by an implementation of this method must then be used
+   * during the rest of the invocation of the {@link
+   * #of(ConfiguredSupplier, Path, Supplier)} method, as if it had
+   * been supplied in the first place.</p>
+   *
+   * <p>Behavior resulting from any other usage of an implementation
+   * of this method is undefined.</p>
+   *
+   * <p>The default implementation of this method simply returns the
+   * supplied {@link Path}.  Implementations of the {@link
+   * ConfiguredSupplier} interface are strongly encouraged to actually
+   * perform path transliteration.</p>
+   *
+   * <p>A class that implements {@link ConfiguredSupplier} may find
+   * {@link StackWalker} particularly useful in implementing this method.</p>
+   *
+   * @param path an {@linkplain Path#isAbsolute() absolute
+   * <code>Path</code>}; must not be null; must return {@code true}
+   * from its {@link Path#isAbsolute() isAbsolute()} method
+   *
+   * @return the transliterated {@link Path}; never {@code null}
+   *
+   * @exception NullPointerException if {@code path} is {@code null}
+   *
+   * @exception IllegalArgumentException if {@code path} returns
+   * {@code false} from its {@link Path#isAbsolute() isAbsolute()}
+   * method
+   *
+   * @nullability Implementations of this method must not return
+   * {@code null}.
+   *
+   * @threadsafety Implementations of this method must be safe for
+   * concurrent use by multiple threads.
+   *
+   * @idempotency Implementations of this method must be idempotent
+   * and deterministic.
+   *
+   * @see Path#isAbsolute()
+   *
+   * @see Path#transliterate(BiFunction)
+   *
+   * @see #of(ConfiguredSupplier, Path, Supplier)
+   */
+  @Experimental
+  @OverridingEncouraged
+  @SubordinateTo("#of(ConfiguredSupplier, Path, Supplier")
+  public default Path transliterate(final Path path) {
+    if (!path.isAbsolute()) {
+      throw new IllegalArgumentException("!path.isAbsolute(): " + path);
+    }
+    return path;
+  }
 
   @Convenience
   @OverridingDiscouraged
@@ -98,8 +173,9 @@ public interface ConfiguredSupplier<T> extends Supplier<T> {
                                                 final Type type,
                                                 final U defaultValue) {
     return
-      this.plus(Path.of(Accessor.of(accessor), type),
-                defaultValue);
+      this.plus(accessor,
+                type,
+                () -> defaultValue);
   }
 
   @OverridingDiscouraged
@@ -115,7 +191,7 @@ public interface ConfiguredSupplier<T> extends Supplier<T> {
   public default <U> ConfiguredSupplier<U> plus(final Type type,
                                                 final U defaultValue) {
     return
-      this.plus(Path.of(Accessor.of(), type),
+      this.plus(type,
                 () -> defaultValue);
   }
 
@@ -195,37 +271,36 @@ public interface ConfiguredSupplier<T> extends Supplier<T> {
   @Convenience
   @OverridingDiscouraged
   public default <U> ConfiguredSupplier<U> of(final ConfiguredSupplier<?> parent,
-                                              final Path path,
+                                              final Path absolutePath,
                                               final U defaultValue) {
     return
       this.of(parent,
-              path,
+              absolutePath,
               () -> defaultValue);
   }
 
   @OverridingDiscouraged
-  public default <U> ConfiguredSupplier<U> of(final Path path) {
+  public default <U> ConfiguredSupplier<U> of(final Path absolutePath) {
     return
-      this.of(path,
+      this.of(absolutePath,
               ConfiguredSupplier::fail);
   }
 
   @OverridingDiscouraged
-  public default <U> ConfiguredSupplier<U> of(final Path path,
+  public default <U> ConfiguredSupplier<U> of(final Path absolutePath,
                                               final Supplier<U> defaultSupplier) {
     return
       this.of(this.root(),
-              path,
+              absolutePath,
               defaultSupplier);
   }
 
   @Convenience
   @OverridingDiscouraged
-  public default <U> ConfiguredSupplier<U> of(final Path path,
+  public default <U> ConfiguredSupplier<U> of(final Path absolutePath,
                                               final U defaultValue) {
     return
-      this.of(this.root(),
-              path,
+      this.of(absolutePath,
               () -> defaultValue);
   }
 
@@ -233,7 +308,7 @@ public interface ConfiguredSupplier<T> extends Supplier<T> {
   @OverridingDiscouraged
   public default <U> ConfiguredSupplier<U> of(final Type type) {
     return
-      this.of(Path.of(Accessor.of(), type),
+      this.of(type,
               ConfiguredSupplier::fail);
   }
 
@@ -242,7 +317,7 @@ public interface ConfiguredSupplier<T> extends Supplier<T> {
   public default <U> ConfiguredSupplier<U> of(final Type type,
                                               final Supplier<U> defaultSupplier) {
     return
-      this.of(Path.of(Accessor.of(), type),
+      this.of(Path.of().plus(Accessor.of(), type), // of().plus() is critical here
               defaultSupplier);
   }
 
@@ -251,7 +326,7 @@ public interface ConfiguredSupplier<T> extends Supplier<T> {
   public default <U> ConfiguredSupplier<U> of(final Type type,
                                               final U defaultValue) {
     return
-      this.of(Path.of(Accessor.of(), type),
+      this.of(type,
               () -> defaultValue);
   }
 
@@ -282,8 +357,40 @@ public interface ConfiguredSupplier<T> extends Supplier<T> {
                                               final Type type,
                                               final Supplier<U> defaultSupplier) {
     return
-      this.of(Path.of(Accessor.of(accessor), type),
+      this.of(Accessor.of(accessor),
+              type,
               defaultSupplier);
+  }
+
+  @Convenience
+  @OverridingDiscouraged
+  public default <U> ConfiguredSupplier<U> of(final Accessor accessor,
+                                              final Type type) {
+    return
+      this.of(accessor,
+              type,
+              ConfiguredSupplier::fail);
+  }
+
+  @Convenience
+  @OverridingDiscouraged
+  public default <U> ConfiguredSupplier<U> of(final Accessor accessor,
+                                              final Type type,
+                                              final Supplier<U> defaultSupplier) {
+    return
+      this.of(Path.of().plus(accessor, type), // of().plus() is critical here
+              defaultSupplier);
+  }
+
+  @Convenience
+  @OverridingDiscouraged
+  public default <U> ConfiguredSupplier<U> of(final Accessor accessor,
+                                              final Type type,
+                                              final U defaultValue) {
+    return
+      this.of(accessor,
+              type,
+              () -> defaultValue);
   }
 
   @OverridingDiscouraged

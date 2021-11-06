@@ -16,9 +16,16 @@
  */
 package org.microbean.settings.api;
 
+import java.lang.StackWalker.StackFrame;
+
 import java.lang.reflect.Type;
 
-import java.util.List;
+import java.net.URI;
+import java.net.URISyntaxException;
+
+import java.security.CodeSource;
+
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
 
@@ -26,10 +33,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 final class TestPath {
 
+  private static final StackWalker stackWalker = StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE);
+  
   private TestPath() {
     super();
   }
@@ -54,6 +64,49 @@ final class TestPath {
             return false;
           }
         }));
+  }
+
+  @Test
+  final void testParseRoot() throws ClassNotFoundException {
+    assertEquals(Path.of(), new Path.Parser().parse("/", this.getClass().getClassLoader()));    
+  }
+
+  @Test
+  final void testParseInteger() throws ClassNotFoundException {
+    assertEquals(Path.of(Integer.class), new Path.Parser().parse("java.lang.Integer", this.getClass().getClassLoader()));    
+  }
+
+  @Test
+  final void testParseRootInteger() throws ClassNotFoundException {
+    assertEquals(Path.of().plus(Integer.class), new Path.Parser().parse("//java.lang.Integer", this.getClass().getClassLoader()));    
+  }
+
+  @Test
+  final void testRelativeNoTypesBackToBack() throws ClassNotFoundException {
+    assertThrows(IllegalArgumentException.class, () -> {
+        new Path.Parser().parse("java.lang.Integer/java.lang.Integer", this.getClass().getClassLoader());
+      });
+  }
+
+  @Test
+  final void testAbsoluteNoTypesBackToBack1() throws ClassNotFoundException {
+    assertThrows(IllegalArgumentException.class, () -> {
+        new Path.Parser().parse("/java.lang.Integer", this.getClass().getClassLoader());
+      });
+  }
+
+  @Test
+  final void testAbsoluteNoTypesBackToBack2() throws ClassNotFoundException {
+    assertThrows(IllegalArgumentException.class, () -> {
+        new Path.Parser().parse("/java.lang.Integer/java.lang.Integer", this.getClass().getClassLoader());
+      });
+  }
+
+  @Test
+  final void testAbsoluteNoTypesBackToBack3() throws ClassNotFoundException {
+    assertThrows(IllegalArgumentException.class, () -> {
+        new Path.Parser().parse("/java.lang.Integer/java.lang.Integer/java.lang.Integer", this.getClass().getClassLoader());
+      });
   }
 
   private static interface Car {
