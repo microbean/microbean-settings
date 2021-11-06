@@ -109,6 +109,26 @@ final class TestPath {
       });
   }
 
+  @Test
+  final void testNoTypeParams() throws ClassNotFoundException {
+    assertThrows(IllegalArgumentException.class, () -> {
+        new Path.Parser().parse("java.lang.Integer:java.lang.Object=", this.getClass().getClassLoader());
+      });
+  }
+
+  @Test
+  final void testParamsButNoArgumentsOK() throws ClassNotFoundException {
+    assertEquals(Path.of(Accessor.of("wheel", String.class), Integer.class),
+                 new Path.Parser().parse("wheel:java.lang.String=/java.lang.Integer", this.getClass().getClassLoader()));
+  }
+
+  @Test
+  final void frob() throws ClassNotFoundException {
+    assertEquals(Path.of(Accessor.of("wheel", String.class, "LR"), Integer.class),
+                 new Path.Parser().parse("wheel:java.lang.String=\"LR\"/java.lang.Integer", this.getClass().getClassLoader()));
+  }
+  
+
   private static interface Car {
 
   }

@@ -442,7 +442,7 @@ public final class Path implements Assignable<Type> {
             assert params.isEmpty();
             assert args.isEmpty();
             if (type != null) {
-              throw new IllegalArgumentException();
+              throw new IllegalArgumentException(s);
             }
             type = typeFor(sb.toString(), cl);
             elements.add(type);
@@ -451,18 +451,26 @@ public final class Path implements Assignable<Type> {
             state = NAME;
             break;
           case PARAMETERS:
-            throw new IllegalArgumentException();
+            assert type == null;
+            assert args.isEmpty();
+            state = ARGUMENTS;
+            break;
           case ARGUMENTS:
             assert name != null;
             assert type == null;
             assert !params.isEmpty();
-            args.add(sb.toString());
-            elements.add(Accessor.of(name, params, args));
-            sb.setLength(0);
+            if (sb.isEmpty()) {
+              elements.add(Accessor.of(name, params, List.of()));
+            } else {
+              args.add(sb.toString());
+              elements.add(Accessor.of(name, params, args));
+              sb.setLength(0);
+            }
             name = null;
             // type = null;
             params.clear();
             args.clear();
+            state = NAME;
             break;
           default:
             sb.append((char)c);
@@ -472,7 +480,7 @@ public final class Path implements Assignable<Type> {
         case ':':
           switch (state) {
           case START:
-            throw new IllegalArgumentException();
+            throw new IllegalArgumentException(s);
           case NAME:
             assert params.isEmpty();
             assert args.isEmpty();
@@ -482,9 +490,9 @@ public final class Path implements Assignable<Type> {
             state = PARAMETERS;
             break;
           case TYPE:
-            throw new IllegalArgumentException();
+            throw new IllegalArgumentException(s);
           case PARAMETERS:
-            throw new IllegalArgumentException();
+            throw new IllegalArgumentException(s);
           case ARGUMENTS:
             assert !params.isEmpty();
             sb.append((char)c);
@@ -497,16 +505,21 @@ public final class Path implements Assignable<Type> {
         case '.':
           switch (state) {
           case START:
-            throw new IllegalArgumentException();
+            throw new IllegalArgumentException(s);
           case NAME:
             assert params.isEmpty();
             assert args.isEmpty();
             if (type != null) {
-              throw new IllegalArgumentException(); // two types in a row
+              throw new IllegalArgumentException(s); // two types in a row
             }
             sb.append((char)c);
             name = null;
             state = TYPE;
+            break;
+          case PARAMETERS:
+            assert type == null;
+            assert args.isEmpty();
+            sb.append((char)c);
             break;
           default:
             sb.append((char)c);
@@ -517,20 +530,57 @@ public final class Path implements Assignable<Type> {
         case ';':
           switch (state) {
           case START:
-            throw new IllegalArgumentException();
+            throw new IllegalArgumentException(s);
           case NAME:
-            throw new IllegalArgumentException();
+            throw new IllegalArgumentException(s);
           case TYPE:
-            throw new IllegalArgumentException();
+            throw new IllegalArgumentException(s);
           case PARAMETERS:
-            assert args.isEmpty();
-            params.add(typeFor(sb.toString(), cl));
-            sb.setLength(0);
-            break;
+            throw new IllegalArgumentException(s);
           case ARGUMENTS:
             assert params.isEmpty();
             args.add(sb.toString());
             sb.setLength(0);
+            state = PARAMETERS;
+            break;
+          default:
+            throw new IllegalStateException();
+          }
+          break;
+
+        case '\\':
+          switch (state) {
+          case START:
+            throw new IllegalArgumentException(s);
+          case NAME:
+            sb.append((char)c);
+            break;
+          case TYPE:
+            throw new IllegalArgumentException(s);
+          case PARAMETERS:
+            throw new IllegalArgumentException(s);
+          case ARGUMENTS:
+            if (i + 1 < s.length() && s.charAt(i + 1) == '"') {
+              i++;
+              sb.append("\"");
+            } else {
+              sb.append('\\');
+            }
+            break;
+          default:
+            throw new IllegalStateException();
+          }
+          break;
+
+        case '\"':
+          switch (state) {
+          case START:
+          case NAME:
+          case TYPE:
+          case PARAMETERS:
+            throw new IllegalArgumentException(s);
+          case ARGUMENTS:
+            // skip it
             break;
           default:
             throw new IllegalStateException();
@@ -540,22 +590,29 @@ public final class Path implements Assignable<Type> {
         case '=':
           switch (state) {
           case START:
-            throw new IllegalArgumentException();
+            throw new IllegalArgumentException(s);
           case NAME:
-            throw new IllegalArgumentException();
+            throw new IllegalArgumentException(s);
           case TYPE:
-            throw new IllegalArgumentException();
+            throw new IllegalArgumentException(s);
           case PARAMETERS:
             assert name != null;
             assert type == null;
             assert args.isEmpty();
-            sb.setLength(0); // lose the param0 part
+            params.add(typeFor(sb.toString(), cl));
+            sb.setLength(0);
+            if (i + 1 < s.length()) {
+              if (s.charAt(i + 1) == '\"') {
+                ++i;
+              }
+              state = ARGUMENTS;
+            }
             break;
           case ARGUMENTS:
             assert name != null;
             assert type == null;
             assert !params.isEmpty();
-            sb.setLength(0); // lose the arg0 part
+            sb.append((char)c);
             break;
           default:
             throw new IllegalStateException();
@@ -578,10 +635,10 @@ public final class Path implements Assignable<Type> {
       switch (state) {
       case START:
         // empty
-        throw new IllegalArgumentException();
+        throw new IllegalArgumentException(s);
       case NAME:
         if (!sb.isEmpty()) {
-          throw new IllegalArgumentException();
+          throw new IllegalArgumentException(s);
         }
         break;
       case TYPE:
@@ -593,17 +650,9 @@ public final class Path implements Assignable<Type> {
         sb.setLength(0);
         break;
       case PARAMETERS:
-        throw new IllegalArgumentException();
+        throw new IllegalArgumentException(s);
       case ARGUMENTS:
-        assert name != null;
-        assert type == null;
-        assert !params.isEmpty();
-        args.add(sb.toString());
-        elements.add(Accessor.of(name, params, args));
-        sb.setLength(0);
-        name = null;
-        params.clear();
-        break;
+        throw new IllegalArgumentException(s);
       default:
         throw new IllegalStateException();
       }

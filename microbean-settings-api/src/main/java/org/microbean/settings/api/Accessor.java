@@ -45,10 +45,10 @@ public record Accessor(String name, List<Class<?>> parameters, List<String> argu
 
   public Accessor {
     Objects.requireNonNull(name, "name");
-    Objects.requireNonNull(parameters, "parameters");
-    Objects.requireNonNull(arguments, "arguments");
-    if (parameters.size() != arguments.size()) {
-      throw new IllegalArgumentException("paramters: " + parameters + "; arguments: " + arguments);
+    parameters = List.copyOf(parameters);
+    arguments = List.copyOf(arguments);
+    if (!arguments.isEmpty() && parameters.size() != arguments.size()) {      
+      throw new IllegalArgumentException("parameters: " + parameters + "; arguments: " + arguments);
     }
   }
 
@@ -66,6 +66,11 @@ public record Accessor(String name, List<Class<?>> parameters, List<String> argu
     return this.parameters().get(index);
   }
 
+  public final int argumentCount() {
+    assert this.arguments().isEmpty() ? true : this.parameterCount() == this.arguments.size();
+    return this.arguments().size();
+  }
+  
   public final String argument(final int index) {
     return this.arguments().get(index);
   }
@@ -90,13 +95,20 @@ public record Accessor(String name, List<Class<?>> parameters, List<String> argu
     final int parameterCount = this.parameterCount();
     if (parameterCount > 0) {
       sb.append(":");
-      for (int i = 0; i < parameterCount; i++) {
-        sb.append("param").append(i).append("=").append(this.parameter(i).getName()).append(";");
-      }
-      for (int i = 0; i < parameterCount; i++) {
-        sb.append("arg").append(i).append("=").append("\"").append(this.argument(i).replace("\"", "\\\"")).append("\"");
-        if (i + 1 < parameterCount) {
-          sb.append(";");
+      final int argumentCount = this.argumentCount();
+      if (argumentCount <= 0) {
+        for (int i = 0; i < parameterCount; i++) {
+          sb.append(this.parameter(i).getName()).append("=");
+          if (i + 1 < parameterCount) {
+            sb.append(";");
+          }
+        }
+      } else {
+        for (int i = 0; i < parameterCount; i++) {
+          sb.append(this.parameter(i).getName()).append("=").append(this.argument(i).replace("\"", "\\\"")).append("\"");
+          if (i + 1 < parameterCount) {
+            sb.append(";");
+          }
         }
       }
     }
@@ -144,6 +156,10 @@ public record Accessor(String name, List<Class<?>> parameters, List<String> argu
     return new Accessor(index);
   }
 
+  public static final Accessor of(final String name, final Class<?> parameter) {
+    return of(name, List.of(parameter), List.of());
+  }
+  
   public static final <T> Accessor of(final String name, final Class<T> parameter, final T argument) {
     return of(name, List.of(parameter), List.of(argument.toString()));
   }
