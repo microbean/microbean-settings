@@ -510,7 +510,7 @@ public class Settings<T> implements ConfiguredSupplier<T> {
    */
   @SubordinateTo("#of(ConfiguredSupplier, Path, Supplier)")
   protected int score(final Path referencePath, final Path valuePath) {
-    assert referencePath.type(0) == void.class : "referencePath: " + referencePath;
+    assert referencePath.isAbsolute() : "referencePath: " + referencePath;
 
     final int lastValuePathIndex = referencePath.lastIndexOf(valuePath, AccessorsMatchBiPredicate.INSTANCE);
     assert lastValuePathIndex >= 0 : "referencePath: " + referencePath + "; valuePath: " + valuePath;
@@ -655,10 +655,10 @@ public class Settings<T> implements ConfiguredSupplier<T> {
    */
   protected static final boolean isSelectable(final Path referencePath,
                                               final Path valuePath) {
-    if (referencePath.isType(0) && referencePath.type(0) == void.class) {
+    if (referencePath.isAbsolute()) {
       return referencePath.endsWith(valuePath, AccessorsMatchBiPredicate.INSTANCE);
     } else {
-      throw new IllegalArgumentException("refernecePath: " + referencePath);
+      throw new IllegalArgumentException("referencePath: " + referencePath);
     }
   }
 

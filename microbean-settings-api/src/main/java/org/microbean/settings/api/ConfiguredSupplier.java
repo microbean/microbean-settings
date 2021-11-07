@@ -418,7 +418,9 @@ public interface ConfiguredSupplier<T> extends OptionalSupplier<T> {
           throw new IllegalStateException("root(): " + bootstrapConfiguredSupplier.root());
         }
 
-        instance = bootstrapConfiguredSupplier.of(ConfiguredSupplier.class).orElse(bootstrapConfiguredSupplier);
+        instance = bootstrapConfiguredSupplier
+          .<ConfiguredSupplier<?>>of(new TypeToken<ConfiguredSupplier<?>>() {}.type())
+          .orElse(bootstrapConfiguredSupplier);
 
         if (instance.parent() != bootstrapConfiguredSupplier) {
           throw new IllegalStateException("instance.parent(): " + instance.parent());
