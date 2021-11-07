@@ -68,21 +68,25 @@ public interface ConfiguredSupplier<T> extends OptionalSupplier<T> {
    * may be different that will be used instead.
    *
    * <p>The {@link Path} that is returned may be the {@link Path} that
-   * was supplied.</p>
+   * was supplied.  This may happen, for example, if {@linkplain
+   * Path#isTransliterated() the path has already been
+   * transliterated}, or if the path identifies a transliteration
+   * request.</p>
    *
    * <p>Path transliteration is needed because the {@link
    * Accessor#name() name()} components of {@link Accessor}s may
    * unintentionally clash when two components are combined into a
    * single application.</p>
    *
-   * <p>Path transliteration must occur during the execution of the
-   * {@link #of(ConfiguredSupplier, Path)} method, such that the
-   * {@link Path} supplied to that method, once it has been verified
-   * to be {@linkplain Path#isAbsolute() absolute}, is supplied to an
-   * implementation of this method. The {@link Path} returned by an
-   * implementation of this method must then be used during the rest
-   * of the invocation of the {@link #of(ConfiguredSupplier, Path)}
-   * method, as if it had been supplied in the first place.</p>
+   * <p>Path transliteration must occur during the execution of any
+   * implementation of the {@link #of(ConfiguredSupplier, Path)}
+   * method, such that the {@link Path} supplied to that method, once
+   * it has been verified to be {@linkplain Path#isAbsolute()
+   * absolute}, is supplied to an implementation of this method. The
+   * {@link Path} returned by an implementation of this method must
+   * then be used during the rest of the invocation of the {@link
+   * #of(ConfiguredSupplier, Path)} method, as if it had been supplied
+   * in the first place.</p>
    *
    * <p>Behavior resulting from any other usage of an implementation
    * of this method is undefined.</p>

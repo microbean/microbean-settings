@@ -219,18 +219,18 @@ public class Settings<T> implements ConfiguredSupplier<T> {
   }
 
   private final <U> Settings<U> of(final ConfiguredSupplier<?> parent,
-                                   Path path,
+                                   Path absolutePath,
                                    final Consumer<? super Provider> rejectedProviders,
                                    final Consumer<? super Value<?>> rejectedValues,
                                    final Consumer<? super Value<?>> ambiguousValues) {
-    if (path.isAbsolute()) {
-      if (path.size() == 1 && parent != this) {
-        throw new IllegalArgumentException("path.isRoot(): " + path);
+    if (absolutePath.isAbsolute()) {
+      if (absolutePath.size() == 1 && parent != this) {
+        throw new IllegalArgumentException("absolutePath.isRoot(): " + absolutePath);
       }
     } else {
-      throw new IllegalArgumentException("!path.isAbsolute(): " + path);
+      throw new IllegalArgumentException("!absolutePath.isAbsolute(): " + absolutePath);
     }
-    path = this.transliterate(path);
+    absolutePath = this.transliterate(absolutePath);
     // We deliberately do not use computeIfAbsent() because of()
     // operations can kick off other of() operations, and then you'd
     // have a cache mutating operation occuring within a cache
@@ -241,13 +241,13 @@ public class Settings<T> implements ConfiguredSupplier<T> {
     //
     // This obviously can result in unnecessary work, but most
     // configuration use cases will cause this work to happen anyway.
-    final Qualified.Record<Path> qp = Qualified.Record.of(parent.qualifiers(), path);
+    final Qualified.Record<Path> qp = Qualified.Record.of(parent.qualifiers(), absolutePath);
     Settings<?> settings = this.settingsCache.get(qp);
     if (settings == null) {
       settings =
         this.settingsCache.putIfAbsent(qp,
                                        this.computeSettings(parent,
-                                                            path,
+                                                            absolutePath,
                                                             rejectedProviders,
                                                             rejectedValues,
                                                             ambiguousValues));
@@ -265,17 +265,16 @@ public class Settings<T> implements ConfiguredSupplier<T> {
   @Experimental
   @Override
   public final Path transliterate(final Path path) {
-    // TODO: this is all fouled up
-    if (!path.isAbsolute() || path.isTransliterated() || path.type() == Path.class) {
-      final Accessor a = path.accessor(1);
-      if (a.name().equals("transliterate") && a.parameterCount() == 1 && a.parameter(0) == Path.class) {
+    if (path.isTransliterated()) {
+      return path;
+    } else if (path.type() == Path.class) {
+      // Are we in the middle of a transliteration request?
+      final Accessor a = path.lastAccessor();
+      if (a != null && a.name().equals("transliterate") && a.parameterCount() == 1 && a.parameter(0) == Path.class) {
         return path;
       }
     }
-    return
-      this.of(Accessor.of("transliterate", Path.class),
-              Path.class)
-      .orElse(path);
+    return this.of(Accessor.of("transliterate", Path.class, path), Path.class).orElse(path);
   }
 
   private final <U> Settings<U> computeSettings(final ConfiguredSupplier<?> parent,

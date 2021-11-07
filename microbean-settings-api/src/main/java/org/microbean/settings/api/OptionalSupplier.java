@@ -27,110 +27,162 @@ import java.util.function.Supplier;
 
 import java.util.stream.Stream;
 
+import org.microbean.development.annotation.OverridingDiscouraged;
+
 /**
  * A {@link Supplier} that is {@link Optional}-like.
  *
  * <p>Unlike {@link Optional}, any implementation of this interface is
  * not a <a
  * href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/doc-files/ValueBased.html">value-based
- * class</a>.  This is also why the {@link #isPresent()} and {@link
- * #isEmpty()} methods are deprecated.</p>
+ * class</a>.  This is also why there are no {@code isPresent()} or
+ * {@code isEmpty()} methods.</p>
+ *
+ * @param <T> the type of value implementations of this interface
+ * {@linkplain #get() supply}
  *
  * @author <a href="https://about.me/lairdnelson"
  * target="_parent">Laird Nelson</a>
+ *
+ * @see #get()
+ *
+ * @see #optional()
  */
+@FunctionalInterface
 public interface OptionalSupplier<T> extends Supplier<T> {
 
-  private T getValue() {
+  /**
+   * Returns a value, which may be {@code null}, indicating (possibly
+   * transitory) <em>emptiness</em>, or non-{@code null}, indicating
+   * (possibly transitory) <em>presence</em>.
+   *
+   * <p>This method's contract extends {@link Supplier#get()}'s
+   * contract with the following additional requirements:</p>
+   *
+   * <ul>
+   *
+   * <li>An implementation of this method need not be deterministic.</li>
+   *
+   * <li>An implementation of this method may indicate (possibly
+   * transitory) emptiness by any of the following means:
+   *
+   * <ul>
+   *
+   * <li>Returning {@code null}.</li>
+   *
+   * <li>Throwing a {@link NoSuchElementException}.</li>
+   *
+   * <li>Throwing an {@link UnsupportedOperationException}.</li>
+   *
+   * </ul></li>
+   *
+   * <li>The returning of a non-{@code null} value indicates (possibly
+   * transitory) presence.</li>
+   *
+   * </ul>
+   *
+   * @return a value, or {@code null} to indicate emptiness
+   *
+   * @exception NoSuchElementException to indicate emptiness
+   *
+   * @exception UnsupportedOperationException to indicate emptiness
+   *
+   * @nullability Implementations of this method may and often will
+   * return {@code null}.
+   *
+   * @threadsafety Implementations of this method must be safe for
+   * concurrent use by multiple threads.
+   *
+   * @idempotency Implementations of this method must be idempotent
+   * but need not be deterministic.
+   */
+  @Override
+  public T get();
+
+  /**
+   * Returns a non-{@code null} but possibly {@linkplain
+   * Optional#isEmpty() empty} {@link Optional} representing this
+   * {@link OptionalSupplier}'s {@linkplain #get() value}.
+   *
+   * <p>The default implementation of this method does not and its
+   * overrides must not return {@code null}.</p>
+   *
+   * @return a non-{@code null} but possibly {@linkplain
+   * Optional#isEmpty() empty} {@link Optional} representing this
+   * {@link OptionalSupplier}'s {@linkplain #get() value}
+   *
+   * @nullability The default implementation of this method does not
+   * and overrides must not return {@code null}.
+   *
+   * @threadsafety The default implementation of this method is and
+   * overrides must be safe for concurrent use by multiple threads.
+   *
+   * @idempotency The default implementation and overrides of this
+   * method may not be idempotent or deterministic.
+   */
+  @OverridingDiscouraged
+  public default Optional<T> optional() {
     try {
-      return this.get();
+      return Optional.ofNullable(this.get());
     } catch (final NoSuchElementException | UnsupportedOperationException e) {
       // TODO: log
-      return null;
+      return Optional.empty();
     }
   }
 
+  @OverridingDiscouraged
   public default Optional<T> filter(final Predicate<? super T> predicate) {
-    final T value = this.getValue();
-    return value != null && predicate.test(value) ? Optional.of(value) : Optional.empty();
+    return this.optional().filter(predicate);
   }
 
-  @SuppressWarnings("unchecked")
+  @OverridingDiscouraged
   public default <U> Optional<U> flatMap(final Function<? super T, ? extends Optional<? extends U>> mapper) {
-    final T value = this.getValue();
-    return value == null ? Optional.empty() : Objects.requireNonNull((Optional<U>)mapper.apply(value));
+    return this.optional().flatMap(mapper);
   }
 
+  @OverridingDiscouraged
   public default void ifPresent(final Consumer<? super T> action) {
-    final T value = this.getValue();
-    if (value == null) {
-      action.accept(value);
-    }
+    this.optional().ifPresent(action);
   }
 
+  @OverridingDiscouraged
   public default void ifPresentOrElse(final Consumer<? super T> action, final Runnable emptyAction) {
-    final T value = this.getValue();
-    if (value == null) {
-      emptyAction.run();
-    } else {
-      action.accept(value);
-    }
+    this.optional().ifPresentOrElse(action, emptyAction);
   }
 
-  @Deprecated
-  public default boolean isEmpty() {
-    return this.getValue() == null;
-  }
-
-  @Deprecated
-  public default boolean isPresent() {
-    return this.getValue() != null;
-  }
-
+  @OverridingDiscouraged
   public default <U> Optional<U> map(final Function <? super T, ? extends U> mapper) {
-    final T value = this.getValue();
-    return value == null ? Optional.empty() : Optional.ofNullable(mapper.apply(value));
+    return this.optional().map(mapper);
   }
 
-  @SuppressWarnings("unchecked")
+  @OverridingDiscouraged
   public default Optional<T> or(final Supplier<? extends Optional<? extends T>> supplier) {
-    final T value = this.getValue();
-    return value == null ? Objects.requireNonNull((Optional<T>)supplier.get()) : Optional.of(value);
+    return this.optional().or(supplier);
   }
 
+  @OverridingDiscouraged
   public default T orElse(final T other) {
-    final T value = this.getValue();
-    return value == null ? other : value;
+    return this.optional().orElse(other);
   }
 
+  @OverridingDiscouraged
   public default T orElseGet(final Supplier<? extends T> supplier) {
-    final T value = this.getValue();
-    return value == null ? supplier.get() : value;
+    return this.optional().orElseGet(supplier);
   }
 
+  @OverridingDiscouraged
   public default T orElseThrow() {
-    final T value = this.getValue();
-    if (value == null) {
-      throw new NoSuchElementException();
-    } else {
-      return value;
-    }
+    return this.orElseThrow(NoSuchElementException::new);
   }
 
+  @OverridingDiscouraged
   public default <X extends Throwable> T orElseThrow(final Supplier<? extends X> exceptionSupplier) throws X {
-    final T value = this.getValue();
-    if (value == null) {
-      throw exceptionSupplier.get();
-    } else {
-      return value;
-    }
+    return this.optional().orElseThrow(exceptionSupplier);
   }
 
+  @OverridingDiscouraged
   public default Stream<T> stream() {
-    final T value = this.getValue();
-    return value == null ? Stream.empty() : Stream.of(value);
+    return this.optional().stream();
   }
-
-
 
 }

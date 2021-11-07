@@ -163,7 +163,7 @@ public record Accessor(String name, List<Class<?>> parameters, List<String> argu
   public static final <T> Accessor of(final String name, final Class<T> parameter, final T argument) {
     return of(name, List.of(parameter), List.of(argument.toString()));
   }
-  
+
   public static final Accessor of(final String name, final List<Class<?>> parameters, final List<String> arguments) {
     return new Accessor(name, parameters, arguments);
   }
