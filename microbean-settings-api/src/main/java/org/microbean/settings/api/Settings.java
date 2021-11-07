@@ -265,6 +265,7 @@ public class Settings<T> implements ConfiguredSupplier<T> {
   @Experimental
   @Override
   public final Path transliterate(final Path path) {
+    // TODO: this is all fouled up
     if (!path.isAbsolute() || path.isTransliterated() || path.type() == Path.class) {
       final Accessor a = path.accessor(1);
       if (a.name().equals("transliterate") && a.parameterCount() == 1 && a.parameter(0) == Path.class) {
@@ -278,11 +279,12 @@ public class Settings<T> implements ConfiguredSupplier<T> {
   }
 
   private final <U> Settings<U> computeSettings(final ConfiguredSupplier<?> parent,
-                                                final Path path,
+                                                final Path absolutePath,
                                                 final Consumer<? super Provider> rejectedProviders,
                                                 final Consumer<? super Value<?>> rejectedValues,
                                                 final Consumer<? super Value<?>> ambiguousValues) {
-    final Value<U> value = this.value(parent, path, rejectedProviders, rejectedValues, ambiguousValues);
+    assert absolutePath.isAbsolute() : "absolutePath: " + absolutePath;
+    final Value<U> value = this.value(parent, absolutePath, rejectedProviders, rejectedValues, ambiguousValues);
     final Supplier<U> supplier;
     if (value == null) {
       supplier = Settings::returnNull;
@@ -294,7 +296,7 @@ public class Settings<T> implements ConfiguredSupplier<T> {
                      this.providers,
                      parent.qualifiers(),
                      parent,
-                     path,
+                     absolutePath,
                      supplier,
                      this.rejectedProvidersConsumerSupplier,
                      this.rejectedValuesConsumerSupplier,
@@ -302,10 +304,11 @@ public class Settings<T> implements ConfiguredSupplier<T> {
   }
 
   private final <U> Value<U> value(final ConfiguredSupplier<?> parent,
-                                   final Path path,
+                                   final Path absolutePath,
                                    final Consumer<? super Provider> rejectedProviders,
                                    final Consumer<? super Value<?>> rejectedValues,
                                    final Consumer<? super Value<?>> ambiguousValues) {
+    assert absolutePath.isAbsolute() : "absolutePath: " + absolutePath;
     final Collection<? extends Provider> providers = this.providers();
     if (providers.isEmpty()) {
       return null;
@@ -313,14 +316,14 @@ public class Settings<T> implements ConfiguredSupplier<T> {
       final Provider provider = providers instanceof List<? extends Provider> list ? list.get(0) : providers.iterator().next();
       if (provider == null) {
         return null;
-      } else if (!this.isSelectable(provider, parent, path)) {
+      } else if (!this.isSelectable(provider, parent, absolutePath)) {
         rejectedProviders.accept(provider);
         return null;
       } else {
-        final Value<?> value = provider.get(parent, path);
+        final Value<?> value = provider.get(parent, absolutePath);
         if (value == null) {
           return null;
-        } else if (!isSelectable(parent.qualifiers(), path, value.qualifiers(), value.path())) {
+        } else if (!isSelectable(parent.qualifiers(), absolutePath, value.qualifiers(), value.path())) {
           rejectedValues.accept(value);
           return null;
         } else {
@@ -336,18 +339,18 @@ public class Settings<T> implements ConfiguredSupplier<T> {
       int candidateQualifiersScore = Integer.MIN_VALUE;
       int candidatePathScore = Integer.MIN_VALUE;
       for (final Provider provider : providers) {
-        if (provider != null && this.isSelectable(provider, parent, path)) {
+        if (provider != null && this.isSelectable(provider, parent, absolutePath)) {
           @SuppressWarnings("unchecked")
-          final Value<U> v = (Value<U>)provider.get(parent, path);
+          final Value<U> v = (Value<U>)provider.get(parent, absolutePath);
           Value<U> value = v;
           VALUE_EVALUATION_LOOP:
           while (value != null) { // NOTE INFINITE LOOP POSSIBILITY; read carefully
-            if (isSelectable(qualifiers, path, value.qualifiers(), value.path())) {
+            if (isSelectable(qualifiers, absolutePath, value.qualifiers(), value.path())) {
               if (candidate == null) {
                 candidate = value;
                 candidateProvider = provider;
                 candidateQualifiersScore = this.score(qualifiers, candidate.qualifiers());
-                candidatePathScore = this.score(path, candidate.path());
+                candidatePathScore = this.score(absolutePath, candidate.path());
                 value = null; // critical
               } else {
                 // Let's do qualifiers first.  This is an arbitrary decision.
@@ -357,13 +360,13 @@ public class Settings<T> implements ConfiguredSupplier<T> {
                   value = null; // critical
                 } else if (valueQualifiersScore == candidateQualifiersScore) {
                   // Same qualifiers score; let's now do paths.
-                  final int valuePathScore = this.score(path, value.path());
+                  final int valuePathScore = this.score(absolutePath, value.path());
                   if (valuePathScore < candidatePathScore) {
                     rejectedValues.accept(value);
                     value = null; // critical
                   } else if (valuePathScore == candidatePathScore) {
                     final Value<U> disambiguatedValue =
-                      this.disambiguate(parent, path, candidateProvider, candidate, provider, value);
+                      this.disambiguate(parent, absolutePath, candidateProvider, candidate, provider, value);
                     if (disambiguatedValue == null) {
                       ambiguousValues.accept(candidate);
                       ambiguousValues.accept(value);
@@ -428,10 +431,13 @@ public class Settings<T> implements ConfiguredSupplier<T> {
 
   protected final boolean isSelectable(final Provider provider,
                                        final ConfiguredSupplier<?> supplier,
-                                       final Path path) {
+                                       final Path absolutePath) {
+    if (!absolutePath.isAbsolute()) {
+      throw new IllegalArgumentException("absolutePath: " + absolutePath);
+    }
     return
-      AssignableType.of(provider.upperBound()).isAssignable(path.type()) &&
-      provider.isSelectable(supplier, path);
+      AssignableType.of(provider.upperBound()).isAssignable(absolutePath.type()) &&
+      provider.isSelectable(supplier, absolutePath);
   }
 
   @SubordinateTo("#of(ConfiguredSupplier, Path, Supplier)")
@@ -449,7 +455,7 @@ public class Settings<T> implements ConfiguredSupplier<T> {
 
   /**
    * Returns a score indicating the relative specificity of {@code
-   * valuePath} with respect to {@code referencePath}.
+   * valuePath} with respect to {@code absoluteReferencePath}.
    *
    * <p>This is <em>not</em> a comparison method.</p>
    *
@@ -460,35 +466,35 @@ public class Settings<T> implements ConfiguredSupplier<T> {
    *
    * <li>Neither parameter's value may be {@code null}.</li>
    *
-   * <li>{@code referencePath} must have {@code void.class} as its
-   * first {@linkplain Path#type(int) element}</li>
+   * <li>{@code absoluteReferencePath} must be {@linkplain
+   * Path#isAbsolute() absolute}
    *
    * <li>{@code valuePath} must be selectable with respect to {@code
-   * referencePath}, where the definition of selectability is
+   * absoluteReferencePath}, where the definition of selectability is
    * described below</li>
    *
    * </ul>
    *
    * <p>For {@code valuePath} to "be selectable" with respect to
-   * {@code referencePath} for the purposes of this method and for no
-   * other purpose, a hypothetical invocation of {@link
+   * {@code absoluteReferencePath} for the purposes of this method and
+   * for no other purpose, a hypothetical invocation of {@link
    * #isSelectable(Path, Path)} must return {@code true} when supplied
-   * with {@code referencePath} and {@code valuePath} respectively.
-   * Note that such an invocation is <em>not</em> made by this method,
-   * but logically precedes it when this method is called in the
-   * natural course of events by the {@link #of(ConfiguredSupplier,
-   * Path)} method.</p>
+   * with {@code absoluteReferencePath} and {@code valuePath}
+   * respectively.  Note that such an invocation is <em>not</em> made
+   * by this method, but logically precedes it when this method is
+   * called in the natural course of events by the {@link
+   * #of(ConfiguredSupplier, Path)} method.</p>
    *
-   * @param referencePath the {@link Path} against which to score the
-   * supplied {@code valuePath}; must not be {@code null}; must adhere
-   * to the preconditions above
+   * @param absoluteReferencePath the {@link Path} against which to
+   * score the supplied {@code valuePath}; must not be {@code null};
+   * must adhere to the preconditions above
    *
    * @param valuePath the {@link Path} to score against the supplied
-   * {@code referencePath}; must not be {@code null}; must adhere to
-   * the preconditions above
+   * {@code absoluteReferencePath}; must not be {@code null}; must
+   * adhere to the preconditions above
    *
    * @return a relative score for {@code valuePath} with respect to
-   * {@code referencePath}; meaningless on its own
+   * {@code absoluteReferencePath}; meaningless on its own
    *
    * @exception NullPointerException if either parameter is {@code
    * null}
@@ -509,19 +515,21 @@ public class Settings<T> implements ConfiguredSupplier<T> {
    * property.
    */
   @SubordinateTo("#of(ConfiguredSupplier, Path, Supplier)")
-  protected int score(final Path referencePath, final Path valuePath) {
-    assert referencePath.isAbsolute() : "referencePath: " + referencePath;
+  protected int score(final Path absoluteReferencePath, final Path valuePath) {
+    if (!absoluteReferencePath.isAbsolute()) {
+      throw new IllegalArgumentException("absoluteReferencePath: " + absoluteReferencePath);
+    }
 
-    final int lastValuePathIndex = referencePath.lastIndexOf(valuePath, AccessorsMatchBiPredicate.INSTANCE);
-    assert lastValuePathIndex >= 0 : "referencePath: " + referencePath + "; valuePath: " + valuePath;
-    assert lastValuePathIndex + valuePath.size() == referencePath.size() : "referencePath: " + referencePath + "; valuePath: " + valuePath;
+    final int lastValuePathIndex = absoluteReferencePath.lastIndexOf(valuePath, AccessorsMatchBiPredicate.INSTANCE);
+    assert lastValuePathIndex >= 0 : "absoluteReferencePath: " + absoluteReferencePath + "; valuePath: " + valuePath;
+    assert lastValuePathIndex + valuePath.size() == absoluteReferencePath.size() : "absoluteReferencePath: " + absoluteReferencePath + "; valuePath: " + valuePath;
 
     int score = valuePath.size();
     for (int valuePathIndex = 0; valuePathIndex < valuePath.size(); valuePathIndex++) {
       final int referencePathIndex = lastValuePathIndex + valuePathIndex;
-      if (referencePath.isAccessor(referencePathIndex)) {
+      if (absoluteReferencePath.isAccessor(referencePathIndex)) {
         if (valuePath.isAccessor(valuePathIndex)) {
-          final Accessor referenceAccessor = referencePath.accessor(referencePathIndex);
+          final Accessor referenceAccessor = absoluteReferencePath.accessor(referencePathIndex);
           final Accessor valueAccessor = valuePath.accessor(valuePathIndex);
 
           assert referenceAccessor.name().equals(valueAccessor.name()) : "referenceAccessor: " + referenceAccessor + "; valueAccessor: " + valueAccessor;
@@ -552,9 +560,9 @@ public class Settings<T> implements ConfiguredSupplier<T> {
         } else {
           throw new IllegalArgumentException("valuePath: " + valuePath);
         }
-      } else if (referencePath.isType(referencePathIndex)) {
+      } else if (absoluteReferencePath.isType(referencePathIndex)) {
         if (valuePath.isType(valuePathIndex)) {
-          final Type referenceType = referencePath.type(referencePathIndex);
+          final Type referenceType = absoluteReferencePath.type(referencePathIndex);
           final Type valueType = valuePath.type(valuePathIndex);
           if (Types.equals(referenceType, valueType)) {
             score++;
@@ -567,7 +575,7 @@ public class Settings<T> implements ConfiguredSupplier<T> {
           throw new IllegalArgumentException("valuePath: " + valuePath);
         }
       } else {
-        throw new IllegalArgumentException("referencePath: " + referencePath);
+        throw new IllegalArgumentException("absoluteReferencePath: " + absoluteReferencePath);
       }
     }
     return score;
@@ -593,10 +601,10 @@ public class Settings<T> implements ConfiguredSupplier<T> {
   }
 
   private static final boolean isSelectable(final Qualifiers referenceQualifiers,
-                                              final Path referencePath,
+                                              final Path absoluteReferencePath,
                                               final Qualifiers valueQualifiers,
                                               final Path valuePath) {
-    return isSelectable(referenceQualifiers, valueQualifiers) && isSelectable(referencePath, valuePath);
+    return isSelectable(referenceQualifiers, valueQualifiers) && isSelectable(absoluteReferencePath, valuePath);
   }
 
   protected static final boolean isSelectable(final Qualifiers referenceQualifiers,
@@ -607,13 +615,13 @@ public class Settings<T> implements ConfiguredSupplier<T> {
   /**
    * Returns {@code true} if the supplied {@code valuePath} is
    * <em>selectable</em> (for further consideration and scoring) with
-   * respect to the supplied {@code referencePath}.
+   * respect to the supplied {@code absoluteReferencePath}.
    *
    * <p>This method calls {@link Path#endsWith(Path, BiPredicate)} on
-   * the supplied {@code referencePath} with {@code valuePath} as its
-   * {@link Path}-typed first argument, and a {@link BiPredicate} that
-   * returns {@code true} if and only if any of the following
-   * conditions is true:</p>
+   * the supplied {@code absoluteReferencePath} with {@code valuePath}
+   * as its {@link Path}-typed first argument, and a {@link
+   * BiPredicate} that returns {@code true} if and only if any of the
+   * following conditions is true:</p>
    *
    * <ul>
    *
@@ -624,7 +632,7 @@ public class Settings<T> implements ConfiguredSupplier<T> {
    * {@linkplain Accessor#arguments() arguments}, and each parameter
    * found in {@code valuePath} {@linkplain
    * Class#isAssignableFrom(Class) is assignable to} the corresponding
-   * parameter found in {@code referencePath}</li>
+   * parameter found in {@code absoluteReferencePath}</li>
    *
    * <li>The first argument is a {@link Type}, the second argument is
    * also a {@link Type} and the second {@link Type} {@linkplain
@@ -635,31 +643,29 @@ public class Settings<T> implements ConfiguredSupplier<T> {
    * <p>In all other cases this method returns {@code false} or throws
    * an exception.</p>
    *
-   * @param referencePath the reference path; must not be {@code
-   * null}; must have {@code void.class} as its first {@linkplain
-   * Path#type(int) element}
+   * @param absoluteReferencePath the reference path; must not be
+   * {@code null}; must be {@linkplain Path#isAbsolute() absolute}
    *
    * @param valuePath the {@link Path} to test; must not be {@code
    * null}
    *
    * @return {@code true} if {@code valuePath} is selectable (for
    * further consideration and scoring) with respect to {@code
-   * referencePath}; {@code false} in all other cases
+   * absoluteReferencePath}; {@code false} in all other cases
    *
    * @exception NullPointerException if either parameter is {@code
    * null}
    *
-   * @exception IllegalArgumentException if {@code referencePath}'s
-   * first {@linkplain Path#type(int) element} is not {@code
-   * void.class}
+   * @exception IllegalArgumentException if {@code
+   * absoluteReferencePath} {@linkplain Path#isAbsolute() is not
+   * absolute}
    */
-  protected static final boolean isSelectable(final Path referencePath,
+  protected static final boolean isSelectable(final Path absoluteReferencePath,
                                               final Path valuePath) {
-    if (referencePath.isAbsolute()) {
-      return referencePath.endsWith(valuePath, AccessorsMatchBiPredicate.INSTANCE);
-    } else {
-      throw new IllegalArgumentException("referencePath: " + referencePath);
+    if (!absoluteReferencePath.isAbsolute()) {
+      throw new IllegalArgumentException("absoluteReferencePath: " + absoluteReferencePath);
     }
+    return absoluteReferencePath.endsWith(valuePath, AccessorsMatchBiPredicate.INSTANCE);
   }
 
   private static final <T> T returnNull() {

@@ -32,7 +32,7 @@ import java.lang.reflect.WildcardType;
 import java.util.Objects;
 import java.util.Optional;
 
-public abstract class TypeToken<T> implements AutoCloseable, Constable, Serializable, Type {
+public abstract class TypeToken<T> implements AutoCloseable, Constable, Serializable {
 
 
   /*
@@ -41,8 +41,6 @@ public abstract class TypeToken<T> implements AutoCloseable, Constable, Serializ
 
 
   private static final long serialVersionUID = 1L;
-
-  private static final ActualTypeArgumentExtractor extractor = new ActualTypeArgumentExtractor(TypeToken.class, 0);
 
 
   /*
@@ -61,12 +59,12 @@ public abstract class TypeToken<T> implements AutoCloseable, Constable, Serializ
 
 
   public final Type type() {
-    return extractor.get(this.getClass());
+    return ActualTypeArgumentExtractor.INSTANCE.get(this.getClass());
   }
 
   @Override
   public final void close() {
-    extractor.remove(this.getClass());
+    ActualTypeArgumentExtractor.INSTANCE.remove(this.getClass());
   }
 
   public final Class<?> erase() {
@@ -78,14 +76,15 @@ public abstract class TypeToken<T> implements AutoCloseable, Constable, Serializ
     return Optional.ofNullable(this.erase()).flatMap(Class::describeConstable);
   }
 
-  @Override // Type
   public String getTypeName() {
-    return this.type().getTypeName();
+    final Type type = this.type();
+    return type == null ? null : type.getTypeName();
   }
 
   @Override // Object
   public int hashCode() {
-    return this.type().hashCode();
+    final Type type = this.type();
+    return type == null ? 0 : type.hashCode();
   }
 
   @Override // Object
@@ -94,8 +93,6 @@ public abstract class TypeToken<T> implements AutoCloseable, Constable, Serializ
       return true;
     } else if (other instanceof TypeToken<?> tt) {
       return Objects.equals(this.type(), tt.type());
-    } else if (other instanceof Type t) {
-      return this.type().equals(t);
     } else {
       return false;
     }
@@ -103,7 +100,8 @@ public abstract class TypeToken<T> implements AutoCloseable, Constable, Serializ
 
   @Override // Object
   public String toString() {
-    return this.type().getTypeName();
+    final Type type = this.type();
+    return type == null ? "null" : type.toString();
   }
 
 
@@ -123,8 +121,6 @@ public abstract class TypeToken<T> implements AutoCloseable, Constable, Serializ
       return erase(tv.getBounds()[0]);
     } else if (type instanceof WildcardType wt) {
       return erase(wt.getUpperBounds()[0]);
-    } else if (type instanceof TypeToken<?> tt) {
-      return erase(tt.type());
     } else {
       return null;
     }
@@ -138,16 +134,22 @@ public abstract class TypeToken<T> implements AutoCloseable, Constable, Serializ
 
   private static final class ActualTypeArgumentExtractor extends ClassValue<Type> {
 
+    private static final ActualTypeArgumentExtractor INSTANCE = new ActualTypeArgumentExtractor();
+
     private final Class<?> stopClass;
 
     private final int index;
 
+    private ActualTypeArgumentExtractor() {
+      this(ActualTypeArgumentExtractor.class.getDeclaringClass(), 0);
+    }
+
     private ActualTypeArgumentExtractor(final Class<?> stopClass, final int index) {
       super();
-      if (stopClass.isInterface() || !Modifier.isAbstract(stopClass.getModifiers())) {
-        throw new IllegalArgumentException("stopClass: " + stopClass.getName());
-      } else if (index < 0 || index >= stopClass.getTypeParameters().length) {
+      if (index < 0 || index >= stopClass.getTypeParameters().length) {
         throw new IndexOutOfBoundsException(index);
+      } else if (!Modifier.isAbstract(stopClass.getModifiers()) && !stopClass.isInterface() || stopClass.isArray()) {
+        throw new IllegalArgumentException("stopClass: " + stopClass.getName());
       }
       this.stopClass = stopClass;
       this.index = index;
@@ -155,20 +157,16 @@ public abstract class TypeToken<T> implements AutoCloseable, Constable, Serializ
 
     @Override
     protected final Type computeValue(final Class<?> c) {
-      final Class<?> lssc = this.leastSpecificSubclass(c);
-      if (lssc == null) {
-        return null;
-      } else {
-        return ((ParameterizedType)lssc.getGenericSuperclass()).getActualTypeArguments()[this.index];
-      }
+      final Class<?> lssc = this.leastSpecificProperSubclass(c);
+      return lssc == null ? null : ((ParameterizedType)lssc.getGenericSuperclass()).getActualTypeArguments()[this.index];
     }
 
-    private final Class<?> leastSpecificSubclass(final Class<?> c) {
+    private final Class<?> leastSpecificProperSubclass(final Class<?> c) {
       if (c == null || c == this.stopClass || c == Object.class) {
         return null;
       } else {
         final Class<?> sc = c.getSuperclass();
-        return sc == this.stopClass ? c : this.leastSpecificSubclass(sc);
+        return sc == this.stopClass ? c : this.leastSpecificProperSubclass(sc);
       }
     }
 

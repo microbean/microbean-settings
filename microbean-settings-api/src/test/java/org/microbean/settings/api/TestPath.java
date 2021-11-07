@@ -142,7 +142,6 @@ final class TestPath {
                  new Path.Parser(this.getClass().getClassLoader()).parse("wheel:java.lang.String=LR/java.lang.Integer"));
   }
 
-  
   private static interface Car {
 
   }
