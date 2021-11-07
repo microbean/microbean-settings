@@ -298,7 +298,7 @@ public class ProxyingProvider extends AbstractProvider<Object> {
         if (returnType == void.class || returnType == Void.class) {
           return defaultValue(proxy, m, args);
         } else {
-          return this.caller.plus(this.pathFunction.apply(m, args), () -> defaultValue(proxy, m, args)).get();
+          return this.caller.plus(this.pathFunction.apply(m, args)).orElseGet(() -> defaultValue(proxy, m, args));
         }
       }
     }

@@ -33,8 +33,7 @@ public class SystemPropertiesQualifiersProvider extends AbstractProvider<Qualifi
   public Value<?> get(final ConfiguredSupplier<?> supplier, final Path path) {
 
     // Use the configuration system to find a String under the path /qualifierPrefix.
-    // I am not happy about the verbosity here.
-    final String prefix = Optional.ofNullable(supplier.of("qualifierPrefix", String.class, "qualifier.").get()).orElse("qualifier.");
+    final String prefix = supplier.of("qualifierPrefix", String.class).orElse("qualifier.");
     
     final Properties systemProperties = System.getProperties();
     final SortedMap<String, String> map = new TreeMap<>();

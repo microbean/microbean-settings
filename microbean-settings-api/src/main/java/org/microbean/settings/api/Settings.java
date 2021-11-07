@@ -134,7 +134,8 @@ public class Settings<T> implements ConfiguredSupplier<T> {
         // final-but-as-yet-uninitialized qualifiers instance field will
         // be null.  Note that the qualifiers() accessor method accounts
         // for this and will return Qualifiers.of() instead.
-        this.qualifiers = this.plus(Qualifiers.class, Qualifiers::of).get();
+        // this.qualifiers = this.plus(Qualifiers.class, Qualifiers::of).get();
+        this.qualifiers = this.<Qualifiers>plus(Qualifiers.class).orElseGet(Qualifiers::of);
         this.settingsCache.remove(qp);
       } else {
         throw new IllegalArgumentException("path: " + path);
@@ -208,12 +209,10 @@ public class Settings<T> implements ConfiguredSupplier<T> {
 
   @Override // ConfiguredSupplier
   public final <U> Settings<U> of(final ConfiguredSupplier<?> parent,
-                                  final Path path,
-                                  final Supplier<U> defaultSupplier) {
+                                  final Path path) {
     return
       this.of(parent,
               path, // NOTE: no plus()
-              defaultSupplier,
               this.rejectedProvidersConsumerSupplier.get(),
               this.rejectedValuesConsumerSupplier.get(),
               this.ambiguousValuesConsumerSupplier.get());
@@ -221,7 +220,6 @@ public class Settings<T> implements ConfiguredSupplier<T> {
 
   private final <U> Settings<U> of(final ConfiguredSupplier<?> parent,
                                    Path path,
-                                   final Supplier<U> defaultSupplier,
                                    final Consumer<? super Provider> rejectedProviders,
                                    final Consumer<? super Value<?>> rejectedValues,
                                    final Consumer<? super Value<?>> ambiguousValues) {
@@ -250,7 +248,6 @@ public class Settings<T> implements ConfiguredSupplier<T> {
         this.settingsCache.putIfAbsent(qp,
                                        this.computeSettings(parent,
                                                             path,
-                                                            defaultSupplier,
                                                             rejectedProviders,
                                                             rejectedValues,
                                                             ambiguousValues));
@@ -275,34 +272,21 @@ public class Settings<T> implements ConfiguredSupplier<T> {
       }
     }
     return
-      this.of(Accessor.of("transliterate", Path.class, path),
-              Path.class,
-              () -> path)
-      .get();
+      this.of(Accessor.of("transliterate", Path.class),
+              Path.class)
+      .orElse(path);
   }
 
   private final <U> Settings<U> computeSettings(final ConfiguredSupplier<?> parent,
                                                 final Path path,
-                                                final Supplier<U> defaultSupplier,
                                                 final Consumer<? super Provider> rejectedProviders,
                                                 final Consumer<? super Value<?>> rejectedValues,
                                                 final Consumer<? super Value<?>> ambiguousValues) {
     final Value<U> value = this.value(parent, path, rejectedProviders, rejectedValues, ambiguousValues);
     final Supplier<U> supplier;
     if (value == null) {
-      if (defaultSupplier == null) {
-        supplier = Settings::fail;
-      } else {
-        supplier = defaultSupplier;
-      }
+      supplier = Settings::returnNull;
     } else {
-      // TODO: if we could tell that defaultSupplier was something
-      // like () -> "foo", then perhaps the user's intent is to use
-      // "foo" not just for when a Value can't be found, but when a
-      // Value's value (Value#get() return value) is null.  In such a
-      // case, perhaps supplier should be something like:
-      // () -> { U v = value.get(); return v == null ? defaultSupplier.get() : v; }
-      // Or maybe just leave it up to the user.
       supplier = value;
     }
     return
@@ -493,7 +477,7 @@ public class Settings<T> implements ConfiguredSupplier<T> {
    * Note that such an invocation is <em>not</em> made by this method,
    * but logically precedes it when this method is called in the
    * natural course of events by the {@link #of(ConfiguredSupplier,
-   * Path, Supplier)} method.</p>
+   * Path)} method.</p>
    *
    * @param referencePath the {@link Path} against which to score the
    * supplied {@code valuePath}; must not be {@code null}; must adhere
@@ -512,7 +496,7 @@ public class Settings<T> implements ConfiguredSupplier<T> {
    * @exception IllegalArgumentException if certain preconditions have
    * been violated
    *
-   * @see #of(ConfiguredSupplier, Path, Supplier)
+   * @see #of(ConfiguredSupplier, Path)
    *
    * @see #isSelectable(Path, Path)
    *
@@ -676,10 +660,6 @@ public class Settings<T> implements ConfiguredSupplier<T> {
     } else {
       throw new IllegalArgumentException("refernecePath: " + referencePath);
     }
-  }
-
-  private static final <T> T fail() {
-    throw new UnsupportedOperationException();
   }
 
   private static final <T> T returnNull() {

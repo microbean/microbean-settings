@@ -30,7 +30,7 @@ import org.microbean.development.annotation.OverridingEncouraged;
 import org.microbean.development.annotation.SubordinateTo;
 
 /**
- * A {@link Supplier} of configured objects.
+ * An {@link OptionalSupplier} of configured objects.
  *
  * @author <a href="https://about.me/lairdnelson"
  * target="_parent">Laird Nelson</a>
@@ -53,8 +53,7 @@ public interface ConfiguredSupplier<T> extends OptionalSupplier<T> {
   public Path path();
 
   public <U> ConfiguredSupplier<U> of(final ConfiguredSupplier<?> parent,
-                                      final Path path,
-                                      final Supplier<U> defaultSupplier);
+                                      final Path absolutePath);
 
 
   /*
@@ -77,14 +76,13 @@ public interface ConfiguredSupplier<T> extends OptionalSupplier<T> {
    * single application.</p>
    *
    * <p>Path transliteration must occur during the execution of the
-   * {@link #of(ConfiguredSupplier, Path, Supplier)} method, such that
-   * the {@link Path} supplied to that method, once it has been
-   * verified to be {@linkplain Path#isAbsolute() absolute}, is
-   * supplied to an implementation of this method. The {@link Path}
-   * returned by an implementation of this method must then be used
-   * during the rest of the invocation of the {@link
-   * #of(ConfiguredSupplier, Path, Supplier)} method, as if it had
-   * been supplied in the first place.</p>
+   * {@link #of(ConfiguredSupplier, Path)} method, such that the
+   * {@link Path} supplied to that method, once it has been verified
+   * to be {@linkplain Path#isAbsolute() absolute}, is supplied to an
+   * implementation of this method. The {@link Path} returned by an
+   * implementation of this method must then be used during the rest
+   * of the invocation of the {@link #of(ConfiguredSupplier, Path)}
+   * method, as if it had been supplied in the first place.</p>
    *
    * <p>Behavior resulting from any other usage of an implementation
    * of this method is undefined.</p>
@@ -122,7 +120,7 @@ public interface ConfiguredSupplier<T> extends OptionalSupplier<T> {
    *
    * @see Path#transliterate(BiFunction)
    *
-   * @see #of(ConfiguredSupplier, Path, Supplier)
+   * @see #of(ConfiguredSupplier, Path)
    */
   @Experimental
   @OverridingEncouraged
@@ -141,256 +139,236 @@ public interface ConfiguredSupplier<T> extends OptionalSupplier<T> {
   }
 
   @OverridingDiscouraged
-  public default <U> ConfiguredSupplier<U> plus(final Type type) {
+  public default <U> ConfiguredSupplier<U> plus(final Class<? extends U> type) {
     return
-      this.plus(type,
-                ConfiguredSupplier::fail);
+      this.plus(Accessor.of(),
+                type);
+  }
+
+  @OverridingDiscouraged
+  @SuppressWarnings("unchecked")
+  public default <U> ConfiguredSupplier<U> plus(final Type type) {
+    if (type instanceof Class<?>) {
+      return
+        this.plus((Class<? extends U>)type);
+    } else {
+      return
+        this.plus(Accessor.of(),
+                  type);
+    }
   }
 
   @Convenience
   @OverridingDiscouraged
+  public default <U> ConfiguredSupplier<U> plus(final String accessor,
+                                                final Class<? extends U> type) {
+    return
+      this.plus(accessor.isEmpty() ? Accessor.of() : Accessor.of(accessor),
+                type);
+  }
+
+
+  @Convenience
+  @OverridingDiscouraged
+  @SuppressWarnings("unchecked")
   public default <U> ConfiguredSupplier<U> plus(final String accessor,
                                                 final Type type) {
+    if (type instanceof Class) {
+      return
+        this.plus(accessor,
+                  (Class<? extends U>)type);
+    } else {
+      return
+        this.plus(accessor.isEmpty() ? Accessor.of() : Accessor.of(accessor),
+                  type);
+    }
+  }
+
+  public default <U> ConfiguredSupplier<U> plus(final Accessor accessor,
+                                                final Class<? extends U> type) {
     return
-      this.plus(accessor,
-                type,
-                ConfiguredSupplier::fail);
+      this.plus(Path.of(accessor, type));
   }
 
   @Convenience
   @OverridingDiscouraged
-  public default <U> ConfiguredSupplier<U> plus(final String accessor,
-                                                final Type type,
-                                                final Supplier<U> defaultSupplier) {
-    return
-      this.plus(Path.of(Accessor.of(accessor), type),
-                defaultSupplier);
-  }
-
-  @Convenience
-  @OverridingDiscouraged
-  public default <U> ConfiguredSupplier<U> plus(final String accessor,
-                                                final Type type,
-                                                final U defaultValue) {
-    return
-      this.plus(accessor,
-                type,
-                () -> defaultValue);
-  }
-
-  @OverridingDiscouraged
-  public default <U> ConfiguredSupplier<U> plus(final Type type,
-                                                final Supplier<U> defaultSupplier) {
-    return
-      this.plus(Path.of(Accessor.of(), type),
-                defaultSupplier);
-  }
-
-  @Convenience
-  @OverridingDiscouraged
-  public default <U> ConfiguredSupplier<U> plus(final Type type,
-                                                final U defaultValue) {
-    return
-      this.plus(type,
-                () -> defaultValue);
+  @SuppressWarnings("unchecked")
+  public default <U> ConfiguredSupplier<U> plus(final Accessor accessor,
+                                                final Type type) {
+    if (type instanceof Class) {
+      return
+        this.plus(accessor,
+                  (Class<? extends U>)type);
+    } else {
+      return
+        this.plus(Path.of(accessor, type));
+    }
   }
 
   @OverridingDiscouraged
   public default <U> ConfiguredSupplier<U> plus(final Path path) {
     return
-      this.plus(path,
-                ConfiguredSupplier::fail);
-  }
-
-  @OverridingDiscouraged
-  public default <U> ConfiguredSupplier<U> plus(final Path path,
-                                                final Supplier<U> defaultSupplier) {
-    return
       this.of(this,
-              this.path().plus(path),
-              defaultSupplier);
+              this.path().plus(path)); // NOTE
   }
 
   @Convenience
-  @OverridingDiscouraged
-  public default <U> ConfiguredSupplier<U> plus(final Path path,
-                                                final U defaultValue) {
-    return
-      this.of(this,
-              this.path().plus(path),
-              () -> defaultValue);
-  }
-
   @OverridingDiscouraged
   public default <U> ConfiguredSupplier<U> of(final ConfiguredSupplier<?> parent,
-                                              final Path path) {
+                                              final Class<? extends U> type) {
     return
       this.of(parent,
-              path,
-              ConfiguredSupplier::fail);
+              Accessor.of(),
+              type);
   }
 
   @Convenience
   @OverridingDiscouraged
+  @SuppressWarnings("unchecked")
+  public default <U> ConfiguredSupplier<U> of(final ConfiguredSupplier<?> parent,
+                                              final Type type) {
+    if (type instanceof Class) {
+      return
+        this.of(parent,
+                (Class<? extends U>)type);
+    } else {
+      return
+        this.of(parent,
+                Accessor.of(),
+                type);
+    }
+  }
+
+  @Convenience
+  @OverridingDiscouraged
+  public default <U> ConfiguredSupplier<U> of(final ConfiguredSupplier<?> parent,
+                                              final String accessor,
+                                              final Class<? extends U> type) {
+    return
+      this.of(parent,
+              accessor.isEmpty() ? Accessor.of() : Accessor.of(accessor),
+              type);
+  }
+
+
+  @Convenience
+  @OverridingDiscouraged
+  @SuppressWarnings("unchecked")
   public default <U> ConfiguredSupplier<U> of(final ConfiguredSupplier<?> parent,
                                               final String accessor,
                                               final Type type) {
-    return
-      this.of(parent,
-              accessor,
-              type,
-              ConfiguredSupplier::fail);
+    if (type instanceof Class) {
+      return
+        this.of(parent,
+                accessor,
+                (Class<? extends U>)type);
+    } else {
+      return
+        this.of(parent,
+                accessor.isEmpty() ? Accessor.of() : Accessor.of(accessor),
+                type);
+    }
   }
 
   @Convenience
   @OverridingDiscouraged
   public default <U> ConfiguredSupplier<U> of(final ConfiguredSupplier<?> parent,
-                                              final String accessor,
-                                              final Type type,
-                                              final Supplier<U> defaultSupplier) {
+                                              final Accessor accessor,
+                                              final Class<? extends U> type) {
     return
       this.of(parent,
-              accessor,
-              type,
-              defaultSupplier);
+              Path.of().plus(accessor, type)); // of().plus() is critical here
   }
+
 
   @Convenience
   @OverridingDiscouraged
+  @SuppressWarnings("unchecked")
   public default <U> ConfiguredSupplier<U> of(final ConfiguredSupplier<?> parent,
-                                              final String accessor,
-                                              final Type type,
-                                              final U defaultValue) {
-    return
-      this.of(parent,
-              accessor,
-              type,
-              defaultValue);
-  }
-
-  @Convenience
-  @OverridingDiscouraged
-  public default <U> ConfiguredSupplier<U> of(final ConfiguredSupplier<?> parent,
-                                              final Path absolutePath,
-                                              final U defaultValue) {
-    return
-      this.of(parent,
-              absolutePath,
-              () -> defaultValue);
+                                              final Accessor accessor,
+                                              final Type type) {
+    if (type instanceof Class) {
+      return
+        this.of(parent,
+                accessor,
+                (Class<? extends U>)type);
+    } else {
+      return
+        this.of(parent,
+                Path.of().plus(accessor, type)); // of().plus() is critical here
+    }
   }
 
   @OverridingDiscouraged
   public default <U> ConfiguredSupplier<U> of(final Path absolutePath) {
     return
-      this.of(absolutePath,
-              ConfiguredSupplier::fail);
-  }
-
-  @OverridingDiscouraged
-  public default <U> ConfiguredSupplier<U> of(final Path absolutePath,
-                                              final Supplier<U> defaultSupplier) {
-    return
       this.of(this.root(),
-              absolutePath,
-              defaultSupplier);
+              absolutePath);
   }
 
   @Convenience
   @OverridingDiscouraged
-  public default <U> ConfiguredSupplier<U> of(final Path absolutePath,
-                                              final U defaultValue) {
+  public default <U> ConfiguredSupplier<U> of(final Class<? extends U> type) {
     return
-      this.of(absolutePath,
-              () -> defaultValue);
+      this.of(Accessor.of(),
+              type);
   }
+
 
   @Convenience
   @OverridingDiscouraged
   public default <U> ConfiguredSupplier<U> of(final Type type) {
     return
-      this.of(type,
-              ConfiguredSupplier::fail);
+      this.of(Accessor.of(),
+              type);
   }
 
   @Convenience
   @OverridingDiscouraged
-  public default <U> ConfiguredSupplier<U> of(final Type type,
-                                              final Supplier<U> defaultSupplier) {
+  public default <U> ConfiguredSupplier<U> of(final String accessor,
+                                              final Class<? extends U> type) {
     return
-      this.of(Path.of().plus(Accessor.of(), type), // of().plus() is critical here
-              defaultSupplier);
+      this.of(accessor.isEmpty() ? Accessor.of() : Accessor.of(accessor),
+              type);
   }
 
   @Convenience
   @OverridingDiscouraged
-  public default <U> ConfiguredSupplier<U> of(final Type type,
-                                              final U defaultValue) {
-    return
-      this.of(type,
-              () -> defaultValue);
-  }
-
-  @Convenience
-  @OverridingDiscouraged
+  @SuppressWarnings("unchecked")
   public default <U> ConfiguredSupplier<U> of(final String accessor,
                                               final Type type) {
-    return
-      this.of(accessor,
-              type,
-              ConfiguredSupplier::fail);
+    if (type instanceof Class) {
+      return
+        this.of(accessor,
+                (Class<? extends U>)type);
+    } else {
+      return
+        this.of(accessor.isEmpty() ? Accessor.of() : Accessor.of(accessor),
+                type);
+    }
   }
 
   @Convenience
   @OverridingDiscouraged
-  public default <U> ConfiguredSupplier<U> of(final String accessor,
-                                              final Type type,
-                                              final U defaultValue) {
+  public default <U> ConfiguredSupplier<U> of(final Accessor accessor,
+                                              final Class<? extends U> type) {
     return
-      this.of(accessor,
-              type,
-              () -> defaultValue);
+      this.of(Path.of().plus(accessor, type)); // of().plus() is critical here
   }
 
   @Convenience
   @OverridingDiscouraged
-  public default <U> ConfiguredSupplier<U> of(final String accessor,
-                                              final Type type,
-                                              final Supplier<U> defaultSupplier) {
-    return
-      this.of(Accessor.of(accessor),
-              type,
-              defaultSupplier);
-  }
-
-  @Convenience
-  @OverridingDiscouraged
+  @SuppressWarnings("unchecked")
   public default <U> ConfiguredSupplier<U> of(final Accessor accessor,
                                               final Type type) {
-    return
-      this.of(accessor,
-              type,
-              ConfiguredSupplier::fail);
-  }
-
-  @Convenience
-  @OverridingDiscouraged
-  public default <U> ConfiguredSupplier<U> of(final Accessor accessor,
-                                              final Type type,
-                                              final Supplier<U> defaultSupplier) {
-    return
-      this.of(Path.of().plus(accessor, type), // of().plus() is critical here
-              defaultSupplier);
-  }
-
-  @Convenience
-  @OverridingDiscouraged
-  public default <U> ConfiguredSupplier<U> of(final Accessor accessor,
-                                              final Type type,
-                                              final U defaultValue) {
-    return
-      this.of(accessor,
-              type,
-              () -> defaultValue);
+    if (type instanceof Class) {
+      return
+        this.of(accessor,
+                (Class<? extends U>)type);
+    } else {
+      return
+        this.of(Path.of().plus(accessor, type)); // of().plus() is critical here
+    }
   }
 
   @OverridingDiscouraged
@@ -424,8 +402,10 @@ public interface ConfiguredSupplier<T> extends OptionalSupplier<T> {
     return new Object() {
       private static final ConfiguredSupplier<?> instance;
       static {
+
         final ConfiguredSupplier<?> bootstrapConfiguredSupplier =
           ServiceLoader.load(ConfiguredSupplier.class, ConfiguredSupplier.class.getClassLoader()).findFirst().orElseThrow();
+
         if (!Path.of().equals(bootstrapConfiguredSupplier.path())) {
           throw new IllegalStateException("path(): " + bootstrapConfiguredSupplier.path());
         } else if (bootstrapConfiguredSupplier.parent() != bootstrapConfiguredSupplier) {
@@ -437,7 +417,9 @@ public interface ConfiguredSupplier<T> extends OptionalSupplier<T> {
         } else if (bootstrapConfiguredSupplier.root() != bootstrapConfiguredSupplier) {
           throw new IllegalStateException("root(): " + bootstrapConfiguredSupplier.root());
         }
-        instance = bootstrapConfiguredSupplier.of(ConfiguredSupplier.class, () -> bootstrapConfiguredSupplier).get();
+
+        instance = bootstrapConfiguredSupplier.of(ConfiguredSupplier.class).orElse(bootstrapConfiguredSupplier);
+
         if (instance.parent() != bootstrapConfiguredSupplier) {
           throw new IllegalStateException("instance.parent(): " + instance.parent());
         } else if (!(instance.get() instanceof ConfiguredSupplier)) {
@@ -445,10 +427,6 @@ public interface ConfiguredSupplier<T> extends OptionalSupplier<T> {
         }
       }
     }.instance;
-  }
-
-  private static <U> U fail() {
-    throw new UnsupportedOperationException();
   }
 
 }

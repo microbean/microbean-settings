@@ -27,28 +27,49 @@ import java.util.function.Supplier;
 
 import java.util.stream.Stream;
 
+/**
+ * A {@link Supplier} that is {@link Optional}-like.
+ *
+ * <p>Unlike {@link Optional}, any implementation of this interface is
+ * not a <a
+ * href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/doc-files/ValueBased.html">value-based
+ * class</a>.  This is also why the {@link #isPresent()} and {@link
+ * #isEmpty()} methods are deprecated.</p>
+ *
+ * @author <a href="https://about.me/lairdnelson"
+ * target="_parent">Laird Nelson</a>
+ */
 public interface OptionalSupplier<T> extends Supplier<T> {
 
+  private T getValue() {
+    try {
+      return this.get();
+    } catch (final NoSuchElementException | UnsupportedOperationException e) {
+      // TODO: log
+      return null;
+    }
+  }
+
   public default Optional<T> filter(final Predicate<? super T> predicate) {
-    final T value = this.get();
+    final T value = this.getValue();
     return value != null && predicate.test(value) ? Optional.of(value) : Optional.empty();
   }
 
   @SuppressWarnings("unchecked")
   public default <U> Optional<U> flatMap(final Function<? super T, ? extends Optional<? extends U>> mapper) {
-    final T value = this.get();
+    final T value = this.getValue();
     return value == null ? Optional.empty() : Objects.requireNonNull((Optional<U>)mapper.apply(value));
   }
 
   public default void ifPresent(final Consumer<? super T> action) {
-    final T value = this.get();
+    final T value = this.getValue();
     if (value == null) {
       action.accept(value);
     }
   }
 
   public default void ifPresentOrElse(final Consumer<? super T> action, final Runnable emptyAction) {
-    final T value = this.get();
+    final T value = this.getValue();
     if (value == null) {
       emptyAction.run();
     } else {
@@ -58,37 +79,37 @@ public interface OptionalSupplier<T> extends Supplier<T> {
 
   @Deprecated
   public default boolean isEmpty() {
-    return this.get() == null;
+    return this.getValue() == null;
   }
 
   @Deprecated
   public default boolean isPresent() {
-    return this.get() != null;
+    return this.getValue() != null;
   }
 
   public default <U> Optional<U> map(final Function <? super T, ? extends U> mapper) {
-    final T value = this.get();
+    final T value = this.getValue();
     return value == null ? Optional.empty() : Optional.ofNullable(mapper.apply(value));
   }
 
   @SuppressWarnings("unchecked")
   public default Optional<T> or(final Supplier<? extends Optional<? extends T>> supplier) {
-    final T value = this.get();
+    final T value = this.getValue();
     return value == null ? Objects.requireNonNull((Optional<T>)supplier.get()) : Optional.of(value);
   }
 
   public default T orElse(final T other) {
-    final T value = this.get();
+    final T value = this.getValue();
     return value == null ? other : value;
   }
 
   public default T orElseGet(final Supplier<? extends T> supplier) {
-    final T value = this.get();
+    final T value = this.getValue();
     return value == null ? supplier.get() : value;
   }
 
   public default T orElseThrow() {
-    final T value = this.get();
+    final T value = this.getValue();
     if (value == null) {
       throw new NoSuchElementException();
     } else {
@@ -97,7 +118,7 @@ public interface OptionalSupplier<T> extends Supplier<T> {
   }
 
   public default <X extends Throwable> T orElseThrow(final Supplier<? extends X> exceptionSupplier) throws X {
-    final T value = this.get();
+    final T value = this.getValue();
     if (value == null) {
       throw exceptionSupplier.get();
     } else {
@@ -106,7 +127,7 @@ public interface OptionalSupplier<T> extends Supplier<T> {
   }
 
   public default Stream<T> stream() {
-    final T value = this.get();
+    final T value = this.getValue();
     return value == null ? Stream.empty() : Stream.of(value);
   }
 
