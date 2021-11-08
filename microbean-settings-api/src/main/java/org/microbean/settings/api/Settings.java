@@ -36,8 +36,6 @@ import java.util.function.Supplier;
 import org.microbean.development.annotation.Experimental;
 import org.microbean.development.annotation.SubordinateTo;
 
-import org.microbean.settings.api.Provider.Value;
-
 import org.microbean.type.Types;
 
 /**

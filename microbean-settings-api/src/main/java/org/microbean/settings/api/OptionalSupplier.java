@@ -30,7 +30,8 @@ import java.util.stream.Stream;
 import org.microbean.development.annotation.OverridingDiscouraged;
 
 /**
- * A {@link Supplier} that is {@link Optional}-like.
+ * A {@link Supplier} that is {@link Optional}-like, and a convenient
+ * {@linkplain #optional() bridge to <code>Optional</code> objects}.
  *
  * <p>Unlike {@link Optional}, any implementation of this interface is
  * not a <a

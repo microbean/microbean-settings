@@ -80,8 +80,9 @@ public class ProxyingProvider extends AbstractProvider<Object> {
       // things that could be conceivably used as indices into
       // array-like and map-like and list-like structures.
       //
-      // So a class with Foo getFoo(Blatz b) will not be proxiable, but
-      // a class with Foo getFoo(int i) will be.
+      // So a class with Foo getFoo(Blatz b) will not be proxiable,
+      // but a class with Foo getFoo(int i) or Foo getFoo(String s)
+      // will be.
       //
       // The end result of this isProxiable() implementation is highly
       // predictive of proxiability but not exhaustively predictive.

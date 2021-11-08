@@ -20,12 +20,19 @@ import java.util.Collection;
 
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
 final class TestProvider {
 
   private TestProvider() {
     super();
+  }
+
+  @Test
+  final void testJavaHome() {
+    assertEquals(System.getProperty("java.home"), ConfiguredSupplier.of().plus("java.home", String.class).get());
   }
 
   @Test

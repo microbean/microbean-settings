@@ -45,7 +45,7 @@ public class SystemPropertiesQualifiersProvider extends AbstractProvider<Qualifi
         }
       }
     }
-    return new Value<>(Qualifiers.of(), Qualifiers.class, Qualifiers.of(map));
+    return new Value<>(Qualifiers.of(), Path.of(Qualifiers.class), Qualifiers.of(map));
   }
   
 }

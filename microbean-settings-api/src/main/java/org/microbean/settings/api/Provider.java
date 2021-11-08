@@ -41,7 +41,7 @@ import org.microbean.development.annotation.Convenience;
  * @see Settings
  */
 @FunctionalInterface
-public interface Provider {
+public interface Provider extends Prioritized {
 
 
   /*
@@ -80,135 +80,10 @@ public interface Provider {
     return Object.class;
   }
 
-  public default boolean isSelectable(final ConfiguredSupplier<?> supplier, final Path path) {
-    return AssignableType.of(this.upperBound()).isAssignable(path.type());
+  public default boolean isSelectable(final ConfiguredSupplier<?> supplier, final Path absolutePath) {
+    return AssignableType.of(this.upperBound()).isAssignable(absolutePath.type());
   }
 
-  public Value<?> get(final ConfiguredSupplier<?> supplier, final Path path);
-
-
-  /*
-   * Inner and nested classes.
-   */
-
-
-  /**
-   * A {@link Supplier} of a value returned by a {@link Provider}.
-   *
-   * <p>A {@link Value}, once returned by a {@link Provider}, is no
-   * longer linked to that {@link Provider} and can be regarded as an
-   * authoritative source for values going forward.  Notably, it can
-   * be cached.  Its {@link Provider} can be discarded.</p>
-   *
-   * @author <a href="https://about.me/lairdnelson"
-   * target="_parent">Laird Nelson</a>
-   *
-   * @param <T> the type of value this {@link Value} returns
-   *
-   * @param qualifiers the {@link Qualifiers} this {@link Value} is
-   * suitable for; must not be {@code null}
-   *
-   * @param path the possibly vague {@link Path} (or paths that match
-   * it) this {@link Value} is suitable for; must not be {@code null}
-   *
-   * @param supplier the {@link Supplier} underlying this {@link
-   * Value}; must not be {@code null}
-   */
-  public static record Value<T>(Qualifiers qualifiers, Path path, Supplier<T> supplier) implements Supplier<T> {
-
-
-    /*
-     * Constructors.
-     */
-
-
-    public Value(final Type type, final T value) {
-      this(Qualifiers.of(), Path.of(type), () -> value);
-    }
-
-    public Value(final Type type, final Supplier<T> supplier) {
-      this(Qualifiers.of(), Path.of(type), supplier);
-    }
-
-    public Value(final Qualifiers qualifiers, final Type type, final T value) {
-      this(qualifiers, Path.of(type), () -> value);
-    }
-
-    public Value(final Qualifiers qualifiers, final Type type, final Supplier<T> supplier) {
-      this(qualifiers, Path.of(type), supplier);
-    }
-
-    public Value(final Class<T> type, final T value) {
-      this(Qualifiers.of(), Path.of(type), () -> value);
-    }
-
-    public Value(final Class<T> type, final Supplier<T> supplier) {
-      this(Qualifiers.of(), Path.of(type), supplier);
-    }
-
-    public Value(final Qualifiers qualifiers, final Class<T> type, final T value) {
-      this(qualifiers, Path.of(type), () -> value);
-    }
-
-    public Value(final Qualifiers qualifiers, final Class<T> type, final Supplier<T> supplier) {
-      this(qualifiers, Path.of(type), supplier);
-    }
-
-    public Value(final Path path, final T value) {
-      this(Qualifiers.of(), path, () -> value);
-    }
-
-    public Value(final Path path, final Supplier<T> supplier) {
-      this(Qualifiers.of(), path, supplier);
-    }
-
-    public Value(final Qualifiers qualifiers, final Path path, final T value) {
-      this(qualifiers, path, () -> value);
-    }
-
-    public Value {
-      Objects.requireNonNull(qualifiers, "qualifiers");
-      Objects.requireNonNull(path, "path");
-      Objects.requireNonNull(supplier, "supplier");
-    }
-
-
-    /*
-     * Instance methods.
-     */
-
-
-    @Override // Supplier<T>
-    public final T get() {
-      return this.supplier().get();
-    }
-
-    /**
-     * Returns the result of invoking {@link Path#type()} on the
-     * return value of this {@link Value}'s {@link #path()} method.
-     *
-     * <p>This method never returns {@code null}.</p>
-     *
-     * @return the result of invoking {@link Path#type()} on the
-     * return value of this {@link Value}'s {@link #path()} method;
-     * never {@code null}
-     *
-     * @nullability This method never returns {@code null}.
-     *
-     * @idempotency This method is idempotent and and deterministic.
-     *
-     * @threadsafety This method is safe for concurrent use by
-     * multiple threads.
-     *
-     * @see #path()
-     *
-     * @see Path#type()
-     */
-    @Convenience
-    public final Type type() {
-      return this.path().type();
-    }
-
-  }
+  public Value<?> get(final ConfiguredSupplier<?> supplier, final Path absolutePath);
 
 }

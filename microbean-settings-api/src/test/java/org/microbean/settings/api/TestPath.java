@@ -142,6 +142,12 @@ final class TestPath {
                  new Path.Parser(this.getClass().getClassLoader()).parse("wheel:java.lang.String=LR/java.lang.Integer"));
   }
 
+  @Test
+  final void testParsingOfNameWithDot() throws ClassNotFoundException {
+    assertEquals(Path.of().plus(Accessor.of("file.separator"), String.class),
+                 new Path.Parser(this.getClass().getClassLoader()).parse("/file\\.separator/java.lang.String"));
+  }
+
   private static interface Car {
 
   }
