@@ -64,13 +64,14 @@ public final class Value<T> implements OptionalSupplier<T> {
     this(null, qualifiers, path, optionalSupplier);
   }
   
-  @SuppressWarnings("unchecked")
   public Value(final Value<? extends T> defaults, final Qualifiers qualifiers, final Path path, final OptionalSupplier<? extends T> optionalSupplier) {
     super();
     this.defaults = defaults;
     this.qualifiers = Objects.requireNonNull(qualifiers, "qualifiers");
     this.path = Objects.requireNonNull(path, "path");
-    this.optionalSupplier = (OptionalSupplier<T>)Objects.requireNonNull(optionalSupplier, "optionalSupplier");
+    @SuppressWarnings("unchecked")
+    final OptionalSupplier<T> os = (OptionalSupplier<T>)Objects.requireNonNull(optionalSupplier, "optionalSupplier");
+    this.optionalSupplier = os;
   }
 
   public final Qualifiers qualifiers() {
