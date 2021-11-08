@@ -48,7 +48,7 @@ import org.microbean.development.annotation.Convenience;
  */
 public final class Value<T> implements OptionalSupplier<T> {
 
-  private final Value<? extends T> defaults;
+  private final Supplier<? extends T> defaults;
   
   private final Qualifiers qualifiers;
 
@@ -64,7 +64,7 @@ public final class Value<T> implements OptionalSupplier<T> {
     this(null, qualifiers, path, optionalSupplier);
   }
   
-  public Value(final Value<? extends T> defaults, final Qualifiers qualifiers, final Path path, final OptionalSupplier<? extends T> optionalSupplier) {
+  public Value(final Supplier<? extends T> defaults, final Qualifiers qualifiers, final Path path, final OptionalSupplier<? extends T> optionalSupplier) {
     super();
     this.defaults = defaults;
     this.qualifiers = Objects.requireNonNull(qualifiers, "qualifiers");
