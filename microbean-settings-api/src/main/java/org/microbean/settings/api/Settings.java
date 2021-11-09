@@ -344,92 +344,111 @@ public class Settings<T> implements AutoCloseable, ConfiguredSupplier<T> {
       Provider candidateProvider = null;
       int candidateQualifiersScore = Integer.MIN_VALUE;
       int candidatePathScore = Integer.MIN_VALUE;
+
+      PROVIDER_LOOP:
       for (final Provider provider : providers) {
-        if (provider != null && this.isSelectable(provider, parent, absolutePath)) {
-          @SuppressWarnings("unchecked")
-          final Value<U> v = (Value<U>)provider.get(parent, absolutePath);
-          Value<U> value = v;
-          VALUE_EVALUATION_LOOP:
-          while (value != null) { // NOTE INFINITE LOOP POSSIBILITY; read carefully
-            if (isSelectable(qualifiers, absolutePath, value.qualifiers(), value.path())) {
-              if (candidate == null) {
-                candidate = value;
-                candidateProvider = provider;
-                candidateQualifiersScore = this.score(qualifiers, candidate.qualifiers());
-                candidatePathScore = this.score(absolutePath, candidate.path());
-                value = null; // critical
-              } else {
-                // Let's do qualifiers first.  This is an arbitrary decision.
-                final int valueQualifiersScore = this.score(qualifiers, value.qualifiers());
-                if (valueQualifiersScore < candidateQualifiersScore) {
-                  rejectedValues.accept(value);
-                  value = null; // critical
-                } else if (valueQualifiersScore == candidateQualifiersScore) {
-                  // Same qualifiers score; let's now do paths.
-                  final int valuePathScore = this.score(absolutePath, value.path());
-                  if (valuePathScore < candidatePathScore) {
-                    rejectedValues.accept(value);
-                    value = null; // critical
-                  } else if (valuePathScore == candidatePathScore) {
-                    final Value<U> disambiguatedValue =
-                      this.disambiguate(parent, absolutePath, candidateProvider, candidate, provider, value);
-                    if (disambiguatedValue == null) {
-                      ambiguousValues.accept(candidate);
-                      ambiguousValues.accept(value);
-                      value = null; // critical
-                      // TODO: I'm not sure whether to null the
-                      // candidate bits and potentially grab another
-                      // less suitable one, keep the existing one even
-                      // though it's ambiguous, or, if we keep it, to
-                      // break or continue.  For now I'm going to keep
-                      // it and continue; the caller can examine
-                      // whatever ended up in the ambiguous values
-                      // consumer and figure out what it wants to do.
-                    } else if (disambiguatedValue.equals(candidate)) {
-                      rejectedValues.accept(value);
-                      value = null; // critical
-                    } else if (disambiguatedValue.equals(value)) {
-                      rejectedValues.accept(candidate);
-                      candidate = disambiguatedValue;
-                      candidateProvider = provider;
-                      candidateQualifiersScore = valueQualifiersScore;
-                      candidatePathScore = valuePathScore;
-                      value = null; // critical
-                    } else {
-                      // Disambiguation came up with an entirely
-                      // different value, so run it through the
-                      // machine.
-                      value = disambiguatedValue;
-                      assert value != null;
-                      continue VALUE_EVALUATION_LOOP; // NOTE
-                    }
-                  } else {
-                    rejectedValues.accept(candidate);
-                    candidate = value;
-                    candidateProvider = provider;
-                    candidateQualifiersScore = valueQualifiersScore;
-                    candidatePathScore = valuePathScore;
-                    value = null; // critical
-                  }
-                } else {
-                  rejectedValues.accept(candidate);
-                  candidate = value;
-                  candidateProvider = provider;
-                  candidateQualifiersScore = valueQualifiersScore;
-                  // (No need to update candidatePathScore.)
-                  value = null; // critical
-                }
-              }
-            } else {
-              rejectedValues.accept(value);
-              value = null; // critical
-            }
-            assert value == null;
-          } // end while(value != null)
-          assert value == null;
-        } else {
+        if (provider == null || !this.isSelectable(provider, parent, absolutePath)) {
           rejectedProviders.accept(provider);
+          continue PROVIDER_LOOP;
         }
+
+        @SuppressWarnings("unchecked")
+        final Value<U> v = (Value<U>)provider.get(parent, absolutePath);
+        Value<U> value = v;
+
+        // NOTE INFINITE LOOP POSSIBILITY; read carefully!
+        VALUE_EVALUATION_LOOP:
+        while (true) {
+
+          if (!isSelectable(qualifiers, absolutePath, value.qualifiers(), value.path())) {
+            rejectedValues.accept(value);
+            break VALUE_EVALUATION_LOOP;
+          }
+
+          if (candidate == null) {
+            candidate = value;
+            candidateProvider = provider;
+            candidateQualifiersScore = this.score(qualifiers, candidate.qualifiers());
+            candidatePathScore = this.score(absolutePath, candidate.path());
+            break VALUE_EVALUATION_LOOP;
+          }
+
+          // Let's do qualifiers first.  This is an arbitrary decision.
+          final int valueQualifiersScore = this.score(qualifiers, value.qualifiers());
+          if (valueQualifiersScore < candidateQualifiersScore) {
+            // TODO: use value as candidate's defaults
+            rejectedValues.accept(value);
+            break VALUE_EVALUATION_LOOP;
+          }
+
+          if (valueQualifiersScore > candidateQualifiersScore) {
+            // TODO: use candidate as value's defaults
+            rejectedValues.accept(candidate);
+            candidate = value;
+            candidateProvider = provider;
+            candidateQualifiersScore = valueQualifiersScore;
+            // (No need to update candidatePathScore.)
+            break VALUE_EVALUATION_LOOP;
+          }
+
+          // Same qualifiers score; let's now do paths.
+          final int valuePathScore = this.score(absolutePath, value.path());
+          if (valuePathScore < candidatePathScore) {
+            // TODO: use value as candidate's defaults
+            rejectedValues.accept(value);
+            break VALUE_EVALUATION_LOOP;
+          }
+
+          if (valuePathScore > candidatePathScore) {
+            // TODO: use candidate as value's defaults
+            rejectedValues.accept(candidate);
+            candidate = value;
+            candidateProvider = provider;
+            candidateQualifiersScore = valueQualifiersScore;
+            candidatePathScore = valuePathScore;
+            break VALUE_EVALUATION_LOOP;
+          }
+
+          final Value<U> disambiguatedValue =
+            this.disambiguate(parent, absolutePath, candidateProvider, candidate, provider, value);
+          if (disambiguatedValue == null) {
+            // Couldn't disambiguate.
+            ambiguousValues.accept(candidate);
+            ambiguousValues.accept(value);
+            // TODO: I'm not sure whether to null the candidate
+            // bits and potentially grab another less suitable
+            // one, keep the existing one even though it's
+            // ambiguous, or, if we keep it, to break or continue.
+            // For now I'm going to keep it and continue; the
+            // caller can examine whatever ended up in the
+            // ambiguous values consumer and figure out what it
+            // wants to do.
+            break VALUE_EVALUATION_LOOP;
+          }
+
+          if (disambiguatedValue.equals(candidate)) {
+            // TODO: use value as candidate's defaults
+            rejectedValues.accept(value);
+            break VALUE_EVALUATION_LOOP;
+          }
+
+          if (disambiguatedValue.equals(value)) {
+            // TODO: use candidate as disambiguatedValue's
+            // defaults
+            rejectedValues.accept(candidate);
+            candidate = disambiguatedValue;
+            candidateProvider = provider;
+            candidateQualifiersScore = valueQualifiersScore;
+            candidatePathScore = valuePathScore;
+            break VALUE_EVALUATION_LOOP;
+          }
+
+          // Disambiguation came up with an entirely different
+          // value, so run it through the machine.
+          value = disambiguatedValue;
+          continue VALUE_EVALUATION_LOOP;
+
+        } // end VALUE_EVALUATION_LOOP
       }
       return candidate;
     }
