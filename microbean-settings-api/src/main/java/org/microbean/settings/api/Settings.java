@@ -379,17 +379,12 @@ public class Settings<T> implements AutoCloseable, ConfiguredSupplier<T> {
         // Let's do qualifiers first.  This is an arbitrary decision.
         final int valueQualifiersScore = this.score(qualifiers, value.qualifiers());
         if (valueQualifiersScore < candidateQualifiersScore) {
-          // TODO: use value as candidate's defaults
-          // candidate = new Value<>(value, candidate);
-          rejectedValues.accept(value);
+          candidate = new Value<>(value, candidate);
           break VALUE_EVALUATION_LOOP;
         }
 
         if (valueQualifiersScore > candidateQualifiersScore) {
-          // TODO: use candidate as value's defaults
-          // candidate = new Value<>(candidate, value);
-          rejectedValues.accept(candidate);
-          candidate = value;
+          candidate = new Value<>(candidate, value);
           candidateProvider = provider;
           candidateQualifiersScore = valueQualifiersScore;
           // (No need to update candidatePathScore.)
@@ -399,17 +394,12 @@ public class Settings<T> implements AutoCloseable, ConfiguredSupplier<T> {
         // Same qualifiers score; let's now do paths.
         final int valuePathScore = this.score(absolutePath, value.path());
         if (valuePathScore < candidatePathScore) {
-          // TODO: use value as candidate's defaults
-          // candidate = new Value<>(value, candidate);
-          rejectedValues.accept(value);
+          candidate = new Value<>(value, candidate);
           break VALUE_EVALUATION_LOOP;
         }
 
         if (valuePathScore > candidatePathScore) {
-          // TODO: use candidate as value's defaults
-          // candidate = new Value<>(candidate, value);
-          rejectedValues.accept(candidate);
-          candidate = value;
+          candidate = new Value<>(candidate, value);
           candidateProvider = provider;
           candidateQualifiersScore = valueQualifiersScore;
           candidatePathScore = valuePathScore;
@@ -432,17 +422,12 @@ public class Settings<T> implements AutoCloseable, ConfiguredSupplier<T> {
         }
 
         if (disambiguatedValue.equals(candidate)) {
-          // TODO: use value as candidate's defaults
-          // candidate = new Value<>(value, candidate);
-          rejectedValues.accept(value);
+          candidate = new Value<>(value, candidate);
           break VALUE_EVALUATION_LOOP;
         }
 
         if (disambiguatedValue.equals(value)) {
-          // TODO: use candidate as disambiguatedValue's defaults
-          // candidate = new Value<>(candidate, disambiguatedValue);
-          rejectedValues.accept(candidate);
-          candidate = disambiguatedValue;
+          candidate = new Value<>(candidate, disambiguatedValue);
           candidateProvider = provider;
           candidateQualifiersScore = valueQualifiersScore;
           candidatePathScore = valuePathScore;
