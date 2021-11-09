@@ -81,6 +81,9 @@ public interface Provider extends Prioritized {
   }
 
   public default boolean isSelectable(final ConfiguredSupplier<?> supplier, final Path absolutePath) {
+    if (!absolutePath.isAbsolute()) {
+      throw new IllegalArgumentException("absolutePath: " + absolutePath);
+    }
     return AssignableType.of(this.upperBound()).isAssignable(absolutePath.type());
   }
 

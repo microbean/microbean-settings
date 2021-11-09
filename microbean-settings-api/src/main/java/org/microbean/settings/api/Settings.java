@@ -49,7 +49,7 @@ import org.microbean.type.Types;
  *
  * @see Provider
  */
-public class Settings<T> implements ConfiguredSupplier<T> {
+public class Settings<T> implements AutoCloseable, ConfiguredSupplier<T> {
 
 
   /*
@@ -132,9 +132,11 @@ public class Settings<T> implements ConfiguredSupplier<T> {
         // final-but-as-yet-uninitialized qualifiers instance field will
         // be null.  Note that the qualifiers() accessor method accounts
         // for this and will return Qualifiers.of() instead.
-        // this.qualifiers = this.plus(Qualifiers.class, Qualifiers::of).get();
-        this.qualifiers = this.<Qualifiers>plus(Qualifiers.class).orElseGet(Qualifiers::of);
-        this.settingsCache.remove(qp);
+        try {
+          this.qualifiers = this.of(Qualifiers.class).orElseGet(Qualifiers::of);
+        } finally {
+          this.settingsCache.remove(qp);
+        }
       } else {
         throw new IllegalArgumentException("path: " + path);
       }
@@ -153,6 +155,12 @@ public class Settings<T> implements ConfiguredSupplier<T> {
    * Instance methods.
    */
 
+
+  @Experimental
+  @Override
+  public final void close() {
+    this.settingsCache.clear();
+  }
 
   /**
    * Returns an {@linkplain
@@ -207,10 +215,10 @@ public class Settings<T> implements ConfiguredSupplier<T> {
 
   @Override // ConfiguredSupplier
   public final <U> Settings<U> of(final ConfiguredSupplier<?> parent,
-                                  final Path path) {
+                                  final Path absolutePath) {
     return
       this.of(parent,
-              path, // NOTE: no plus()
+              absolutePath,
               this.rejectedProvidersConsumerSupplier.get(),
               this.rejectedValuesConsumerSupplier.get(),
               this.ambiguousValuesConsumerSupplier.get());
@@ -266,9 +274,10 @@ public class Settings<T> implements ConfiguredSupplier<T> {
     if (path.isTransliterated()) {
       return path;
     } else if (path.type() == Path.class) {
-      // Are we in the middle of a transliteration request?
       final Accessor a = path.lastAccessor();
       if (a != null && a.name().equals("transliterate") && a.parameterCount() == 1 && a.parameter(0) == Path.class) {
+        // Are we in the middle of a transliteration request? Avoid
+        // the infinite loop.
         return path;
       }
     }
@@ -284,7 +293,7 @@ public class Settings<T> implements ConfiguredSupplier<T> {
     final Value<U> value = this.value(parent, absolutePath, rejectedProviders, rejectedValues, ambiguousValues);
     final Supplier<U> supplier;
     if (value == null) {
-      supplier = Settings::returnNull;
+      supplier = Settings::throwNoSuchElementException;
     } else {
       supplier = value;
     }
@@ -578,13 +587,17 @@ public class Settings<T> implements ConfiguredSupplier<T> {
     return score;
   }
 
-  protected <U> Value<U> disambiguate(final ConfiguredSupplier<?> parent,
-                                      final Path path,
+  protected <U> Value<U> disambiguate(final ConfiguredSupplier<?> supplier,
+                                      final Path absolutePath,
                                       final Provider p0,
                                       final Value<U> v0,
                                       final Provider p1,
                                       final Value<U> v1) {
-    return null;
+    if (!absolutePath.isAbsolute()) {
+      throw new IllegalArgumentException("absolutePath: " + absolutePath);
+    }
+    final Disambiguator d = supplier.of(Disambiguator.class).orElse(null);
+    return d == null ? null : d.disambiguate(supplier, absolutePath, p0, v0, p1, v1);
   }
 
 
@@ -667,6 +680,10 @@ public class Settings<T> implements ConfiguredSupplier<T> {
 
   private static final <T> T returnNull() {
     return null;
+  }
+
+  private static final <T> T throwNoSuchElementException() {
+    throw new NoSuchElementException();
   }
 
   private static final void sink(final Object ignored) {

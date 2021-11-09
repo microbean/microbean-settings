@@ -18,6 +18,7 @@ package org.microbean.settings.api;
 
 import java.lang.reflect.Type;
 
+import java.util.NoSuchElementException;
 import java.util.Objects;
 
 import java.util.function.Supplier;
@@ -48,30 +49,72 @@ import org.microbean.development.annotation.Convenience;
  */
 public final class Value<T> implements OptionalSupplier<T> {
 
-  private final Supplier<? extends T> defaults;
-  
   private final Qualifiers qualifiers;
 
   private final Path path;
 
-  private final OptionalSupplier<T> optionalSupplier;
+  private final Supplier<? extends T> supplier;
+
+  private final boolean deterministic;
 
   public Value(final Qualifiers qualifiers, final Path path, final T value) {
-    this(null, qualifiers, path, () -> value);
+    this(null, qualifiers, path, () -> value, true);
   }
 
-  public Value(final Qualifiers qualifiers, final Path path, final OptionalSupplier<? extends T> optionalSupplier) {
-    this(null, qualifiers, path, optionalSupplier);
+  public Value(final Qualifiers qualifiers, final Path path, final Supplier<? extends T> supplier) {
+    this(null, qualifiers, path, supplier, false);
+  }
+
+  public Value(final Qualifiers qualifiers, final Path path, final Supplier<? extends T> supplier, final boolean deterministic) {
+    this(null, qualifiers, path, supplier, deterministic);
+  }
+
+  public Value(final Supplier<? extends T> defaults,
+               final Qualifiers qualifiers,
+               final Path path,
+               final Supplier<? extends T> supplier) {
+    this(defaults, qualifiers, path, supplier, false);
+  }
+
+  public Value(final Supplier<? extends T> defaults, final Value<? extends T> source) {
+    this(defaults, source.qualifiers(), source.path(), source, source.deterministic());
+  }
+
+  public Value(final Value<? extends T> source) {
+    this(null, source.qualifiers(), source.path(), source, source.deterministic());
   }
   
-  public Value(final Supplier<? extends T> defaults, final Qualifiers qualifiers, final Path path, final OptionalSupplier<? extends T> optionalSupplier) {
+  public Value(final Supplier<? extends T> defaults,
+               final Qualifiers qualifiers,
+               final Path path,
+               final Supplier<? extends T> supplier,
+               final boolean deterministic) {
     super();
-    this.defaults = defaults;
     this.qualifiers = Objects.requireNonNull(qualifiers, "qualifiers");
     this.path = Objects.requireNonNull(path, "path");
-    @SuppressWarnings("unchecked")
-    final OptionalSupplier<T> os = (OptionalSupplier<T>)Objects.requireNonNull(optionalSupplier, "optionalSupplier");
-    this.optionalSupplier = os;
+    Objects.requireNonNull(supplier, "supplier");
+    if (defaults == null) {
+      this.supplier = supplier;
+    } else {
+      this.supplier = new Supplier<>() {
+          private volatile Supplier<? extends T> s = supplier;
+          @Override
+          public final T get() {
+            final Supplier<? extends T> s = this.s;
+            try {
+              return s.get();
+            } catch (final NoSuchElementException | UnsupportedOperationException e) {
+              if (s == defaults) {
+                throw e;
+              } else {
+                this.s = defaults;
+                return defaults.get();
+              }
+            }
+          }
+        };
+    }
+    this.deterministic = deterministic;
   }
 
   public final Qualifiers qualifiers() {
@@ -82,14 +125,13 @@ public final class Value<T> implements OptionalSupplier<T> {
     return this.path;
   }
 
-  public final OptionalSupplier<T> optionalSupplier() {
-    return this.optionalSupplier;
-  }
-
   @Override // OptionalSupplier<T>
   public final T get() {
-    final T value = this.optionalSupplier().orElse(null);
-    return value == null ? this.defaults == null ? null : this.defaults.get() : value;
+    return this.supplier.get();
+  }
+
+  public final boolean deterministic() {
+    return this.deterministic;
   }
 
   /**
@@ -116,6 +158,38 @@ public final class Value<T> implements OptionalSupplier<T> {
   @Convenience
   public final Type type() {
     return this.path().type();
+  }
+
+  @Override
+  public final int hashCode() {
+    int hashCode = 17;
+    Object v = this.qualifiers();
+    int c = v == null ? 0 : v.hashCode();
+    hashCode = 37 * hashCode + c;
+
+    v = this.path();
+    c = v == null ? 0 : v.hashCode();
+    hashCode = 37 * hashCode + c;
+
+    c = this.deterministic() ? 1 : 0;
+    hashCode = 37 * hashCode + c;
+
+    return hashCode;
+  }
+
+  @Override
+  public final boolean equals(final Object other) {
+    if (other == this) {
+      return true;
+    } else if (other != null && this.getClass() == other.getClass()) {
+      final Value<?> her = (Value<?>)other;
+      return
+        Objects.equals(this.qualifiers(), her.qualifiers()) &&
+        Objects.equals(this.path(), her.path()) &&
+        this.deterministic() && her.deterministic();
+    } else {
+      return false;
+    }
   }
   
 }

@@ -66,43 +66,51 @@ public class ProxyingProvider extends AbstractProvider<Object> {
 
   @Override // Provider
   public final boolean isSelectable(final ConfiguredSupplier<?> caller,
-                                    final Path path) {
+                                    final Path absolutePath) {
+    if (!absolutePath.isAbsolute()) {
+      throw new IllegalArgumentException("absolutePath: " + absolutePath);
+    }
     return
-      super.isSelectable(caller, /*qualifiers,*/ path) &&
-      this.isProxiable(caller, /*qualifiers,*/ path);
+      super.isSelectable(caller, absolutePath) &&
+      this.isProxiable(caller, absolutePath);
   }
 
   protected boolean isProxiable(final ConfiguredSupplier<?> caller,
-                                final Path path) {
-    if (path.type() instanceof Class<?> c && c.isInterface() && !c.isHidden() && !c.isSealed()) {
-      // Weed out otherwise proxiable interfaces that have public
-      // methods that take parameters that are anything other than
-      // things that could be conceivably used as indices into
-      // array-like and map-like and list-like structures.
-      //
-      // So a class with Foo getFoo(Blatz b) will not be proxiable,
-      // but a class with Foo getFoo(int i) or Foo getFoo(String s)
-      // will be.
-      //
-      // The end result of this isProxiable() implementation is highly
-      // predictive of proxiability but not exhaustively predictive.
-      for (final Method m : c.getMethods()) {
-        final Type returnType = m.getReturnType();
-        if (returnType != void.class && returnType != Void.class && m.getParameterCount() <= 1) {
-          // Leave void-returning methods behind; configuration use cases
-          // won't tend to touch them, and if they do, well, they'll
-          // probably get an UnsupportedOperationException.
-          for (final Class<?> parameterType : m.getParameterTypes()) {
-            if (!this.isIndexLike(parameterType)) {
-              return false;
+                                final Path absolutePath) {
+    if (absolutePath.type() instanceof Class<?> c && c.isInterface() && !c.isHidden() && !c.isSealed()) {
+      final Method[] methods = c.getMethods();
+      switch (methods.length) {
+      case 0:
+        return false;
+      default:
+        int getterCount = 0;
+        int defaultCount = 0;
+        for (final Method m : methods) {
+          if (m.isDefault()) {
+            ++defaultCount;
+          } else {
+            final Type returnType = m.getReturnType();
+            if (returnType != void.class && returnType != Void.class) {
+            switch (m.getParameterCount()) {
+              case 0:
+                ++getterCount;
+                break;
+              case 1:
+                if (!this.isIndexLike(m.getParameterTypes()[0])) {
+                   return false;
+                }
+                ++getterCount;
+                break;
+              default:
+                return false;
+              }
             }
           }
         }
+        return getterCount > 0 || defaultCount > 0;
       }
-      return true;
-    } else {
-      return false;
     }
+    return false;
   }
 
   protected boolean isIndexLike(final Class<?> parameterType) {

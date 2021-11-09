@@ -305,6 +305,9 @@ public interface ConfiguredSupplier<T> extends OptionalSupplier<T> {
 
   @OverridingDiscouraged
   public default <U> ConfiguredSupplier<U> of(final Path absolutePath) {
+    if (!absolutePath.isAbsolute()) {
+      throw new IllegalArgumentException("absolutePath: " + absolutePath);
+    }
     return
       this.of(this.root(),
               absolutePath);
