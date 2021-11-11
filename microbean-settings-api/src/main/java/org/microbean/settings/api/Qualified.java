@@ -35,31 +35,6 @@ public interface Qualified<T> {
 
 
   /*
-   * Static methods.
-   */
-
-
-  public static <T> String toString(final Qualified<T> q) {
-    return toString(q, null);
-  }
-
-  public static <T> String toString(final Qualified<? extends T> q, final Function<? super T, ? extends String> f) {
-    if (q == null) {
-      return "";
-    } else if (f == null) {
-      return q.toString();
-    } else {
-      final StringBuilder sb = new StringBuilder(String.valueOf(f.apply(q.qualified())));
-      final Qualifiers qualifiers = q.qualifiers();
-      if (qualifiers != null && !qualifiers.isEmpty()) {
-        sb.append(":").append(qualifiers.toString());
-      }
-      return sb.toString();
-    }
-  }
-
-
-  /*
    * Inner and nested classes.
    */
 
@@ -75,16 +50,6 @@ public interface Qualified<T> {
     public Record {
       Objects.requireNonNull(qualifiers, "qualifiers");
       Objects.requireNonNull(qualified, "qualified");
-    }
-
-
-    /*
-     * Instance methods.
-     */
-
-
-    public final String toString(final Function<? super T, ? extends String> f) {
-      return Qualified.toString(this, f);
     }
 
 

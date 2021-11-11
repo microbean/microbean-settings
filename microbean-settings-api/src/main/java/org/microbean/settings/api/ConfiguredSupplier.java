@@ -74,7 +74,7 @@ public interface ConfiguredSupplier<T> extends OptionalSupplier<T> {
    * request.</p>
    *
    * <p>Path transliteration is needed because the {@link
-   * Accessor#name() name()} components of {@link Accessor}s may
+   * Accessor2#name() name()} components of {@link Accessor2}s may
    * unintentionally clash when two components are combined into a
    * single application.</p>
    *

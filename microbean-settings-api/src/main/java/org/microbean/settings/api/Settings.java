@@ -724,23 +724,25 @@ public class Settings<T> implements AutoCloseable, ConfiguredSupplier<T> {
    * <p>This method calls {@link Path2#endsWith(Path2, BiPredicate)} on
    * the supplied {@code absoluteReferencePath} with {@code valuePath}
    * as its {@link Path2}-typed first argument, and a {@link
-   * BiPredicate} that returns {@code true} if and only if any of the
-   * following conditions is true:</p>
+   * BiPredicate} that returns {@code true} if and only if all of the
+   * following conditions are true:</p>
    *
    * <ul>
    *
-   * <li>The first argument is an {@link Accessor}, the second
-   * argument is also an {@link Accessor}, both have equal {@linkplain
-   * Accessor#name() names}, both have equal numbers of {@linkplain
-   * Accessor#parameters() parameters}, both have equal numbers of
-   * {@linkplain Accessor#arguments() arguments}, and each parameter
-   * found in {@code valuePath} {@linkplain
-   * Class#isAssignableFrom(Class) is assignable to} the corresponding
-   * parameter found in {@code absoluteReferencePath}</li>
+   * <li>Each {@link Accessor2} has a {@linkplain Accessor2#name()
+   * name} that is either {@linkplain String#isEmpty() empty} or equal
+   * to the other's.</li>
    *
-   * <li>The first argument is a {@link Type}, the second argument is
-   * also a {@link Type} and the second {@link Type} {@linkplain
-   * Assignable#isAssignable(Object) is assignable to} the first</li>
+   * <li>Either {@link Accessor2} has a {@link Accessor2#type() Type}
+   * that is {@code null}, or the first {@link Accessor2}'s {@link
+   * Accessor2#type() Type} {@link AssignableType#of(Type) is
+   * assignable from} the second's.</li>
+   *
+   * <li>Either {@link Accessor2} has {@code null} {@linkplain
+   * Accessor2#parameters() parameters} or each of the first {@link
+   * Accessor2}'s {@linkplain Accessor2#parameters() parameters}
+   * {@linkplain Class#isAssignableFrom(Class) is assignable from} the
+   * second's corresponding parameter.</li>
    *
    * </ul>
    *
