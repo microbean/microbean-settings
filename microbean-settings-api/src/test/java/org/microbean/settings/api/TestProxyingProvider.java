@@ -54,21 +54,21 @@ final class TestProxyingProvider {
     public Powertrain getPowertrain();
 
     public Wheel getWheel(final String wheelSpecifier);
-    
+
   }
 
   public static interface Powertrain {
 
     public Engine getEngine();
-    
+
   }
 
   public static interface Engine {
 
     public default void start() {
-      
+
     }
-    
+
   }
 
   public static interface Wheel {
@@ -76,7 +76,7 @@ final class TestProxyingProvider {
     public default int getDiameterInInches() {
       return 18;
     }
-    
+
   }
 
   public static final class LRWheelProvider extends AbstractProvider<Wheel> {
@@ -84,13 +84,13 @@ final class TestProxyingProvider {
     public LRWheelProvider() {
       super();
     }
-    
+
     @Override
     public final boolean isSelectable(final ConfiguredSupplier<?> supplier,
-                                      final Path2 path) {
+                                      final Path path) {
       if (super.isSelectable(supplier, path)) {
         assertSame(Wheel.class, path.type());
-        final Accessor2 a = path.get(path.size() - 1);
+        final Accessor a = path.get(path.size() - 1);
         final List<String> arguments = a.arguments().orElse(null);
         return "wheel".equals(a.name()) && arguments != null && !arguments.isEmpty() && "LR".equals(arguments.get(0));
       } else {
@@ -99,17 +99,17 @@ final class TestProxyingProvider {
     }
 
     public final Value<Wheel> get(final ConfiguredSupplier<?> supplier,
-                                  final Path2 path) {
+                                  final Path path) {
       assertSame(Wheel.class, path.type());
-      final Accessor2 a = path.get(path.size() - 1);
+      final Accessor a = path.get(path.size() - 1);
       assertEquals("wheel", a.name());
       assertEquals(List.of(String.class), a.parameters().orElseThrow());
       assertEquals("LR", a.arguments().orElseThrow().get(0));
       return new Value<>(Qualifiers.of(),
-                         Path2.of(Accessor2.of("wheel",
-                                               Wheel.class,
-                                               List.of(String.class),
-                                               List.of("LR"))),
+                         Path.of(Accessor.of("wheel",
+                                             Wheel.class,
+                                             List.of(String.class),
+                                             List.of("LR"))),
                          new Wheel() {
                            @Override
                            public final int getDiameterInInches() {
@@ -117,7 +117,7 @@ final class TestProxyingProvider {
                            }
                          });
     }
-    
+
   }
-  
+
 }

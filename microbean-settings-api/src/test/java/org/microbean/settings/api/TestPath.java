@@ -38,42 +38,43 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-final class TestPath2 {
+final class TestPath {
 
   private static final StackWalker stackWalker = StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE);
 
-  private TestPath2() {
+  private TestPath() {
     super();
   }
 
   @Test
   final void testParseRoot() throws ClassNotFoundException {
-    assertSame(Path2.root(), new Path2.Parser(this.getClass().getClassLoader()).parse(":void"));
+    assertSame(Path.root(), new Path.Parser(this.getClass().getClassLoader()).parse(":void"));
   }
 
   @Test
   final void testParseEmpty() throws ClassNotFoundException {
-    assertSame(Path2.of(), new Path2.Parser(this.getClass().getClassLoader()).parse(""));
+    assertThrows(IllegalArgumentException.class,
+                 () -> new Path.Parser(this.getClass().getClassLoader()).parse(""));
   }
 
   @Test
   final void testParseFoo() throws ClassNotFoundException {
-    assertEquals(Path2.of(Accessor2.of("foo")), new Path2.Parser(this.getClass().getClassLoader()).parse("foo"));
+    assertEquals(Path.of(Accessor.of("foo")), new Path.Parser(this.getClass().getClassLoader()).parse("foo"));
   }
 
   @Test
   final void testPathParse() throws ClassNotFoundException {
-    assertEquals(Path2.of(List.of(Accessor2.of(),
-                                  Accessor2.of("foo", String.class, List.of(String.class, Integer.class), List.of("goop", "4")))),
-                 new Path2.Parser(this.getClass().getClassLoader()).parse("/foo(java.lang.String=goop,java.lang.Integer=4):java.lang.String"));
+    assertEquals(Path.of(List.of(Accessor.of(),
+                                 Accessor.of("foo", String.class, List.of(String.class, Integer.class), List.of("goop", "4")))),
+                 new Path.Parser(this.getClass().getClassLoader()).parse("/foo(java.lang.String=goop,java.lang.Integer=4):java.lang.String"));
   }
 
   @Test
   final void testPathParseWithEscapedSlash() throws ClassNotFoundException {
-    assertEquals(Path2.of(List.of(Accessor2.of(),
-                                  Accessor2.of("/foo", String.class, List.of(String.class, Integer.class), List.of("goop", "4")))),
-                 new Path2.Parser(this.getClass().getClassLoader()).parse("/\\/foo(java.lang.String=goop,java.lang.Integer=4):java.lang.String"));
+    assertEquals(Path.of(List.of(Accessor.of(),
+                                 Accessor.of("/foo", String.class, List.of(String.class, Integer.class), List.of("goop", "4")))),
+                 new Path.Parser(this.getClass().getClassLoader()).parse("/\\/foo(java.lang.String=goop,java.lang.Integer=4):java.lang.String"));
   }
 
-  
+
 }

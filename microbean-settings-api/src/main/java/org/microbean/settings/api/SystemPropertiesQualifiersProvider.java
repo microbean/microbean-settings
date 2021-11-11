@@ -30,11 +30,11 @@ public class SystemPropertiesQualifiersProvider extends AbstractProvider<Qualifi
   }
 
   @Override // AbstractProvider<Qualifiers>
-  public Value<?> get(final ConfiguredSupplier<?> supplier, final Path2 path) {
+  public Value<?> get(final ConfiguredSupplier<?> supplier, final Path path) {
 
     // Use the configuration system to find a String under the path /qualifierPrefix.
     final String prefix = supplier.of("qualifierPrefix", String.class).orElse("qualifier.");
-    
+
     final Properties systemProperties = System.getProperties();
     final SortedMap<String, String> map = new TreeMap<>();
     for (final String propertyName : systemProperties.stringPropertyNames()) {
@@ -45,7 +45,7 @@ public class SystemPropertiesQualifiersProvider extends AbstractProvider<Qualifi
         }
       }
     }
-    return new Value<>(Qualifiers.of(), Path2.of(Qualifiers.class), Qualifiers.of(map));
+    return new Value<>(Qualifiers.of(), Path.of(Qualifiers.class), Qualifiers.of(map));
   }
-  
+
 }

@@ -22,25 +22,17 @@ public final class EnvironmentVariableProvider extends AbstractProvider<String> 
     super();
   }
 
-  public boolean isSelectable(final ConfiguredSupplier<?> supplier, final Path2 absolutePath) {
+  public boolean isSelectable(final ConfiguredSupplier<?> supplier, final Path absolutePath) {
     assert absolutePath.isAbsolute();
     return
-      absolutePath.size() == 2 &&
-      super.isSelectable(supplier, absolutePath) &&
+      absolutePath.size() == 2
+      && super.isSelectable(supplier, absolutePath) &&
       System.getenv(absolutePath.get(1).name()) != null;
-    /*
-    // /SHELL/java.lang.String has size 3: void.class (not shown), "SHELL", and String.class.
-    return
-      absolutePath.size() == 3 &&
-      super.isSelectable(supplier, absolutePath) &&
-      System.getenv(absolutePath.lastAccessor().name()) != null;
-    */
   }
   
-  public Value<?> get(final ConfiguredSupplier<?> supplier, final Path2 absolutePath) {
+  public Value<?> get(final ConfiguredSupplier<?> supplier, final Path absolutePath) {
     assert absolutePath.isAbsolute();
     assert absolutePath.size() == 2;
-    // assert absolutePath.size() == 3;
     return new Value<>(Qualifiers.of(), absolutePath, System.getenv(absolutePath.get(1).name()));
   }
   

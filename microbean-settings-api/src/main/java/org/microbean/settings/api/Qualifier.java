@@ -70,7 +70,7 @@ public final class Qualifier {
     return this.value;
   }
 
-  @Override
+  @Override // Object
   public final int hashCode() {
     int hashCode = 17;
     Object v = this.name();
@@ -81,7 +81,7 @@ public final class Qualifier {
     return 37 * hashCode + c;
   }
 
-  @Override
+  @Override // Object
   public final boolean equals(final Object other) {
     if (other == this) {
       return true;

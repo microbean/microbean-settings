@@ -18,9 +18,6 @@ package org.microbean.settings.api;
 
 import java.util.Objects;
 
-import java.util.function.Function;
-import java.util.function.BiPredicate;
-
 public interface Qualified<T> {
 
 

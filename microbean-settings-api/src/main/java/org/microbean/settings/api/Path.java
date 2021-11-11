@@ -35,7 +35,7 @@ import org.microbean.development.annotation.Experimental;
 
 import org.microbean.type.Types;
 
-public final class Path2 {
+public final class Path {
 
 
   /*
@@ -45,9 +45,7 @@ public final class Path2 {
 
   private static final StackWalker stackWalker = StackWalker.getInstance();
 
-  private static final Path2 EMPTY = new Path2(List.of(), true);
-
-  private static final Path2 ROOT = new Path2(List.of(Accessor2.root()), true);
+  private static final Path ROOT = new Path(List.of(Accessor.root()), true);
 
 
   /*
@@ -55,7 +53,7 @@ public final class Path2 {
    */
 
 
-  private final List<Accessor2> accessors;
+  private final List<Accessor> accessors;
 
   private final boolean transliterated;
 
@@ -65,18 +63,16 @@ public final class Path2 {
    */
 
 
-  private Path2(final List<? extends Accessor2> accessors, final boolean transliterated) {
+  private Path(final List<? extends Accessor> accessors, final boolean transliterated) {
     super();
     final int size = accessors.size();
     switch (size) {
     case 0:
-      this.accessors = List.of();
-      this.transliterated = true;
-      break;
+      throw new IllegalArgumentException("accessors.isEmpty()");
     default:
-      final List<Accessor2> newList = new ArrayList<>(size);
+      final List<Accessor> newList = new ArrayList<>(size);
       for (int i = 0; i < size; i++) {
-        final Accessor2 a = Objects.requireNonNull(accessors.get(i));
+        final Accessor a = Objects.requireNonNull(accessors.get(i));
         if (i != 0 && (a.isRoot() || i + 1 >= size && a.type().isEmpty())) {
           throw new IllegalArgumentException("accessors: " + accessors);
         }
@@ -98,17 +94,17 @@ public final class Path2 {
   }
 
   @Experimental
-  public final Path2 transliterate(final BiFunction<? super String, ? super Accessor2, ? extends Accessor2> f) {
+  public final Path transliterate(final BiFunction<? super String, ? super Accessor, ? extends Accessor> f) {
     if (f == null || this.transliterated) {
       return this;
     } else {
-      final String userPackageName = stackWalker.walk(Path2::findUserPackageName);
-      final int size = this.size() - 1; // don't include our trailing type
-      final List<Accessor2> newAccessors = new ArrayList<>(size);
+      final String userPackageName = stackWalker.walk(Path::findUserPackageName);
+      final int size = this.size();
+      final List<Accessor> newAccessors = new ArrayList<>(size);
       for (int i = 0; i < size; i++) {
         newAccessors.add(f.apply(userPackageName, this.get(i)));
       }
-      return new Path2(newAccessors, true);
+      return new Path(newAccessors, true);
     }
   }
 
@@ -117,43 +113,55 @@ public final class Path2 {
   }
 
   public final boolean isRoot() {
-    return this.size() == 1 && this.get(0).isRoot();
+    return this.size() == 1 && this.first().isRoot();
   }
 
   public final boolean isAbsolute() {
-    return this.size() > 0 && this.get(0).isRoot();
+    return this.size() > 0 && this.first().isRoot();
   }
 
   public final int size() {
     return this.accessors.size();
   }
 
-  public final Path2 plus(final String name, final Type type) {
-    return this.plus(Accessor2.of(name, type));
+  public final Path plus(final String name, final Type type) {
+    return this.plus(Accessor.of(name, type));
   }
 
-  public final Path2 plus(final Accessor2 accessor) {
+  public final Path plus(final Accessor accessor) {
     return this.plus(List.of(accessor));
   }
 
-  public final Path2 plus(final Path2 path) {
+  public final Path plus(final Path path) {
     return this.plus(path.accessors);
   }
 
-  public final Path2 plus(final List<? extends Accessor2> accessors) {
-    final List<Accessor2> newAccessors = new ArrayList<>(this.accessors.size() + accessors.size());
-    newAccessors.addAll(this.accessors);
-    newAccessors.addAll(accessors);
-    return new Path2(newAccessors, false);
+  public final Path plus(final List<? extends Accessor> accessors) {
+    if (accessors.isEmpty()) {
+      return this;
+    } else {
+      final List<Accessor> newAccessors = new ArrayList<>(this.accessors.size() + accessors.size());
+      newAccessors.addAll(this.accessors);
+      newAccessors.addAll(accessors);
+      return new Path(newAccessors, false);
+    }
   }
 
-  public final Accessor2 get(final int index) {
+  public final Accessor get(final int index) {
     return this.accessors.get(index);
   }
 
+  public final Accessor first() {
+    return this.get(0);
+  }
+
+  public final Accessor last() {
+    return this.accessors.get(this.size() - 1);
+  }
+
   public final Type type() {
-    final Type type = this.get(this.size() - 1).type().orElse(null);
-    assert type != null : "Untyped final Accessor2: " + this.get(this.size() - 1);
+    final Type type = this.last().type().orElse(null);
+    assert type != null : "Untyped final Accessor: " + this.last();
     return type;
   }
 
@@ -161,11 +169,11 @@ public final class Path2 {
     return Types.erase(this.type()).getClassLoader();
   }
 
-  public final int indexOf(final Path2 other) {
+  public final int indexOf(final Path other) {
     return other == this ? 0 : Collections.indexOfSubList(this.accessors, other.accessors);
   }
 
-  public final int indexOf(final Path2 path, final BiPredicate<? super Accessor2, ? super Accessor2> p) {
+  public final int indexOf(final Path path, final BiPredicate<? super Accessor, ? super Accessor> p) {
     final int pathSize = path.size();
     final int sizeDiff = this.size() - pathSize;
     OUTER_LOOP:
@@ -180,11 +188,11 @@ public final class Path2 {
     return -1;
   }
 
-  public final int lastIndexOf(final Path2 other) {
+  public final int lastIndexOf(final Path other) {
     return other == this ? 0 : Collections.lastIndexOfSubList(this.accessors, other.accessors);
   }
 
-  public final int lastIndexOf(final Path2 path, final BiPredicate<? super Accessor2, ? super Accessor2> p) {
+  public final int lastIndexOf(final Path path, final BiPredicate<? super Accessor, ? super Accessor> p) {
     final int pathSize = path.size();
     final int sizeDiff = this.size() - pathSize;
     OUTER_LOOP:
@@ -199,7 +207,7 @@ public final class Path2 {
     return -1;
   }
 
-  public final boolean startsWith(final Path2 other) {
+  public final boolean startsWith(final Path other) {
     if (other == this) {
       return true;
     } else if (other == null) {
@@ -209,11 +217,11 @@ public final class Path2 {
     }
   }
 
-  public final boolean startsWith(final Path2 other, final BiPredicate<? super Accessor2, ? super Accessor2> p) {
+  public final boolean startsWith(final Path other, final BiPredicate<? super Accessor, ? super Accessor> p) {
     return this.indexOf(other, p) == 0;
   }
 
-  public final boolean endsWith(final Path2 other) {
+  public final boolean endsWith(final Path other) {
     if (other == this) {
       return true;
     } else if (other == null) {
@@ -224,7 +232,7 @@ public final class Path2 {
     }
   }
 
-  public final boolean endsWith(final Path2 other, final BiPredicate<? super Accessor2, ? super Accessor2> p) {
+  public final boolean endsWith(final Path other, final BiPredicate<? super Accessor, ? super Accessor> p) {
     final int lastIndex = this.lastIndexOf(other, p);
     return lastIndex >= 0 && lastIndex + other.size() == this.size();
   }
@@ -238,7 +246,7 @@ public final class Path2 {
     if (other == this) {
       return true;
     } else if (other != null && this.getClass() == other.getClass()) {
-      return this.accessors.equals(((Path2)other).accessors);
+      return this.accessors.equals(((Path)other).accessors);
     } else {
       return false;
     }
@@ -258,39 +266,35 @@ public final class Path2 {
    */
 
 
-  public static final Path2 root() {
+  public static final Path root() {
     return ROOT;
   }
 
-  static final Path2 of() {
-    return EMPTY;
-  }
-
-  public static final Path2 of(final Accessor2 accessor) {
+  public static final Path of(final Accessor accessor) {
     return of(List.of(accessor));
   }
 
-  public static final Path2 of(final List<? extends Accessor2> accessors) {
+  public static final Path of(final List<? extends Accessor> accessors) {
     if (accessors.isEmpty()) {
-      return of();
+      throw new IllegalArgumentException("accessors.isEmpty()");
     } else if (accessors.size() == 1 && accessors.get(0).isRoot()) {
       return root();
     } else {
-      return new Path2(accessors, false);
+      return new Path(accessors, false);
     }
   }
 
-  public static final Path2 of(final String name) {
-    return new Path2(List.of(Accessor2.of(name, null, (List<? extends Class<?>>)null, (List<? extends String>)null)), false);
+  public static final Path of(final String name) {
+    return new Path(List.of(Accessor.of(name, null, (List<? extends Class<?>>)null, (List<? extends String>)null)), false);
   }
 
-  public static final Path2 of(final Type type) {
-    return new Path2(List.of(Accessor2.of("", type, (List<? extends Class<?>>)null, (List<? extends String>)null)), false);
+  public static final Path of(final Type type) {
+    return new Path(List.of(Accessor.of("", type, (List<? extends Class<?>>)null, (List<? extends String>)null)), false);
   }
 
   private static final String findUserPackageName(final Stream<StackFrame> stream) {
     final String className = stream.sequential()
-      .dropWhile(f -> f.getClassName().startsWith(Path2.class.getPackageName()))
+      .dropWhile(f -> f.getClassName().startsWith(Path.class.getPackageName()))
       .dropWhile(f -> f.getClassName().contains(".$Proxy")) // skip JDK proxies (and any other kind of proxies)
       .map(StackFrame::getClassName)
       .findFirst()
@@ -313,19 +317,19 @@ public final class Path2 {
 
     private final ClassLoader cl;
 
-    private final Accessor2.Parser parser;
+    private final Accessor.Parser parser;
 
     public Parser(final ClassLoader cl) {
       super();
       this.cl = Objects.requireNonNull(cl, "cl");
-      this.parser = new Accessor2.Parser(cl);
+      this.parser = new Accessor.Parser(cl);
     }
 
-    public final Path2 parse(final CharSequence s) throws ClassNotFoundException {
+    public final Path parse(final CharSequence s) throws ClassNotFoundException {
       if (s.isEmpty()) {
-        return Path2.of();
+        throw new IllegalArgumentException("s.isEmpty()");
       } else {
-        final List<Accessor2> accessors = new ArrayList<>(11);
+        final List<Accessor> accessors = new ArrayList<>(11);
         final int length = s.length();
         int start = 0;
         for (int i = 0; i < length; i++) {
@@ -354,9 +358,9 @@ public final class Path2 {
         }
         assert !accessors.isEmpty();
         if (accessors.size() == 1 && accessors.get(0).isRoot()) {
-          return Path2.root();
+          return Path.root();
         } else {
-          return new Path2(accessors, false);
+          return new Path(accessors, false);
         }
       }
     }

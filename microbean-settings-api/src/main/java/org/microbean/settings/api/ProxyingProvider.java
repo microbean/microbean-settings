@@ -45,7 +45,7 @@ public class ProxyingProvider extends AbstractProvider<Object> {
    */
 
 
-  private final ConcurrentMap<Path2, Object> proxies;
+  private final ConcurrentMap<Path, Object> proxies;
 
 
   /*
@@ -66,7 +66,7 @@ public class ProxyingProvider extends AbstractProvider<Object> {
 
   @Override // Provider
   public final boolean isSelectable(final ConfiguredSupplier<?> caller,
-                                    final Path2 absolutePath) {
+                                    final Path absolutePath) {
     if (!absolutePath.isAbsolute()) {
       throw new IllegalArgumentException("absolutePath: " + absolutePath);
     }
@@ -76,7 +76,7 @@ public class ProxyingProvider extends AbstractProvider<Object> {
   }
 
   protected boolean isProxiable(final ConfiguredSupplier<?> caller,
-                                final Path2 absolutePath) {
+                                final Path absolutePath) {
     if (absolutePath.type() instanceof Class<?> c && c.isInterface() && !c.isHidden() && !c.isSealed()) {
       final Method[] methods = c.getMethods();
       switch (methods.length) {
@@ -91,13 +91,13 @@ public class ProxyingProvider extends AbstractProvider<Object> {
           } else {
             final Type returnType = m.getReturnType();
             if (returnType != void.class && returnType != Void.class) {
-            switch (m.getParameterCount()) {
+              switch (m.getParameterCount()) {
               case 0:
                 ++getterCount;
                 break;
               case 1:
                 if (!this.isIndexLike(m.getParameterTypes()[0])) {
-                   return false;
+                  return false;
                 }
                 ++getterCount;
                 break;
@@ -123,7 +123,7 @@ public class ProxyingProvider extends AbstractProvider<Object> {
   @Override // Provider
   @SuppressWarnings("unchecked")
   public final Value<?> get(final ConfiguredSupplier<?> caller,
-                            final Path2 absolutePath) {
+                            final Path absolutePath) {
     assert absolutePath.isAbsolute();
     assert absolutePath.startsWith(caller.path());
     assert !absolutePath.equals(caller.path());
@@ -140,19 +140,19 @@ public class ProxyingProvider extends AbstractProvider<Object> {
   }
 
   protected Qualifiers qualifiers(final ConfiguredSupplier<?> caller,
-                                  final Path2 absolutePath) {
+                                  final Path absolutePath) {
     assert absolutePath.isAbsolute();
     return Qualifiers.of();
   }
 
-  protected Path2 path(final ConfiguredSupplier<?> caller,
-                      final Path2 absolutePath) {
+  protected Path path(final ConfiguredSupplier<?> caller,
+                      final Path absolutePath) {
     assert absolutePath.isAbsolute();
-    return Path2.of(absolutePath.type());
+    return Path.of(absolutePath.type());
   }
 
   protected Object newProxyInstance(final ConfiguredSupplier<?> caller,
-                                    final Path2 absolutePath,
+                                    final Path absolutePath,
                                     final Class<?> classToProxy) {
     assert absolutePath.isAbsolute();
     return
@@ -160,11 +160,11 @@ public class ProxyingProvider extends AbstractProvider<Object> {
                              new Class<?>[] { classToProxy },
                              new Handler(caller,
                                          absolutePath,
-                                         (m, args) -> Path2.of(Accessor2.of(propertyName(m.getName(),
-                                                                                         boolean.class == m.getReturnType()),
-                                                                            m.getGenericReturnType(),
-                                                                            Arrays.asList(m.getParameterTypes()),
-                                                                            stringArgs(args)))));
+                                         (m, args) -> Path.of(Accessor.of(propertyName(m.getName(),
+                                                                                       boolean.class == m.getReturnType()),
+                                                                          m.getGenericReturnType(),
+                                                                          Arrays.asList(m.getParameterTypes()),
+                                                                          stringArgs(args)))));
   }
 
 
@@ -293,13 +293,13 @@ public class ProxyingProvider extends AbstractProvider<Object> {
 
     private final ConfiguredSupplier<?> caller;
 
-    private final Path2 absolutePath;
-    
-    private final BiFunction<? super Method, ? super Object[], ? extends Path2> pathFunction;
+    private final Path absolutePath;
+
+    private final BiFunction<? super Method, ? super Object[], ? extends Path> pathFunction;
 
     private Handler(final ConfiguredSupplier<?> caller,
-                    final Path2 absolutePath,
-                    final BiFunction<? super Method, ? super Object[], ? extends Path2> pathFunction) {
+                    final Path absolutePath,
+                    final BiFunction<? super Method, ? super Object[], ? extends Path> pathFunction) {
       super();
       this.caller = Objects.requireNonNull(caller, "caller");
       this.absolutePath = Objects.requireNonNull(absolutePath, "absolutePath");
@@ -321,7 +321,7 @@ public class ProxyingProvider extends AbstractProvider<Object> {
         if (returnType == void.class || returnType == Void.class) {
           return defaultValue(proxy, m, args);
         } else {
-          final Path2 path = this.pathFunction.apply(m, args);
+          final Path path = this.pathFunction.apply(m, args);
           assert path.type() == returnType;
           assert !path.isAbsolute();
           final OptionalSupplier<Object> s = this.caller.of(this.absolutePath.plus(path));

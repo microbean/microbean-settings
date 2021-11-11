@@ -58,7 +58,7 @@ public class Settings<T> implements AutoCloseable, ConfiguredSupplier<T> {
 
 
   // Package-private for testing only.
-  final ConcurrentMap<Qualified.Record<Path2>, Settings<?>> settingsCache;
+  final ConcurrentMap<Qualified.Record<Path>, Settings<?>> settingsCache;
 
   private final List<Provider> providers;
 
@@ -68,7 +68,7 @@ public class Settings<T> implements AutoCloseable, ConfiguredSupplier<T> {
 
   private final Supplier<T> supplier;
 
-  private final Path2 path;
+  private final Path path;
 
   private final Supplier<? extends Consumer<? super Provider>> rejectedProvidersConsumerSupplier;
 
@@ -92,11 +92,11 @@ public class Settings<T> implements AutoCloseable, ConfiguredSupplier<T> {
    */
   @Deprecated // intended for use by ServiceLoader only
   public Settings() {
-    this(new ConcurrentHashMap<Qualified.Record<Path2>, Settings<?>>(),
+    this(new ConcurrentHashMap<Qualified.Record<Path>, Settings<?>>(),
          loadedProviders(),
          null, // qualifiers
          null, // parent,
-         Path2.root(),
+         Path.root(),
          null, // supplier
          Settings::generateSink,
          Settings::generateSink,
@@ -104,12 +104,12 @@ public class Settings<T> implements AutoCloseable, ConfiguredSupplier<T> {
   }
 
   @SuppressWarnings("unchecked")
-  private Settings(final ConcurrentMap<Qualified.Record<Path2>, Settings<?>> settingsCache,
+  private Settings(final ConcurrentMap<Qualified.Record<Path>, Settings<?>> settingsCache,
                    final Collection<? extends Provider> providers,
                    final Qualifiers qualifiers,
-                   final ConfiguredSupplier<?> parent, // if null, will end up being "this" if path is Path2.root()
-                   final Path2 path,
-                   final Supplier<T> supplier, // if null, will end up being () -> this if path is Path2.root()
+                   final ConfiguredSupplier<?> parent, // if null, will end up being "this" if path is Path.root()
+                   final Path path,
+                   final Supplier<T> supplier, // if null, will end up being () -> this if path is Path.root()
                    final Supplier<? extends Consumer<? super Provider>> rejectedProvidersConsumerSupplier,
                    final Supplier<? extends Consumer<? super Value<?>>> rejectedValuesConsumerSupplier,
                    final Supplier<? extends Consumer<? super Value<?>>> ambiguousValuesConsumerSupplier) {
@@ -122,11 +122,11 @@ public class Settings<T> implements AutoCloseable, ConfiguredSupplier<T> {
     if (parent == null) {
       // Bootstrap case, i.e. the zero-argument constructor called us.
       // Pay attention.
-      if (path.equals(Path2.root())) {
-        this.path = Path2.root();
+      if (path.equals(Path.root())) {
+        this.path = Path.root();
         this.supplier = supplier == null ? () -> (T)this : supplier; // NOTE
         this.parent = this; // NOTE
-        final Qualified.Record<Path2> qp = Qualified.Record.of(Qualifiers.of(), Path2.root());
+        final Qualified.Record<Path> qp = Qualified.Record.of(Qualifiers.of(), Path.root());
         this.settingsCache.put(qp, this); // NOTE
         // While the following call is in effect, our
         // final-but-as-yet-uninitialized qualifiers instance field will
@@ -140,7 +140,7 @@ public class Settings<T> implements AutoCloseable, ConfiguredSupplier<T> {
       } else {
         throw new IllegalArgumentException("path: " + path);
       }
-    } else if (path.equals(Path2.root())) {
+    } else if (path.equals(Path.root())) {
       throw new IllegalArgumentException("path: " + path);
     } else {
       this.path = path;
@@ -204,7 +204,7 @@ public class Settings<T> implements AutoCloseable, ConfiguredSupplier<T> {
   }
 
   @Override // ConfiguredSupplier
-  public final Path2 path() {
+  public final Path path() {
     return this.path;
   }
 
@@ -215,7 +215,7 @@ public class Settings<T> implements AutoCloseable, ConfiguredSupplier<T> {
 
   @Override // ConfiguredSupplier
   public final <U> Settings<U> of(final ConfiguredSupplier<?> parent,
-                                  final Path2 absolutePath) {
+                                  final Path absolutePath) {
     return
       this.of(parent,
               absolutePath,
@@ -225,7 +225,7 @@ public class Settings<T> implements AutoCloseable, ConfiguredSupplier<T> {
   }
 
   private final <U> Settings<U> of(final ConfiguredSupplier<?> parent,
-                                   Path2 absolutePath,
+                                   Path absolutePath,
                                    final Consumer<? super Provider> rejectedProviders,
                                    final Consumer<? super Value<?>> rejectedValues,
                                    final Consumer<? super Value<?>> ambiguousValues) {
@@ -251,7 +251,7 @@ public class Settings<T> implements AutoCloseable, ConfiguredSupplier<T> {
     //
     // This obviously can result in unnecessary work, but most
     // configuration use cases will cause this work to happen anyway.
-    final Qualified.Record<Path2> qp = Qualified.Record.of(parent.qualifiers(), absolutePath);
+    final Qualified.Record<Path> qp = Qualified.Record.of(parent.qualifiers(), absolutePath);
     Settings<?> settings = this.settingsCache.get(qp);
     if (settings == null) {
       settings =
@@ -274,14 +274,14 @@ public class Settings<T> implements AutoCloseable, ConfiguredSupplier<T> {
 
   @Experimental
   @Override
-  public final Path2 transliterate(final Path2 path) {
+  public final Path transliterate(final Path path) {
     if (path.isTransliterated()) {
       return path;
-    } else if (path.type() == Path2.class) {
-      final Accessor2 a = path.get(path.size() - 1);
+    } else if (path.type() == Path.class) {
+      final Accessor a = path.last();
       if (a != null && a.name().equals("transliterate")) {
         final List<Class<?>> parameters = a.parameters().orElse(null);
-        if (parameters.size() == 1 && parameters.get(0) == Path2.class) {
+        if (parameters.size() == 1 && parameters.get(0) == Path.class) {
           // Are we in the middle of a transliteration request? Avoid
           // the infinite loop.
           return path;
@@ -289,15 +289,15 @@ public class Settings<T> implements AutoCloseable, ConfiguredSupplier<T> {
       }
     }
     return
-      this.<Path2>of(Accessor2.of("transliterate", // name
-                                  Path2.class, // type
-                                  Path2.class, // parameter
+      this.<Path>of(Accessor.of("transliterate", // name
+                                  Path.class, // type
+                                  Path.class, // parameter
                                   path.toString())) // sole argument
       .orElse(path);
   }
 
   private final <U> Settings<U> computeSettings(final ConfiguredSupplier<?> parent,
-                                                final Path2 absolutePath,
+                                                final Path absolutePath,
                                                 final Consumer<? super Provider> rejectedProviders,
                                                 final Consumer<? super Value<?>> rejectedValues,
                                                 final Consumer<? super Value<?>> ambiguousValues) {
@@ -322,7 +322,7 @@ public class Settings<T> implements AutoCloseable, ConfiguredSupplier<T> {
   }
 
   private final <U> Value<U> value(final ConfiguredSupplier<?> parent,
-                                   final Path2 absolutePath,
+                                   final Path absolutePath,
                                    final Consumer<? super Provider> rejectedProviders,
                                    final Consumer<? super Value<?>> rejectedValues,
                                    final Consumer<? super Value<?>> ambiguousValues) {
@@ -463,7 +463,7 @@ public class Settings<T> implements AutoCloseable, ConfiguredSupplier<T> {
 
   protected final boolean isSelectable(final Provider provider,
                                        final ConfiguredSupplier<?> supplier,
-                                       final Path2 absolutePath) {
+                                       final Path absolutePath) {
     if (!absolutePath.isAbsolute()) {
       throw new IllegalArgumentException("absolutePath: " + absolutePath);
     }
@@ -472,7 +472,7 @@ public class Settings<T> implements AutoCloseable, ConfiguredSupplier<T> {
       provider.isSelectable(supplier, absolutePath);
   }
 
-  @SubordinateTo("#of(ConfiguredSupplier, Path2, Supplier)")
+  @SubordinateTo("#of(ConfiguredSupplier, Path, Supplier)")
   protected int score(final Qualifiers referenceQualifiers, final Qualifiers valueQualifiers) {
     final int intersectionSize = referenceQualifiers.intersectionSize(valueQualifiers);
     if (intersectionSize > 0) {
@@ -499,7 +499,7 @@ public class Settings<T> implements AutoCloseable, ConfiguredSupplier<T> {
    * <li>Neither parameter's value may be {@code null}.</li>
    *
    * <li>{@code absoluteReferencePath} must be {@linkplain
-   * Path2#isAbsolute() absolute}
+   * Path#isAbsolute() absolute}
    *
    * <li>{@code valuePath} must be selectable with respect to {@code
    * absoluteReferencePath}, where the definition of selectability is
@@ -510,18 +510,18 @@ public class Settings<T> implements AutoCloseable, ConfiguredSupplier<T> {
    * <p>For {@code valuePath} to "be selectable" with respect to
    * {@code absoluteReferencePath} for the purposes of this method and
    * for no other purpose, a hypothetical invocation of {@link
-   * #isSelectable(Path2, Path2)} must return {@code true} when supplied
+   * #isSelectable(Path, Path)} must return {@code true} when supplied
    * with {@code absoluteReferencePath} and {@code valuePath}
    * respectively.  Note that such an invocation is <em>not</em> made
    * by this method, but logically precedes it when this method is
    * called in the natural course of events by the {@link
-   * #of(ConfiguredSupplier, Path2)} method.</p>
+   * #of(ConfiguredSupplier, Path)} method.</p>
    *
-   * @param absoluteReferencePath the {@link Path2} against which to
+   * @param absoluteReferencePath the {@link Path} against which to
    * score the supplied {@code valuePath}; must not be {@code null};
    * must adhere to the preconditions above
    *
-   * @param valuePath the {@link Path2} to score against the supplied
+   * @param valuePath the {@link Path} to score against the supplied
    * {@code absoluteReferencePath}; must not be {@code null}; must
    * adhere to the preconditions above
    *
@@ -534,9 +534,9 @@ public class Settings<T> implements AutoCloseable, ConfiguredSupplier<T> {
    * @exception IllegalArgumentException if certain preconditions have
    * been violated
    *
-   * @see #of(ConfiguredSupplier, Path2)
+   * @see #of(ConfiguredSupplier, Path)
    *
-   * @see #isSelectable(Path2, Path2)
+   * @see #isSelectable(Path, Path)
    *
    * @threadsafety This method is and its overrides must be safe for
    * concurrent use by multiple threads.
@@ -546,8 +546,8 @@ public class Settings<T> implements AutoCloseable, ConfiguredSupplier<T> {
    * invoked with the same paths.  Overrides must preserve this
    * property.
    */
-  @SubordinateTo("#of(ConfiguredSupplier, Path2, Supplier)")
-  protected int score(final Path2 absoluteReferencePath, final Path2 valuePath) {
+  @SubordinateTo("#of(ConfiguredSupplier, Path, Supplier)")
+  protected int score(final Path absoluteReferencePath, final Path valuePath) {
     if (!absoluteReferencePath.isAbsolute()) {
       throw new IllegalArgumentException("absoluteReferencePath: " + absoluteReferencePath);
     }
@@ -560,8 +560,8 @@ public class Settings<T> implements AutoCloseable, ConfiguredSupplier<T> {
     for (int valuePathIndex = 0; valuePathIndex < valuePath.size(); valuePathIndex++) {
       final int referencePathIndex = lastValuePathIndex + valuePathIndex;
 
-      final Accessor2 referenceAccessor = absoluteReferencePath.get(referencePathIndex);
-      final Accessor2 valueAccessor = valuePath.get(valuePathIndex);
+      final Accessor referenceAccessor = absoluteReferencePath.get(referencePathIndex);
+      final Accessor valueAccessor = valuePath.get(valuePathIndex);
       if (!referenceAccessor.name().equals(valueAccessor.name())) {
         return Integer.MIN_VALUE;
       }
@@ -682,7 +682,7 @@ public class Settings<T> implements AutoCloseable, ConfiguredSupplier<T> {
   */
 
   protected <U> Value<U> disambiguate(final ConfiguredSupplier<?> supplier,
-                                      final Path2 absolutePath,
+                                      final Path absolutePath,
                                       final Provider p0,
                                       final Value<U> v0,
                                       final Provider p1,
@@ -705,9 +705,9 @@ public class Settings<T> implements AutoCloseable, ConfiguredSupplier<T> {
   }
 
   private static final boolean isSelectable(final Qualifiers referenceQualifiers,
-                                            final Path2 absoluteReferencePath,
+                                            final Path absoluteReferencePath,
                                             final Qualifiers valueQualifiers,
-                                            final Path2 valuePath) {
+                                            final Path valuePath) {
     return isSelectable(referenceQualifiers, valueQualifiers) && isSelectable(absoluteReferencePath, valuePath);
   }
 
@@ -721,26 +721,26 @@ public class Settings<T> implements AutoCloseable, ConfiguredSupplier<T> {
    * <em>selectable</em> (for further consideration and scoring) with
    * respect to the supplied {@code absoluteReferencePath}.
    *
-   * <p>This method calls {@link Path2#endsWith(Path2, BiPredicate)} on
+   * <p>This method calls {@link Path#endsWith(Path, BiPredicate)} on
    * the supplied {@code absoluteReferencePath} with {@code valuePath}
-   * as its {@link Path2}-typed first argument, and a {@link
+   * as its {@link Path}-typed first argument, and a {@link
    * BiPredicate} that returns {@code true} if and only if all of the
    * following conditions are true:</p>
    *
    * <ul>
    *
-   * <li>Each {@link Accessor2} has a {@linkplain Accessor2#name()
+   * <li>Each {@link Accessor} has a {@linkplain Accessor#name()
    * name} that is either {@linkplain String#isEmpty() empty} or equal
    * to the other's.</li>
    *
-   * <li>Either {@link Accessor2} has a {@link Accessor2#type() Type}
-   * that is {@code null}, or the first {@link Accessor2}'s {@link
-   * Accessor2#type() Type} {@link AssignableType#of(Type) is
+   * <li>Either {@link Accessor} has a {@link Accessor#type() Type}
+   * that is {@code null}, or the first {@link Accessor}'s {@link
+   * Accessor#type() Type} {@link AssignableType#of(Type) is
    * assignable from} the second's.</li>
    *
-   * <li>Either {@link Accessor2} has {@code null} {@linkplain
-   * Accessor2#parameters() parameters} or each of the first {@link
-   * Accessor2}'s {@linkplain Accessor2#parameters() parameters}
+   * <li>Either {@link Accessor} has {@code null} {@linkplain
+   * Accessor#parameters() parameters} or each of the first {@link
+   * Accessor}'s {@linkplain Accessor#parameters() parameters}
    * {@linkplain Class#isAssignableFrom(Class) is assignable from} the
    * second's corresponding parameter.</li>
    *
@@ -750,9 +750,9 @@ public class Settings<T> implements AutoCloseable, ConfiguredSupplier<T> {
    * an exception.</p>
    *
    * @param absoluteReferencePath the reference path; must not be
-   * {@code null}; must be {@linkplain Path2#isAbsolute() absolute}
+   * {@code null}; must be {@linkplain Path#isAbsolute() absolute}
    *
-   * @param valuePath the {@link Path2} to test; must not be {@code
+   * @param valuePath the {@link Path} to test; must not be {@code
    * null}
    *
    * @return {@code true} if {@code valuePath} is selectable (for
@@ -763,11 +763,11 @@ public class Settings<T> implements AutoCloseable, ConfiguredSupplier<T> {
    * null}
    *
    * @exception IllegalArgumentException if {@code
-   * absoluteReferencePath} {@linkplain Path2#isAbsolute() is not
+   * absoluteReferencePath} {@linkplain Path#isAbsolute() is not
    * absolute}
    */
-  protected static final boolean isSelectable(final Path2 absoluteReferencePath,
-                                              final Path2 valuePath) {
+  protected static final boolean isSelectable(final Path absoluteReferencePath,
+                                              final Path valuePath) {
     if (!absoluteReferencePath.isAbsolute()) {
       throw new IllegalArgumentException("absoluteReferencePath: " + absoluteReferencePath);
     }
@@ -808,7 +808,7 @@ public class Settings<T> implements AutoCloseable, ConfiguredSupplier<T> {
   // Matches accessor names (equality), parameter types
   // (isAssignableFrom) and Types (AssignableType.isAssignable()).
   // Argument values themselves are deliberately ignored.
-  private static final class AccessorsMatchBiPredicate implements BiPredicate<Accessor2, Accessor2> {
+  private static final class AccessorsMatchBiPredicate implements BiPredicate<Accessor, Accessor> {
 
     private static final AccessorsMatchBiPredicate INSTANCE = new AccessorsMatchBiPredicate();
 
@@ -816,8 +816,8 @@ public class Settings<T> implements AutoCloseable, ConfiguredSupplier<T> {
       super();
     }
 
-    @Override // BiPredicate<Accessor2, Accessor2>
-    public final boolean test(final Accessor2 a1, final Accessor2 a2) {
+    @Override // BiPredicate<Accessor, Accessor>
+    public final boolean test(final Accessor a1, final Accessor a2) {
       final String name1 = a1.name();
       final String name2 = a2.name();
       if (!name1.isEmpty() && !name2.isEmpty() && !name1.equals(name2)) {

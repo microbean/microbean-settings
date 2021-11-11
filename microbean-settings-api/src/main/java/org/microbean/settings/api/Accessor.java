@@ -23,12 +23,12 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
-public final class Accessor2 {
+public final class Accessor {
 
-  private static final Accessor2 EMPTY = new Accessor2("", null, null, null, false);
+  private static final Accessor EMPTY = new Accessor("", null, null, null, false);
 
-  private static final Accessor2 ROOT = new Accessor2("", void.class, null, null, true);
-  
+  private static final Accessor ROOT = new Accessor("", void.class, null, null, true);
+
   private final String name;
 
   private final Optional<Type> type;
@@ -37,18 +37,18 @@ public final class Accessor2 {
 
   private final Optional<List<String>> arguments;
 
-  public Accessor2(final String name,
-                   final Type type,
-                   final List<? extends Class<?>> parameters,
-                   final List<? extends String> arguments) {
+  public Accessor(final String name,
+                  final Type type,
+                  final List<? extends Class<?>> parameters,
+                  final List<? extends String> arguments) {
     this(name, type, parameters, arguments, false);
   }
 
-  private Accessor2(final String name,
-                    final Type type,
-                    final List<? extends Class<?>> parameters,
-                    final List<? extends String> arguments,
-                    final boolean root) {
+  private Accessor(final String name,
+                   final Type type,
+                   final List<? extends Class<?>> parameters,
+                   final List<? extends String> arguments,
+                   final boolean root) {
     super();
     this.name = name == null ? "" : name;
     if (type == null) {
@@ -77,7 +77,7 @@ public final class Accessor2 {
   }
 
   /**
-   * Returns the non-{@code null} name of this {@link Accessor2}.
+   * Returns the non-{@code null} name of this {@link Accessor}.
    *
    * <p><strong>Note:</strong> if the resulting {@link String}
    * {@linkplain String#isEmpty() is empty}, then during any matching
@@ -86,7 +86,7 @@ public final class Accessor2 {
    *
    * <p>This method never returns {@code null}.</p>
    *
-   * @return the non-{@code null} name of this {@link Accessor2},
+   * @return the non-{@code null} name of this {@link Accessor},
    * which may {@linkplain String#isEmpty() be empty} indicating the
    * special semantics described above
    *
@@ -120,7 +120,7 @@ public final class Accessor2 {
   public final boolean isEmpty() {
     return this.name().isEmpty();
   }
-  
+
   @Override
   public final int hashCode() {
     return Objects.hash(this.name(), this.type(), this.parameters(), this.arguments());
@@ -131,8 +131,8 @@ public final class Accessor2 {
     if (other == this) {
       return true;
     } else if (other != null && this.getClass() == other.getClass()) {
-      final Accessor2 her = (Accessor2)other;
-      return        
+      final Accessor her = (Accessor)other;
+      return
         Objects.equals(this.name(), her.name()) &&
         Objects.equals(this.type(), her.type()) &&
         Objects.equals(this.parameters(), her.parameters()) &&
@@ -171,40 +171,40 @@ public final class Accessor2 {
    * Static methods.
    */
 
-  
-  public static final Accessor2 root() {
+
+  public static final Accessor root() {
     return ROOT;
   }
-  
-  public static final Accessor2 of() {
+
+  public static final Accessor of() {
     return EMPTY;
   }
 
-  public static final Accessor2 of(final String name,
-                                   final Type type,
-                                   final List<? extends Class<?>> parameters,
-                                   final List<? extends String> arguments) {
-    return new Accessor2(name, type, parameters, arguments);
+  public static final Accessor of(final String name,
+                                  final Type type,
+                                  final List<? extends Class<?>> parameters,
+                                  final List<? extends String> arguments) {
+    return new Accessor(name, type, parameters, arguments);
   }
 
-  public static final Accessor2 of(final String name) {
-    return new Accessor2(name, null, null, null);
+  public static final Accessor of(final String name) {
+    return new Accessor(name, null, null, null);
   }
 
-  public static final Accessor2 of(final String name,
-                                   final Type type) {
-    return new Accessor2(name, type, null, null);
+  public static final Accessor of(final String name,
+                                  final Type type) {
+    return new Accessor(name, type, null, null);
   }
 
-  public static final Accessor2 of(final Type type) {
-    return new Accessor2("", type, null, null);
+  public static final Accessor of(final Type type) {
+    return new Accessor("", type, null, null);
   }
 
-  public static final Accessor2 of(final String name,
-                                   final Type type,
-                                   final Class<?> parameter,
-                                   final String argument) {
-    return new Accessor2(name, type, List.of(parameter), List.of(argument));
+  public static final Accessor of(final String name,
+                                  final Type type,
+                                  final Class<?> parameter,
+                                  final String argument) {
+    return new Accessor(name, type, List.of(parameter), List.of(argument));
   }
 
   public static final class Parser {
@@ -214,15 +214,15 @@ public final class Accessor2 {
     private static final int TYPE = 2;
 
     private static final int ARGUMENTS = 3;
-    
+
     private final ClassLoader cl;
-    
+
     public Parser(final ClassLoader cl) {
       super();
       this.cl = Objects.requireNonNull(cl, "cl");
     }
 
-    public final Accessor2 parse(final CharSequence s) throws ClassNotFoundException {
+    public final Accessor parse(final CharSequence s) throws ClassNotFoundException {
       int state = NAME;
       final StringBuilder sb = new StringBuilder();
       String name = null;
@@ -296,7 +296,7 @@ public final class Accessor2 {
         case ',':
           switch (state) {
           case NAME:
-            sb.append((char)c);          
+            sb.append((char)c);
             break;
           case ARGUMENTS:
             assert name != null;
@@ -322,7 +322,7 @@ public final class Accessor2 {
             break;
           case ARGUMENTS:
             if (!sb.isEmpty()) {
-              params.add(loadClass(sb.toString()));            
+              params.add(loadClass(sb.toString()));
               sb.setLength(0);
             }
             if (args == null) {
@@ -345,7 +345,7 @@ public final class Accessor2 {
             break;
           case ARGUMENTS:
             sb.append((char)c);
-            break;            
+            break;
           case TYPE:
             if (!sb.isEmpty()) {
               throw new IllegalArgumentException(iae(s, i));
@@ -354,8 +354,8 @@ public final class Accessor2 {
           default:
             throw new IllegalStateException();
           }
-          break;            
-          
+          break;
+
         default:
           sb.append((char)c);
           break;
@@ -369,7 +369,7 @@ public final class Accessor2 {
         name = sb.toString();
         sb.setLength(0);
         break;
-        
+
       case ARGUMENTS:
         if (!sb.isEmpty()) {
           if (params == null) {
@@ -386,7 +386,7 @@ public final class Accessor2 {
         type = loadType(sb.toString());
         sb.setLength(0);
         break;
-        
+
       default:
         throw new IllegalStateException();
       }
@@ -395,12 +395,12 @@ public final class Accessor2 {
 
       if (name.isEmpty() && params == null && args == null) {
         if (type == null) {
-          return Accessor2.of();
+          return Accessor.of();
         } else if (type == void.class) {
-          return Accessor2.root();
+          return Accessor.root();
         }
       }
-      return new Accessor2(name, type, params, args);
+      return new Accessor(name, type, params, args);
     }
 
     private final String iae(final CharSequence s, final int pos) {
@@ -411,7 +411,7 @@ public final class Accessor2 {
       sb.append('^').append(System.lineSeparator());
       return sb.toString();
     }
-    
+
     private final Class<?> loadClass(final String s) throws ClassNotFoundException {
       return switch (s) {
       case "boolean" -> boolean.class;
@@ -425,11 +425,11 @@ public final class Accessor2 {
       default -> Class.forName(s, false, this.cl);
       };
     }
-    
+
     private final Type loadType(final String s) throws ClassNotFoundException {
       return loadClass(s);
     }
-    
+
   }
 
 }
