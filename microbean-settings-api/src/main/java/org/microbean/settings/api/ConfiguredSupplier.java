@@ -29,6 +29,8 @@ import org.microbean.development.annotation.OverridingDiscouraged;
 import org.microbean.development.annotation.OverridingEncouraged;
 import org.microbean.development.annotation.SubordinateTo;
 
+import org.microbean.settings.api.Path.Element;
+
 /**
  * An {@link OptionalSupplier} of configured objects.
  *
@@ -74,7 +76,7 @@ public interface ConfiguredSupplier<T> extends OptionalSupplier<T> {
    * request.</p>
    *
    * <p>Path transliteration is needed because the {@link
-   * Accessor#name() name()} components of {@link Accessor}s may
+   * Element#name() name()} components of {@link Element}s may
    * unintentionally clash when two components are combined into a
    * single application.</p>
    *
@@ -144,33 +146,33 @@ public interface ConfiguredSupplier<T> extends OptionalSupplier<T> {
 
   @OverridingDiscouraged
   public default <U> ConfiguredSupplier<U> plus(final Class<? extends U> type) {
-    return this.plus(Accessor.of(type));
+    return this.plus(Element.of(type));
   }
 
   @OverridingDiscouraged
   @SuppressWarnings("unchecked")
   public default <U> ConfiguredSupplier<U> plus(final Type type) {
-    return this.plus(Accessor.of(type));
+    return this.plus(Element.of(type));
   }
 
   @Convenience
   @OverridingDiscouraged
-  public default <U> ConfiguredSupplier<U> plus(final String accessor,
+  public default <U> ConfiguredSupplier<U> plus(final String element,
                                                 final Class<? extends U> type) {
-    return this.plus(accessor.isEmpty() ? Accessor.of(type) : Accessor.of(accessor, type));
+    return this.plus(element.isEmpty() ? Element.of(type) : Element.of(element, type));
   }
 
 
   @Convenience
   @OverridingDiscouraged
   @SuppressWarnings("unchecked")
-  public default <U> ConfiguredSupplier<U> plus(final String accessor,
+  public default <U> ConfiguredSupplier<U> plus(final String element,
                                                 final Type type) {
-    return this.plus(accessor.isEmpty() ? Accessor.of(type) : Accessor.of(accessor, type));
+    return this.plus(element.isEmpty() ? Element.of(type) : Element.of(element, type));
   }
 
-  public default <U> ConfiguredSupplier<U> plus(final Accessor accessor) {
-    return this.plus(Path.of(accessor));
+  public default <U> ConfiguredSupplier<U> plus(final Element element) {
+    return this.plus(Path.of(element));
   }
 
   @OverridingDiscouraged
@@ -182,7 +184,7 @@ public interface ConfiguredSupplier<T> extends OptionalSupplier<T> {
   @OverridingDiscouraged
   public default <U> ConfiguredSupplier<U> of(final ConfiguredSupplier<?> parent,
                                               final Class<? extends U> type) {
-    return this.of(parent, Accessor.of(type));
+    return this.of(parent, Element.of(type));
   }
 
   @Convenience
@@ -190,15 +192,15 @@ public interface ConfiguredSupplier<T> extends OptionalSupplier<T> {
   @SuppressWarnings("unchecked")
   public default <U> ConfiguredSupplier<U> of(final ConfiguredSupplier<?> parent,
                                               final Type type) {
-    return this.of(parent, Accessor.of(type));
+    return this.of(parent, Element.of(type));
   }
 
   @Convenience
   @OverridingDiscouraged
   public default <U> ConfiguredSupplier<U> of(final ConfiguredSupplier<?> parent,
-                                              final String accessor,
+                                              final String element,
                                               final Class<? extends U> type) {
-    return this.of(parent, accessor.isEmpty() ? Accessor.of(type) : Accessor.of(accessor, type));
+    return this.of(parent, element.isEmpty() ? Element.of(type) : Element.of(element, type));
   }
 
 
@@ -206,16 +208,16 @@ public interface ConfiguredSupplier<T> extends OptionalSupplier<T> {
   @OverridingDiscouraged
   @SuppressWarnings("unchecked")
   public default <U> ConfiguredSupplier<U> of(final ConfiguredSupplier<?> parent,
-                                              final String accessor,
+                                              final String element,
                                               final Type type) {
-    return this.of(parent, accessor.isEmpty() ? Accessor.of(type) : Accessor.of(accessor, type));
+    return this.of(parent, element.isEmpty() ? Element.of(type) : Element.of(element, type));
   }
 
   @Convenience
   @OverridingDiscouraged
   public default <U> ConfiguredSupplier<U> of(final ConfiguredSupplier<?> parent,
-                                              final Accessor accessor) {
-    return this.of(parent, Path.root().plus(accessor)); // root().plus() is critical here
+                                              final Element element) {
+    return this.of(parent, Path.root().plus(element)); // root().plus() is critical here
   }
 
   @OverridingDiscouraged
@@ -229,35 +231,35 @@ public interface ConfiguredSupplier<T> extends OptionalSupplier<T> {
   @Convenience
   @OverridingDiscouraged
   public default <U> ConfiguredSupplier<U> of(final Class<? extends U> type) {
-    return this.of(Accessor.of(type));
+    return this.of(Element.of(type));
   }
 
 
   @Convenience
   @OverridingDiscouraged
   public default <U> ConfiguredSupplier<U> of(final Type type) {
-    return this.of(Accessor.of(type));
+    return this.of(Element.of(type));
   }
 
   @Convenience
   @OverridingDiscouraged
-  public default <U> ConfiguredSupplier<U> of(final String accessor,
+  public default <U> ConfiguredSupplier<U> of(final String element,
                                               final Class<? extends U> type) {
-    return this.of(accessor.isEmpty() ? Accessor.of(type) : Accessor.of(accessor, type));
+    return this.of(element.isEmpty() ? Element.of(type) : Element.of(element, type));
   }
 
   @Convenience
   @OverridingDiscouraged
   @SuppressWarnings("unchecked")
-  public default <U> ConfiguredSupplier<U> of(final String accessor,
+  public default <U> ConfiguredSupplier<U> of(final String element,
                                               final Type type) {
-    return this.of(accessor.isEmpty() ? Accessor.of(type) : Accessor.of(accessor, type));
+    return this.of(element.isEmpty() ? Element.of(type) : Element.of(element, type));
   }
 
   @Convenience
   @OverridingDiscouraged
-  public default <U> ConfiguredSupplier<U> of(final Accessor accessor) {
-    return this.of(Path.root().plus(accessor)); // root().plus() is critical here
+  public default <U> ConfiguredSupplier<U> of(final Element element) {
+    return this.of(Path.root().plus(element)); // root().plus() is critical here
   }
 
   @OverridingDiscouraged

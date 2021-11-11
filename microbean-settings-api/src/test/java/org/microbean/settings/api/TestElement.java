@@ -31,6 +31,8 @@ import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
 
+import org.microbean.settings.api.Path.Element;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -38,57 +40,57 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-final class TestAccessor {
+final class TestElement {
 
   private static final StackWalker stackWalker = StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE);
 
-  private TestAccessor() {
+  private TestElement() {
     super();
   }
 
   @Test
   final void testParseRoot() throws ClassNotFoundException {
-    assertSame(Accessor.root(), new Accessor.Parser(this.getClass().getClassLoader()).parse(":void"));
+    assertSame(Element.root(), new Element.Parser(this.getClass().getClassLoader()).parse(":void"));
   }
 
   @Test
   final void testParseEmpty() throws ClassNotFoundException {
-    assertSame(Accessor.of(), new Accessor.Parser(this.getClass().getClassLoader()).parse(""));
+    assertSame(Element.root(), new Element.Parser(this.getClass().getClassLoader()).parse(""));
   }
 
   @Test
   final void testParseFoo() throws ClassNotFoundException {
-    assertEquals(Accessor.of("foo"), new Accessor.Parser(this.getClass().getClassLoader()).parse("foo"));
+    assertEquals(Element.of("foo"), new Element.Parser(this.getClass().getClassLoader()).parse("foo"));
   }
 
   @Test
   final void testParseFooStringNoParamsNoArgs() throws ClassNotFoundException {
-    assertEquals(Accessor.of("foo", String.class),
-                 new Accessor.Parser(this.getClass().getClassLoader()).parse("foo:java.lang.String"));
+    assertEquals(Element.of("foo", String.class),
+                 new Element.Parser(this.getClass().getClassLoader()).parse("foo:java.lang.String"));
   }
 
   @Test
   final void testParseFooStringEmptyParamsEmptyArgs() throws ClassNotFoundException {
-    assertEquals(Accessor.of("foo", String.class, List.of(), List.of()),
-                 new Accessor.Parser(this.getClass().getClassLoader()).parse("foo():java.lang.String"));
+    assertEquals(Element.of("foo", String.class, List.of(), List.of()),
+                 new Element.Parser(this.getClass().getClassLoader()).parse("foo():java.lang.String"));
   }
 
   @Test
   final void testParseFooStringOneParamNoArgs() throws ClassNotFoundException {
-    assertEquals(Accessor.of("foo", String.class, List.of(String.class), null),
-                 new Accessor.Parser(this.getClass().getClassLoader()).parse("foo(java.lang.String):java.lang.String"));
+    assertEquals(Element.of("foo", String.class, List.of(String.class), null),
+                 new Element.Parser(this.getClass().getClassLoader()).parse("foo(java.lang.String):java.lang.String"));
   }
 
   @Test
   final void testParseFooStringTwoParamsTwoArgs() throws ClassNotFoundException {
-    assertEquals(Accessor.of("foo", String.class, List.of(String.class, Integer.class), List.of("goop", "4")),
-                 new Accessor.Parser(this.getClass().getClassLoader()).parse("foo(java.lang.String=goop,java.lang.Integer=4):java.lang.String"));
+    assertEquals(Element.of("foo", String.class, List.of(String.class, Integer.class), List.of("goop", "4")),
+                 new Element.Parser(this.getClass().getClassLoader()).parse("foo(java.lang.String=goop,java.lang.Integer=4):java.lang.String"));
   }
 
   @Test
   final void testParseFooStringBadComma() throws ClassNotFoundException {
     assertThrows(IllegalArgumentException.class,
-                 () -> new Accessor.Parser(this.getClass().getClassLoader()).parse("foo(,java.lang.Integer=4):java.lang.String"));
+                 () -> new Element.Parser(this.getClass().getClassLoader()).parse("foo(,java.lang.Integer=4):java.lang.String"));
   }
 
 }

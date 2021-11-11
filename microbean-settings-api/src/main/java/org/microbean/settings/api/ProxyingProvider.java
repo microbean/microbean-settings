@@ -35,6 +35,8 @@ import java.util.function.Supplier;
 
 import org.microbean.development.annotation.Convenience;
 
+import org.microbean.settings.api.Path.Element;
+
 import org.microbean.type.Types;
 
 public class ProxyingProvider extends AbstractProvider<Object> {
@@ -160,11 +162,11 @@ public class ProxyingProvider extends AbstractProvider<Object> {
                              new Class<?>[] { classToProxy },
                              new Handler(caller,
                                          absolutePath,
-                                         (m, args) -> Path.of(Accessor.of(propertyName(m.getName(),
-                                                                                       boolean.class == m.getReturnType()),
-                                                                          m.getGenericReturnType(),
-                                                                          Arrays.asList(m.getParameterTypes()),
-                                                                          stringArgs(args)))));
+                                         (m, args) -> Path.of(Element.of(propertyName(m.getName(),
+                                                                                      boolean.class == m.getReturnType()),
+                                                                         m.getGenericReturnType(),
+                                                                         Arrays.asList(m.getParameterTypes()),
+                                                                         stringArgs(args)))));
   }
 
 

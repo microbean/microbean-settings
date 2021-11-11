@@ -31,17 +31,17 @@ public class SystemPropertiesQualifiersProvider extends AbstractProvider<Qualifi
 
   @Override // AbstractProvider<Qualifiers>
   public Value<?> get(final ConfiguredSupplier<?> supplier, final Path path) {
-
-    // Use the configuration system to find a String under the path /qualifierPrefix.
+    // Use the configuration system to find a String under the path
+    // :void/qualifierPrefix:java.lang.String.
     final String prefix = supplier.of("qualifierPrefix", String.class).orElse("qualifier.");
-
+    final int prefixLength = prefix.length();
     final Properties systemProperties = System.getProperties();
     final SortedMap<String, String> map = new TreeMap<>();
     for (final String propertyName : systemProperties.stringPropertyNames()) {
-      if (propertyName.startsWith(prefix) && propertyName.length() > prefix.length()) {
+      if (propertyName.startsWith(prefix) && propertyName.length() > prefixLength) {
         final String qualifierValue = systemProperties.getProperty(propertyName);
         if (qualifierValue != null) {
-          map.put(propertyName.substring(prefix.length()), qualifierValue);
+          map.put(propertyName.substring(prefixLength), qualifierValue);
         }
       }
     }

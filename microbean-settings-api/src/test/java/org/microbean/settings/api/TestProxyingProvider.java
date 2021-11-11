@@ -21,6 +21,8 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
+import org.microbean.settings.api.Path.Element;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -90,9 +92,9 @@ final class TestProxyingProvider {
                                       final Path path) {
       if (super.isSelectable(supplier, path)) {
         assertSame(Wheel.class, path.type());
-        final Accessor a = path.get(path.size() - 1);
-        final List<String> arguments = a.arguments().orElse(null);
-        return "wheel".equals(a.name()) && arguments != null && !arguments.isEmpty() && "LR".equals(arguments.get(0));
+        final Element e = path.get(path.size() - 1);
+        final List<String> arguments = e.arguments().orElse(null);
+        return "wheel".equals(e.name()) && arguments != null && !arguments.isEmpty() && "LR".equals(arguments.get(0));
       } else {
         return false;
       }
@@ -101,15 +103,15 @@ final class TestProxyingProvider {
     public final Value<Wheel> get(final ConfiguredSupplier<?> supplier,
                                   final Path path) {
       assertSame(Wheel.class, path.type());
-      final Accessor a = path.get(path.size() - 1);
-      assertEquals("wheel", a.name());
-      assertEquals(List.of(String.class), a.parameters().orElseThrow());
-      assertEquals("LR", a.arguments().orElseThrow().get(0));
+      final Element e = path.get(path.size() - 1);
+      assertEquals("wheel", e.name());
+      assertEquals(List.of(String.class), e.parameters().orElseThrow());
+      assertEquals("LR", e.arguments().orElseThrow().get(0));
       return new Value<>(Qualifiers.of(),
-                         Path.of(Accessor.of("wheel",
-                                             Wheel.class,
-                                             List.of(String.class),
-                                             List.of("LR"))),
+                         Path.of(Element.of("wheel",
+                                            Wheel.class,
+                                            List.of(String.class),
+                                            List.of("LR"))),
                          new Wheel() {
                            @Override
                            public final int getDiameterInInches() {

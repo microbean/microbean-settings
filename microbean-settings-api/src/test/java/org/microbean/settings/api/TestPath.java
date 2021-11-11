@@ -31,6 +31,8 @@ import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
 
+import org.microbean.settings.api.Path.Element;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -59,20 +61,20 @@ final class TestPath {
 
   @Test
   final void testParseFoo() throws ClassNotFoundException {
-    assertEquals(Path.of(Accessor.of("foo")), new Path.Parser(this.getClass().getClassLoader()).parse("foo"));
+    assertEquals(Path.of(Element.of("foo")), new Path.Parser(this.getClass().getClassLoader()).parse("foo"));
   }
 
   @Test
   final void testPathParse() throws ClassNotFoundException {
-    assertEquals(Path.of(List.of(Accessor.of(),
-                                 Accessor.of("foo", String.class, List.of(String.class, Integer.class), List.of("goop", "4")))),
+    assertEquals(Path.of(List.of(Element.root(),
+                                 Element.of("foo", String.class, List.of(String.class, Integer.class), List.of("goop", "4")))),
                  new Path.Parser(this.getClass().getClassLoader()).parse("/foo(java.lang.String=goop,java.lang.Integer=4):java.lang.String"));
   }
 
   @Test
   final void testPathParseWithEscapedSlash() throws ClassNotFoundException {
-    assertEquals(Path.of(List.of(Accessor.of(),
-                                 Accessor.of("/foo", String.class, List.of(String.class, Integer.class), List.of("goop", "4")))),
+    assertEquals(Path.of(List.of(Element.root(),
+                                 Element.of("/foo", String.class, List.of(String.class, Integer.class), List.of("goop", "4")))),
                  new Path.Parser(this.getClass().getClassLoader()).parse("/\\/foo(java.lang.String=goop,java.lang.Integer=4):java.lang.String"));
   }
 

@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.StringJoiner;
 
 import java.util.function.BiFunction;
@@ -45,7 +46,7 @@ public final class Path {
 
   private static final StackWalker stackWalker = StackWalker.getInstance();
 
-  private static final Path ROOT = new Path(List.of(Accessor.root()), true);
+  private static final Path ROOT = new Path(List.of(Element.root()), true);
 
 
   /*
@@ -53,7 +54,7 @@ public final class Path {
    */
 
 
-  private final List<Accessor> accessors;
+  private final List<Element> elements;
 
   private final boolean transliterated;
 
@@ -63,22 +64,22 @@ public final class Path {
    */
 
 
-  private Path(final List<? extends Accessor> accessors, final boolean transliterated) {
+  private Path(final List<? extends Element> elements, final boolean transliterated) {
     super();
-    final int size = accessors.size();
+    final int size = elements.size();
     switch (size) {
     case 0:
-      throw new IllegalArgumentException("accessors.isEmpty()");
+      throw new IllegalArgumentException("elements.isEmpty()");
     default:
-      final List<Accessor> newList = new ArrayList<>(size);
+      final List<Element> newList = new ArrayList<>(size);
       for (int i = 0; i < size; i++) {
-        final Accessor a = Objects.requireNonNull(accessors.get(i));
-        if (i != 0 && (a.isRoot() || i + 1 >= size && a.type().isEmpty())) {
-          throw new IllegalArgumentException("accessors: " + accessors);
+        final Element e = Objects.requireNonNull(elements.get(i));
+        if (i != 0 && (e.isRoot() || i + 1 >= size && e.type().isEmpty())) {
+          throw new IllegalArgumentException("elements: " + elements);
         }
-        newList.add(a);
+        newList.add(e);
       }
-      this.accessors = Collections.unmodifiableList(newList);
+      this.elements = Collections.unmodifiableList(newList);
       this.transliterated = transliterated;
     }
   }
@@ -94,26 +95,24 @@ public final class Path {
   }
 
   @Experimental
-  public final Path transliterate(final BiFunction<? super String, ? super Accessor, ? extends Accessor> f) {
-    if (f == null || this.transliterated) {
+  public final Path transliterate(final BiFunction<? super String, ? super Element, ? extends Element> f) {
+    if (f == null) {
+      return new Path(this.elements, true);
+    } else if (this.transliterated) {
       return this;
     } else {
       final String userPackageName = stackWalker.walk(Path::findUserPackageName);
       final int size = this.size();
-      final List<Accessor> newAccessors = new ArrayList<>(size);
+      final List<Element> newElements = new ArrayList<>(size);
       for (int i = 0; i < size; i++) {
-        newAccessors.add(f.apply(userPackageName, this.get(i)));
+        newElements.add(f.apply(userPackageName, this.get(i)));
       }
-      return new Path(newAccessors, true);
+      return new Path(newElements, true);
     }
   }
 
-  public final boolean isEmpty() {
-    return this.accessors.isEmpty();
-  }
-
   public final boolean isRoot() {
-    return this.size() == 1 && this.first().isRoot();
+    return this.isAbsolute() && this.size() == 1;
   }
 
   public final boolean isAbsolute() {
@@ -121,47 +120,47 @@ public final class Path {
   }
 
   public final int size() {
-    return this.accessors.size();
+    return this.elements.size();
   }
 
   public final Path plus(final String name, final Type type) {
-    return this.plus(Accessor.of(name, type));
+    return this.plus(Element.of(name, type));
   }
 
-  public final Path plus(final Accessor accessor) {
-    return this.plus(List.of(accessor));
+  public final Path plus(final Element element) {
+    return this.plus(List.of(element));
   }
 
   public final Path plus(final Path path) {
-    return this.plus(path.accessors);
+    return this.plus(path.elements);
   }
 
-  public final Path plus(final List<? extends Accessor> accessors) {
-    if (accessors.isEmpty()) {
+  public final Path plus(final List<? extends Element> elements) {
+    if (elements.isEmpty()) {
       return this;
     } else {
-      final List<Accessor> newAccessors = new ArrayList<>(this.accessors.size() + accessors.size());
-      newAccessors.addAll(this.accessors);
-      newAccessors.addAll(accessors);
-      return new Path(newAccessors, false);
+      final List<Element> newElements = new ArrayList<>(this.size() + elements.size());
+      newElements.addAll(this.elements);
+      newElements.addAll(elements);
+      return new Path(newElements, false);
     }
   }
 
-  public final Accessor get(final int index) {
-    return this.accessors.get(index);
+  public final Element get(final int index) {
+    return this.elements.get(index);
   }
 
-  public final Accessor first() {
+  public final Element first() {
     return this.get(0);
   }
 
-  public final Accessor last() {
-    return this.accessors.get(this.size() - 1);
+  public final Element last() {
+    return this.get(this.size() - 1);
   }
 
   public final Type type() {
     final Type type = this.last().type().orElse(null);
-    assert type != null : "Untyped final Accessor: " + this.last();
+    assert type != null : "Untyped final Element: " + this.last();
     return type;
   }
 
@@ -170,16 +169,16 @@ public final class Path {
   }
 
   public final int indexOf(final Path other) {
-    return other == this ? 0 : Collections.indexOfSubList(this.accessors, other.accessors);
+    return other == this ? 0 : Collections.indexOfSubList(this.elements, other.elements);
   }
 
-  public final int indexOf(final Path path, final BiPredicate<? super Accessor, ? super Accessor> p) {
+  public final int indexOf(final Path path, final BiPredicate<? super Element, ? super Element> p) {
     final int pathSize = path.size();
     final int sizeDiff = this.size() - pathSize;
     OUTER_LOOP:
     for (int i = 0; i <= sizeDiff; i++) {
       for (int j = 0, k = i; j < pathSize; j++, k++) {
-        if (!p.test(this.accessors.get(k), path.accessors.get(j))) {
+        if (!p.test(this.elements.get(k), path.elements.get(j))) {
           continue OUTER_LOOP;
         }
       }
@@ -189,16 +188,16 @@ public final class Path {
   }
 
   public final int lastIndexOf(final Path other) {
-    return other == this ? 0 : Collections.lastIndexOfSubList(this.accessors, other.accessors);
+    return other == this ? 0 : Collections.lastIndexOfSubList(this.elements, other.elements);
   }
 
-  public final int lastIndexOf(final Path path, final BiPredicate<? super Accessor, ? super Accessor> p) {
+  public final int lastIndexOf(final Path path, final BiPredicate<? super Element, ? super Element> p) {
     final int pathSize = path.size();
     final int sizeDiff = this.size() - pathSize;
     OUTER_LOOP:
     for (int i = sizeDiff; i >= 0; i--) {
       for (int j = 0, k = i; j < pathSize; j++, k++) {
-        if (!p.test(this.accessors.get(k), path.accessors.get(j))) {
+        if (!p.test(this.elements.get(k), path.elements.get(j))) {
           continue OUTER_LOOP;
         }
       }
@@ -217,7 +216,7 @@ public final class Path {
     }
   }
 
-  public final boolean startsWith(final Path other, final BiPredicate<? super Accessor, ? super Accessor> p) {
+  public final boolean startsWith(final Path other, final BiPredicate<? super Element, ? super Element> p) {
     return this.indexOf(other, p) == 0;
   }
 
@@ -232,30 +231,32 @@ public final class Path {
     }
   }
 
-  public final boolean endsWith(final Path other, final BiPredicate<? super Accessor, ? super Accessor> p) {
+  public final boolean endsWith(final Path other, final BiPredicate<? super Element, ? super Element> p) {
     final int lastIndex = this.lastIndexOf(other, p);
     return lastIndex >= 0 && lastIndex + other.size() == this.size();
   }
 
   @Override // Object
   public final int hashCode() {
-    return this.accessors.hashCode();
+    return this.elements.hashCode();
   }
 
+  @Override // Object
   public final boolean equals(final Object other) {
     if (other == this) {
       return true;
     } else if (other != null && this.getClass() == other.getClass()) {
-      return this.accessors.equals(((Path)other).accessors);
+      return this.elements.equals(((Path)other).elements);
     } else {
       return false;
     }
   }
 
+  @Override // Object
   public final String toString() {
     final StringJoiner sj = new StringJoiner("/");
-    for (final Object accessor : this.accessors) {
-      sj.add(accessor.toString());
+    for (final Object element : this.elements) {
+      sj.add(element.toString());
     }
     return sj.toString();
   }
@@ -270,26 +271,22 @@ public final class Path {
     return ROOT;
   }
 
-  public static final Path of(final Accessor accessor) {
-    return of(List.of(accessor));
+  public static final Path of(final Element element) {
+    return of(List.of(element));
   }
 
-  public static final Path of(final List<? extends Accessor> accessors) {
-    if (accessors.isEmpty()) {
-      throw new IllegalArgumentException("accessors.isEmpty()");
-    } else if (accessors.size() == 1 && accessors.get(0).isRoot()) {
+  public static final Path of(final List<? extends Element> elements) {
+    if (elements.isEmpty()) {
+      throw new IllegalArgumentException("elements.isEmpty()");
+    } else if (elements.size() == 1 && elements.get(0).isRoot()) {
       return root();
     } else {
-      return new Path(accessors, false);
+      return new Path(elements, false);
     }
   }
 
-  public static final Path of(final String name) {
-    return new Path(List.of(Accessor.of(name, null, (List<? extends Class<?>>)null, (List<? extends String>)null)), false);
-  }
-
   public static final Path of(final Type type) {
-    return new Path(List.of(Accessor.of("", type, (List<? extends Class<?>>)null, (List<? extends String>)null)), false);
+    return new Path(List.of(Element.of("", type, (List<? extends Class<?>>)null, (List<? extends String>)null)), false);
   }
 
   private static final String findUserPackageName(final Stream<StackFrame> stream) {
@@ -313,23 +310,501 @@ public final class Path {
     }
   }
 
+
+  /*
+   * Inner and nested classes.
+   */
+
+
+  public static final class Element {
+
+
+    /*
+     * Static fields.
+     */
+
+
+    private static final Element ROOT = new Element("", void.class, null, null, true);
+
+
+    /*
+     * Instance fields.
+     */
+
+
+    private final String name;
+
+    private final Optional<Type> type;
+
+    private final Optional<List<Class<?>>> parameters;
+
+    private final Optional<List<String>> arguments;
+
+
+    /*
+     * Constructors.
+     */
+
+
+    private Element(final String name,
+                    final Type type,
+                    final List<? extends Class<?>> parameters,
+                    final List<? extends String> arguments,
+                    final boolean root) {
+      super();
+      if (type == null) {
+        if (name == null || name.isEmpty()) {
+          throw new IllegalArgumentException("An empty name may not be paired with a null type");
+        }
+        this.name = name;
+        this.type = Optional.empty();
+      } else if (!root && type == void.class) {
+        throw new IllegalArgumentException("type must not be void");
+      } else {
+        this.type = Optional.of(type);
+        this.name = name == null ? "" : name;
+      }
+      if (parameters == null) {
+        this.parameters = Optional.empty();
+        if (arguments == null) {
+          this.arguments = Optional.empty();
+        } else {
+          throw new IllegalArgumentException("arguments: " + arguments + "; parameters: null");
+        }
+      } else if (arguments == null) {
+        this.parameters = Optional.of(List.copyOf(parameters));
+        this.arguments = Optional.empty();
+      } else if (parameters.size() == arguments.size()) {
+        this.parameters = Optional.of(List.copyOf(parameters));
+        this.arguments = Optional.of(List.copyOf(arguments));
+      } else {
+        throw new IllegalArgumentException("parameters: " + parameters + "; arguments: " + arguments);
+      }
+    }
+
+
+    /*
+     * Instance methods.
+     */
+
+
+    /**
+     * Returns the non-{@code null} name of this {@link Element}.
+     *
+     * <p><strong>Note:</strong> if the resulting {@link String}
+     * {@linkplain String#isEmpty() is empty}, then during any matching
+     * operations the name may be considered to match all possible
+     * names.</p>
+     *
+     * <p>This method never returns {@code null}.</p>
+     *
+     * @return the non-{@code null} name of this {@link Element},
+     * which may {@linkplain String#isEmpty() be empty} indicating the
+     * special semantics described above
+     *
+     * @nullability This method never returns {@code null}.
+     *
+     * @threadsafety This method is safe for concurrent use by multiple
+     * threads.
+     *
+     * @idempotency This method is idempotent and deterministic.
+     */
+    public final String name() {
+      return this.name;
+    }
+
+    public final Optional<Type> type() {
+      return this.type;
+    }
+
+    public final Optional<List<Class<?>>> parameters() {
+      return this.parameters;
+    }
+
+    public final Optional<List<String>> arguments() {
+      return this.arguments;
+    }
+
+    public final boolean isRoot() {
+      return this.type().orElse(null) == void.class && this.name().isEmpty();
+    }
+
+    @Override // Object
+    public final int hashCode() {
+      return Objects.hash(this.name(), this.type(), this.parameters(), this.arguments());
+    }
+
+    @Override // Object
+    public final boolean equals(final Object other) {
+      if (other == this) {
+        return true;
+      } else if (other != null && this.getClass() == other.getClass()) {
+        final Element her = (Element)other;
+        return
+          Objects.equals(this.name(), her.name()) &&
+          Objects.equals(this.type(), her.type()) &&
+          Objects.equals(this.parameters(), her.parameters()) &&
+          Objects.equals(this.arguments(), her.arguments());
+      } else {
+        return false;
+      }
+    }
+
+    @Override // Object
+    public final String toString() {
+      final StringBuilder sb = new StringBuilder(this.name());
+      final Optional<List<Class<?>>> parameters = this.parameters();
+      if (parameters.isPresent()) {
+        sb.append("(");
+        final List<Class<?>> ps = parameters.orElseThrow();
+        final List<?> as = this.arguments().orElseGet(List::of);
+        for (int i = 0; i < ps.size(); i++) {
+          sb.append(ps.get(i).getName()).append("=\"").append(as.get(i).toString()).append("\"");
+          if (i + 1 < ps.size()) {
+            sb.append(",");
+          }
+        }
+        sb.append(")");
+      }
+      final Optional<Type> type = this.type();
+      if (type.isPresent()) {
+        sb.append(":").append(type.orElseThrow().getTypeName());
+      }
+      return sb.toString();
+    }
+
+
+    /*
+     * Static methods.
+     */
+
+
+    public static final Element root() {
+      return ROOT;
+    }
+
+    public static final Element of(final String name,
+                                   final Type type,
+                                   final List<? extends Class<?>> parameters,
+                                   final List<? extends String> arguments) {
+      return new Element(name, type, parameters, arguments, false);
+    }
+
+    public static final Element of(final String name) {
+      return new Element(name, null, null, null, false);
+    }
+
+    public static final Element of(final String name,
+                                   final Type type) {
+      return new Element(name, type, null, null, false);
+    }
+
+    public static final Element of(final Type type) {
+      return new Element("", type, null, null, false);
+    }
+
+    public static final Element of(final String name,
+                                   final Type type,
+                                   final Class<?> parameter,
+                                   final String argument) {
+      return new Element(name, type, List.of(parameter), List.of(argument), false);
+    }
+
+
+    /*
+     * Inner and nested classes.
+     */
+
+
+    public static final class Parser {
+
+
+      /*
+       * Static fields.
+       */
+
+
+      private static final int NAME = 1;
+
+      private static final int TYPE = 2;
+
+      private static final int ARGUMENTS = 3;
+
+
+      /*
+       * Instance fields.
+       */
+
+
+      private final ClassLoader cl;
+
+
+      /*
+       * Constructors.
+       */
+
+
+      public Parser(final ClassLoader cl) {
+        super();
+        this.cl = Objects.requireNonNull(cl, "cl");
+      }
+
+
+      /*
+       * Instance methods.
+       */
+
+
+      public final Element parse(final CharSequence s) throws ClassNotFoundException {
+        int state = NAME;
+        final StringBuilder sb = new StringBuilder();
+        String name = null;
+        Type type = null;
+        List<Class<?>> params = null;
+        List<String> args = null;
+        final int length = s.length();
+        for (int i = 0; i < length; i++) {
+          final int c = s.charAt(i);
+          final int next = i + 1 < length ? s.charAt(i + 1) : -1;
+          switch (c) {
+
+          case '(':
+            switch (state) {
+            case NAME:
+              switch (next) {
+              case -1:
+                throw new IllegalArgumentException(iae(s, i));
+              default:
+                name = sb.toString();
+                sb.setLength(0);
+                params = new ArrayList<>(3);
+                state = ARGUMENTS;
+                break;
+              }
+              break;
+            case ARGUMENTS:
+            case TYPE:
+              throw new IllegalArgumentException(iae(s, i));
+            default:
+              throw new IllegalStateException();
+            }
+            break;
+
+          case ')':
+            switch (state) {
+            case ARGUMENTS:
+              if (sb.isEmpty()) {
+                if (args == null) {
+                  args = List.of();
+                }
+              } else {
+                if (args == null) {
+                  params.add(loadClass(sb.toString()));
+                } else {
+                  args.add(sb.toString());
+                }
+                sb.setLength(0);
+              }
+              state = TYPE;
+              break;
+            case NAME:
+            case TYPE:
+              throw new IllegalArgumentException(iae(s, i));
+            default:
+              throw new IllegalStateException();
+            }
+            break;
+
+          case '\\':
+            switch (next) {
+            case -1:
+              throw new IllegalArgumentException(iae(s, i));
+            default:
+              sb.append((char)next);
+              ++i;
+              break;
+            }
+            break;
+
+          case ',':
+            switch (state) {
+            case NAME:
+              sb.append((char)c);
+              break;
+            case ARGUMENTS:
+              assert name != null;
+              assert type == null;
+              assert params != null;
+              if (params.isEmpty()) {
+                throw new IllegalArgumentException(iae(s, i));
+              }
+              args.add(sb.toString());
+              sb.setLength(0);
+              break;
+            case TYPE:
+              throw new IllegalArgumentException(iae(s, i));
+            default:
+              throw new IllegalStateException();
+            }
+            break;
+
+          case '=':
+            switch (state) {
+            case NAME:
+              sb.append((char)c);
+              break;
+            case ARGUMENTS:
+              if (!sb.isEmpty()) {
+                params.add(loadClass(sb.toString()));
+                sb.setLength(0);
+              }
+              if (args == null) {
+                args = new ArrayList<>(3);
+              }
+              break;
+            case TYPE:
+              throw new IllegalArgumentException(iae(s, i));
+            default:
+              throw new IllegalStateException();
+            }
+            break;
+
+          case ':':
+            switch (state) {
+            case NAME:
+              name = sb.toString();
+              sb.setLength(0);
+              state = TYPE;
+              break;
+            case ARGUMENTS:
+              sb.append((char)c);
+              break;
+            case TYPE:
+              if (!sb.isEmpty()) {
+                throw new IllegalArgumentException(iae(s, i));
+              }
+              break;
+            default:
+              throw new IllegalStateException();
+            }
+            break;
+
+          default:
+            sb.append((char)c);
+            break;
+          }
+        }
+
+        // Cleanup
+        switch (state) {
+
+        case NAME:
+          name = sb.toString();
+          sb.setLength(0);
+          break;
+
+        case ARGUMENTS:
+          if (!sb.isEmpty()) {
+            if (params == null) {
+              params = List.of(loadClass(sb.toString()));
+            } else {
+              assert !params.isEmpty();
+              args.add(sb.toString());
+            }
+            sb.setLength(0);
+          }
+          break;
+
+        case TYPE:
+          type = loadType(sb.toString());
+          sb.setLength(0);
+          break;
+
+        default:
+          throw new IllegalStateException();
+        }
+
+        assert params == null ? args == null : args == null || args.size() <= params.size() : s + "; params: " + params + "; args: " + args;
+
+        if (name.isEmpty() && params == null && args == null && (type == null || type == void.class)) {
+          return Element.root();
+        } else {
+          return new Element(name, type, params, args, false);
+        }
+      }
+
+
+      /*
+       * Static methods.
+       */
+
+
+      private final String iae(final CharSequence s, final int pos) {
+        final StringBuilder sb = new StringBuilder(s.toString()).append(System.lineSeparator());
+        for (int i = 0; i < pos; i++) {
+          sb.append(' ');
+        }
+        sb.append('^').append(System.lineSeparator());
+        return sb.toString();
+      }
+
+      private final Class<?> loadClass(final String s) throws ClassNotFoundException {
+        return switch (s) {
+        case "boolean" -> boolean.class;
+        case "char" -> char.class;
+        case "double" -> double.class;
+        case "float" -> float.class;
+        case "int" -> int.class;
+        case "long" -> long.class;
+        case "short" -> short.class;
+        case "void" -> void.class;
+        default -> Class.forName(s, false, this.cl);
+        };
+      }
+
+      private final Type loadType(final String s) throws ClassNotFoundException {
+        return loadClass(s);
+      }
+
+    }
+
+  }
+
   public static final class Parser {
+
+
+    /*
+     * Instance fields.
+     */
+
 
     private final ClassLoader cl;
 
-    private final Accessor.Parser parser;
+    private final Element.Parser parser;
+
+
+    /*
+     * Constructors.
+     */
+
 
     public Parser(final ClassLoader cl) {
       super();
       this.cl = Objects.requireNonNull(cl, "cl");
-      this.parser = new Accessor.Parser(cl);
+      this.parser = new Element.Parser(cl);
     }
+
+
+    /*
+     * Instance methods.
+     */
+
 
     public final Path parse(final CharSequence s) throws ClassNotFoundException {
       if (s.isEmpty()) {
         throw new IllegalArgumentException("s.isEmpty()");
       } else {
-        final List<Accessor> accessors = new ArrayList<>(11);
+        final List<Element> elements = new ArrayList<>(11);
         final int length = s.length();
         int start = 0;
         for (int i = 0; i < length; i++) {
@@ -337,9 +812,9 @@ public final class Path {
           switch (c) {
           case '/':
             if (i + 1 < length) {
-              accessors.add(this.parser.parse(s.subSequence(start, i)));
+              elements.add(this.parser.parse(s.subSequence(start, i)));
             } else {
-              accessors.add(this.parser.parse(""));
+              elements.add(this.parser.parse(""));
             }
             start = i + 1;
             break;
@@ -354,13 +829,13 @@ public final class Path {
         }
         // Cleanup
         if (start < length) {
-          accessors.add(this.parser.parse(s.subSequence(start, length)));
+          elements.add(this.parser.parse(s.subSequence(start, length)));
         }
-        assert !accessors.isEmpty();
-        if (accessors.size() == 1 && accessors.get(0).isRoot()) {
+        assert !elements.isEmpty();
+        if (elements.size() == 1 && elements.get(0).isRoot()) {
           return Path.root();
         } else {
-          return new Path(accessors, false);
+          return new Path(elements, false);
         }
       }
     }

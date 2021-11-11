@@ -36,6 +36,8 @@ import java.util.function.Supplier;
 import org.microbean.development.annotation.Experimental;
 import org.microbean.development.annotation.SubordinateTo;
 
+import org.microbean.settings.api.Path.Element;
+
 import org.microbean.type.Types;
 
 /**
@@ -130,7 +132,7 @@ public class Settings<T> implements AutoCloseable, ConfiguredSupplier<T> {
         this.settingsCache.put(qp, this); // NOTE
         // While the following call is in effect, our
         // final-but-as-yet-uninitialized qualifiers instance field will
-        // be null.  Note that the qualifiers() accessor method accounts
+        // be null.  Note that the qualifiers() element method accounts
         // for this and will return Qualifiers.of() instead.
         try {
           this.qualifiers = this.of(Qualifiers.class).orElseGet(Qualifiers::of);
@@ -240,7 +242,9 @@ public class Settings<T> implements AutoCloseable, ConfiguredSupplier<T> {
     } else {
       throw new IllegalArgumentException("!absolutePath.isAbsolute(): " + absolutePath);
     }
-    absolutePath = this.transliterate(absolutePath);
+    if (!absolutePath.isTransliterated()) {
+      absolutePath = this.transliterate(absolutePath);
+    }
     // We deliberately do not use computeIfAbsent() because of()
     // operations can kick off other of() operations, and then you'd
     // have a cache mutating operation occuring within a cache
@@ -278,7 +282,7 @@ public class Settings<T> implements AutoCloseable, ConfiguredSupplier<T> {
     if (path.isTransliterated()) {
       return path;
     } else if (path.type() == Path.class) {
-      final Accessor a = path.last();
+      final Element a = path.last();
       if (a != null && a.name().equals("transliterate")) {
         final List<Class<?>> parameters = a.parameters().orElse(null);
         if (parameters.size() == 1 && parameters.get(0) == Path.class) {
@@ -289,7 +293,7 @@ public class Settings<T> implements AutoCloseable, ConfiguredSupplier<T> {
       }
     }
     return
-      this.<Path>of(Accessor.of("transliterate", // name
+      this.<Path>of(Element.of("transliterate", // name
                                   Path.class, // type
                                   Path.class, // parameter
                                   path.toString())) // sole argument
@@ -552,7 +556,7 @@ public class Settings<T> implements AutoCloseable, ConfiguredSupplier<T> {
       throw new IllegalArgumentException("absoluteReferencePath: " + absoluteReferencePath);
     }
 
-    final int lastValuePathIndex = absoluteReferencePath.lastIndexOf(valuePath, AccessorsMatchBiPredicate.INSTANCE);
+    final int lastValuePathIndex = absoluteReferencePath.lastIndexOf(valuePath, ElementsMatchBiPredicate.INSTANCE);
     assert lastValuePathIndex >= 0 : "absoluteReferencePath: " + absoluteReferencePath + "; valuePath: " + valuePath;
     assert lastValuePathIndex + valuePath.size() == absoluteReferencePath.size() : "absoluteReferencePath: " + absoluteReferencePath + "; valuePath: " + valuePath;
 
@@ -560,14 +564,14 @@ public class Settings<T> implements AutoCloseable, ConfiguredSupplier<T> {
     for (int valuePathIndex = 0; valuePathIndex < valuePath.size(); valuePathIndex++) {
       final int referencePathIndex = lastValuePathIndex + valuePathIndex;
 
-      final Accessor referenceAccessor = absoluteReferencePath.get(referencePathIndex);
-      final Accessor valueAccessor = valuePath.get(valuePathIndex);
-      if (!referenceAccessor.name().equals(valueAccessor.name())) {
+      final Element referenceElement = absoluteReferencePath.get(referencePathIndex);
+      final Element valueElement = valuePath.get(valuePathIndex);
+      if (!referenceElement.name().equals(valueElement.name())) {
         return Integer.MIN_VALUE;
       }
 
-      final Type referenceType = referenceAccessor.type().orElse(null);
-      final Type valueType = valueAccessor.type().orElse(null);
+      final Type referenceType = referenceElement.type().orElse(null);
+      final Type valueType = valueElement.type().orElse(null);
       if (referenceType == null) {
         if (valueType != null) {
           return Integer.MIN_VALUE;
@@ -580,8 +584,8 @@ public class Settings<T> implements AutoCloseable, ConfiguredSupplier<T> {
         return Integer.MIN_VALUE;
       }
 
-      final List<Class<?>> referenceParameters = referenceAccessor.parameters().orElse(null);
-      final List<Class<?>> valueParameters = valueAccessor.parameters().orElse(null);
+      final List<Class<?>> referenceParameters = referenceElement.parameters().orElse(null);
+      final List<Class<?>> valueParameters = valueElement.parameters().orElse(null);
       if (referenceParameters == null) {
         if (valueParameters != null) {
           return Integer.MIN_VALUE;
@@ -590,8 +594,8 @@ public class Settings<T> implements AutoCloseable, ConfiguredSupplier<T> {
         return Integer.MIN_VALUE;
       }
 
-      final List<String> referenceArguments = referenceAccessor.arguments().orElse(null);
-      final List<String> valueArguments = valueAccessor.arguments().orElse(null);
+      final List<String> referenceArguments = referenceElement.arguments().orElse(null);
+      final List<String> valueArguments = valueElement.arguments().orElse(null);
       if (referenceArguments == null) {
         if (valueArguments != null) {
           return Integer.MIN_VALUE;
@@ -617,7 +621,7 @@ public class Settings<T> implements AutoCloseable, ConfiguredSupplier<T> {
           // *could* be suitable but not *as* suitable as one that
           // matched.  Don't adjust the score.
         } else {
-          // The reference accessor had, say, two arguments, and the
+          // The reference element had, say, two arguments, and the
           // value had, say, one.  We treat this as a mismatch.
           return Integer.MIN_VALUE;
         }
@@ -625,61 +629,6 @@ public class Settings<T> implements AutoCloseable, ConfiguredSupplier<T> {
     }
     return score;
   }
-  /*
-      if (absoluteReferencePath.isAccessor(referencePathIndex)) {
-        if (valuePath.isAccessor(valuePathIndex)) {
-          final Accessor referenceAccessor = absoluteReferencePath.accessor(referencePathIndex);
-          final Accessor valueAccessor = valuePath.accessor(valuePathIndex);
-
-          assert referenceAccessor.name().equals(valueAccessor.name()) : "referenceAccessor: " + referenceAccessor + "; valueAccessor: " + valueAccessor;
-          assert referenceAccessor.parameters().size() == valueAccessor.parameters().size() : "referenceAccessor: " + referenceAccessor + "; valueAccessor: " + valueAccessor;
-
-          final List<String> referenceArgs = referenceAccessor.arguments();
-          final int referenceArgsSize = referenceArgs.size();
-          final List<String> valueArgs = valueAccessor.arguments();
-          final int valueArgsSize = valueArgs.size();
-          if (referenceArgsSize < valueArgsSize) {
-            // The value path is unsuitable because it provided too
-            // many arguments.
-            return Integer.MIN_VALUE;
-          } else if (referenceArgs.equals(valueArgs)) {
-            score += referenceArgsSize;
-          } else if (referenceArgsSize == valueArgsSize) {
-            // Same sizes, but different arguments.  The value is not suitable.
-            return Integer.MIN_VALUE;
-          } else if (valueArgsSize == 0) {
-            // The value is indifferent with respect to arguments. It
-            // *could* be suitable but not *as* suitable as one that
-            // matched.  Don't adjust the score.
-          } else {
-            // The reference accessor had, say, two arguments, and the
-            // value had, say, one.  We treat this as a mismatch.
-            return Integer.MIN_VALUE;
-          }
-        } else {
-          throw new IllegalArgumentException("valuePath: " + valuePath);
-        }
-      } else if (absoluteReferencePath.isType(referencePathIndex)) {
-        if (valuePath.isType(valuePathIndex)) {
-          final Type referenceType = absoluteReferencePath.type(referencePathIndex);
-          final Type valueType = valuePath.type(valuePathIndex);
-          if (Types.equals(referenceType, valueType)) {
-            score++;
-          } else {
-            // valueType is a subtype of referenceType. Don't adjust
-            // the score.
-            assert AssignableType.of(referenceType).isAssignable(valueType) : "referenceType: " + referenceType + "; valueType: " + valueType;
-          }
-        } else {
-          throw new IllegalArgumentException("valuePath: " + valuePath);
-        }
-      } else {
-        throw new IllegalArgumentException("absoluteReferencePath: " + absoluteReferencePath);
-      }
-    }
-    return score;
-  }
-  */
 
   protected <U> Value<U> disambiguate(final ConfiguredSupplier<?> supplier,
                                       final Path absolutePath,
@@ -729,18 +678,18 @@ public class Settings<T> implements AutoCloseable, ConfiguredSupplier<T> {
    *
    * <ul>
    *
-   * <li>Each {@link Accessor} has a {@linkplain Accessor#name()
+   * <li>Each {@link Element} has a {@linkplain Element#name()
    * name} that is either {@linkplain String#isEmpty() empty} or equal
    * to the other's.</li>
    *
-   * <li>Either {@link Accessor} has a {@link Accessor#type() Type}
-   * that is {@code null}, or the first {@link Accessor}'s {@link
-   * Accessor#type() Type} {@link AssignableType#of(Type) is
+   * <li>Either {@link Element} has a {@link Element#type() Type}
+   * that is {@code null}, or the first {@link Element}'s {@link
+   * Element#type() Type} {@link AssignableType#of(Type) is
    * assignable from} the second's.</li>
    *
-   * <li>Either {@link Accessor} has {@code null} {@linkplain
-   * Accessor#parameters() parameters} or each of the first {@link
-   * Accessor}'s {@linkplain Accessor#parameters() parameters}
+   * <li>Either {@link Element} has {@code null} {@linkplain
+   * Element#parameters() parameters} or each of the first {@link
+   * Element}'s {@linkplain Element#parameters() parameters}
    * {@linkplain Class#isAssignableFrom(Class) is assignable from} the
    * second's corresponding parameter.</li>
    *
@@ -771,7 +720,7 @@ public class Settings<T> implements AutoCloseable, ConfiguredSupplier<T> {
     if (!absoluteReferencePath.isAbsolute()) {
       throw new IllegalArgumentException("absoluteReferencePath: " + absoluteReferencePath);
     }
-    return absoluteReferencePath.endsWith(valuePath, AccessorsMatchBiPredicate.INSTANCE);
+    return absoluteReferencePath.endsWith(valuePath, ElementsMatchBiPredicate.INSTANCE);
   }
 
   private static final <T> T throwNoSuchElementException() {
@@ -805,35 +754,35 @@ public class Settings<T> implements AutoCloseable, ConfiguredSupplier<T> {
 
   }
 
-  // Matches accessor names (equality), parameter types
+  // Matches element names (equality), parameter types
   // (isAssignableFrom) and Types (AssignableType.isAssignable()).
   // Argument values themselves are deliberately ignored.
-  private static final class AccessorsMatchBiPredicate implements BiPredicate<Accessor, Accessor> {
+  private static final class ElementsMatchBiPredicate implements BiPredicate<Element, Element> {
 
-    private static final AccessorsMatchBiPredicate INSTANCE = new AccessorsMatchBiPredicate();
+    private static final ElementsMatchBiPredicate INSTANCE = new ElementsMatchBiPredicate();
 
-    private AccessorsMatchBiPredicate() {
+    private ElementsMatchBiPredicate() {
       super();
     }
 
-    @Override // BiPredicate<Accessor, Accessor>
-    public final boolean test(final Accessor a1, final Accessor a2) {
-      final String name1 = a1.name();
-      final String name2 = a2.name();
+    @Override // BiPredicate<Element, Element>
+    public final boolean test(final Element e1, final Element e2) {
+      final String name1 = e1.name();
+      final String name2 = e2.name();
       if (!name1.isEmpty() && !name2.isEmpty() && !name1.equals(name2)) {
         // Empty names have special significance in that they "match"
         // any other name.
         return false;
       }
 
-      final Type t1 = a1.type().orElse(null);
-      final Type t2 = a2.type().orElse(null);
+      final Type t1 = e1.type().orElse(null);
+      final Type t2 = e2.type().orElse(null);
       if (t1 != null && t2 != null && !AssignableType.of(t1).isAssignable(t2)) {
         return false;
       }
 
-      final List<Class<?>> p1 = a1.parameters().orElse(null);
-      final List<Class<?>> p2 = a2.parameters().orElse(null);
+      final List<Class<?>> p1 = e1.parameters().orElse(null);
+      final List<Class<?>> p2 = e2.parameters().orElse(null);
       if (p1 != null && p2 != null) {
         if (p1.size() != p2.size()) {
           return false;
