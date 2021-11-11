@@ -501,7 +501,7 @@ public final class Path implements Assignable<Type> {
 
   private static final String findUserPackageName(final Stream<StackFrame> stream) {
     final String className = stream.sequential()
-      .dropWhile(f -> f.getClassName().startsWith(Settings.class.getPackageName()))
+      .dropWhile(f -> f.getClassName().startsWith(Path.class.getPackageName()))
       .dropWhile(f -> f.getClassName().contains(".$Proxy")) // skip JDK proxies (and any other kind of proxies)
       .map(StackFrame::getClassName)
       .findFirst()

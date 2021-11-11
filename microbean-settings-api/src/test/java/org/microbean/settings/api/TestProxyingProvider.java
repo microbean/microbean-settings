@@ -87,29 +87,29 @@ final class TestProxyingProvider {
     
     @Override
     public final boolean isSelectable(final ConfiguredSupplier<?> supplier,
-                                      final Path path) {
+                                      final Path2 path) {
       if (super.isSelectable(supplier, path)) {
         assertSame(Wheel.class, path.type());
-        final Accessor a = path.lastAccessor();
-        return "wheel".equals(a.name()) && "LR".equals(a.argument(0));
+        final Accessor2 a = path.get(path.size() - 1);
+        final List<String> arguments = a.arguments().orElse(null);
+        return "wheel".equals(a.name()) && arguments != null && !arguments.isEmpty() && "LR".equals(arguments.get(0));
       } else {
         return false;
       }
     }
 
     public final Value<Wheel> get(final ConfiguredSupplier<?> supplier,
-                                  final Path path) {
+                                  final Path2 path) {
       assertSame(Wheel.class, path.type());
-      final Accessor a = path.lastAccessor();
-      assertSame(a, path.accessor(path.size() - 2));
+      final Accessor2 a = path.get(path.size() - 1);
       assertEquals("wheel", a.name());
-      assertEquals(List.of(String.class), a.parameters());
-      assertEquals("LR", a.argument(0));
+      assertEquals(List.of(String.class), a.parameters().orElseThrow());
+      assertEquals("LR", a.arguments().orElseThrow().get(0));
       return new Value<>(Qualifiers.of(),
-                         Path.of(Accessor.of("wheel",
-                                             List.of(String.class),
-                                             List.of("LR")),
-                                 Wheel.class),
+                         Path2.of(Accessor2.of("wheel",
+                                               Wheel.class,
+                                               List.of(String.class),
+                                               List.of("LR"))),
                          new Wheel() {
                            @Override
                            public final int getDiameterInInches() {

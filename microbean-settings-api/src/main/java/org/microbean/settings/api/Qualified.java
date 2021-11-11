@@ -83,11 +83,6 @@ public interface Qualified<T> {
      */
 
 
-    @Override
-    public final String toString() {
-      return Qualified.toString(this);
-    }
-
     public final String toString(final Function<? super T, ? extends String> f) {
       return Qualified.toString(this, f);
     }

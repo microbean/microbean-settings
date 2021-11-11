@@ -22,20 +22,30 @@ public final class SystemPropertyProvider extends AbstractProvider<String> {
     super();
   }
 
-  public boolean isSelectable(final ConfiguredSupplier<?> supplier, final Path absolutePath) {
+  public boolean isSelectable(final ConfiguredSupplier<?> supplier, final Path2 absolutePath) {
     assert absolutePath.isAbsolute();
+    return
+      absolutePath.size() == 2 &&
+      super.isSelectable(supplier, absolutePath);
+    /*
     // /file\\.separator/java.lang.String has size 3: void.class (not shown), "file.separator", and String.class.
     return
       absolutePath.size() == 3 &&
       super.isSelectable(supplier, absolutePath);
       // System.getProperty(absolutePath.lastAccessor().name()) != null;
+    */
   }
   
-  public Value<?> get(final ConfiguredSupplier<?> supplier, final Path absolutePath) {
+  public Value<?> get(final ConfiguredSupplier<?> supplier, final Path2 absolutePath) {
     assert absolutePath.isAbsolute();
+    assert absolutePath.size() == 2;
+    final String propertyName = absolutePath.get(absolutePath.size() - 1).name();
+    return new Value<>(Qualifiers.of(), absolutePath, () -> System.getProperty(propertyName));
+    /*
     assert absolutePath.size() == 3;
     final String propertyName = absolutePath.lastAccessor().name();
     return new Value<>(Qualifiers.of(), absolutePath, () -> System.getProperty(propertyName));
+    */
   }
   
 }

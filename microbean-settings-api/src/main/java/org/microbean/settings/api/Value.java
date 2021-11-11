@@ -27,8 +27,8 @@ import org.microbean.development.annotation.Convenience;
 
 /**
  * An {@link OptionalSupplier} of a value that is additionally
- * qualified by a {@link Qualifiers} and a {@link Path} partially
- * identifying the kinds of {@link Qualifiers} and {@link Path}s for
+ * qualified by a {@link Qualifiers} and a {@link Path2} partially
+ * identifying the kinds of {@link Qualifiers} and {@link Path2}s for
  * which it might be suitable.
  *
  * <p>The {@link Value} interface is not used by the {@link
@@ -51,27 +51,27 @@ public final class Value<T> implements OptionalSupplier<T> {
 
   private final Qualifiers qualifiers;
 
-  private final Path path;
+  private final Path2 path;
 
   private final Supplier<? extends T> supplier;
 
   private final boolean deterministic;
 
-  public Value(final Qualifiers qualifiers, final Path path, final T value) {
+  public Value(final Qualifiers qualifiers, final Path2 path, final T value) {
     this(null, qualifiers, path, () -> value, true);
   }
 
-  public Value(final Qualifiers qualifiers, final Path path, final Supplier<? extends T> supplier) {
+  public Value(final Qualifiers qualifiers, final Path2 path, final Supplier<? extends T> supplier) {
     this(null, qualifiers, path, supplier, false);
   }
 
-  public Value(final Qualifiers qualifiers, final Path path, final Supplier<? extends T> supplier, final boolean deterministic) {
+  public Value(final Qualifiers qualifiers, final Path2 path, final Supplier<? extends T> supplier, final boolean deterministic) {
     this(null, qualifiers, path, supplier, deterministic);
   }
 
   public Value(final Supplier<? extends T> defaults,
                final Qualifiers qualifiers,
-               final Path path,
+               final Path2 path,
                final Supplier<? extends T> supplier) {
     this(defaults, qualifiers, path, supplier, false);
   }
@@ -86,7 +86,7 @@ public final class Value<T> implements OptionalSupplier<T> {
   
   public Value(final Supplier<? extends T> defaults,
                final Qualifiers qualifiers,
-               final Path path,
+               final Path2 path,
                final Supplier<? extends T> supplier,
                final boolean deterministic) {
     super();
@@ -121,7 +121,7 @@ public final class Value<T> implements OptionalSupplier<T> {
     return this.qualifiers;
   }
 
-  public final Path path() {
+  public final Path2 path() {
     return this.path;
   }
 
@@ -135,12 +135,12 @@ public final class Value<T> implements OptionalSupplier<T> {
   }
 
   /**
-   * Returns the result of invoking {@link Path#type()} on the
+   * Returns the result of invoking {@link Path2#type()} on the
    * return value of this {@link Value}'s {@link #path()} method.
    *
    * <p>This method never returns {@code null}.</p>
    *
-   * @return the result of invoking {@link Path#type()} on the
+   * @return the result of invoking {@link Path2#type()} on the
    * return value of this {@link Value}'s {@link #path()} method;
    * never {@code null}
    *
@@ -153,7 +153,7 @@ public final class Value<T> implements OptionalSupplier<T> {
    *
    * @see #path()
    *
-   * @see Path#type()
+   * @see Path2#type()
    */
   @Convenience
   public final Type type() {
