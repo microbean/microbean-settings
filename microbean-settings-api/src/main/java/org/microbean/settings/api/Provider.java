@@ -34,9 +34,9 @@ import org.microbean.development.annotation.Convenience;
  * @author <a href="https://about.me/lairdnelson"
  * target="_parent">Laird Nelson</a>
  *
- * @see #isSelectable(ConfiguredSupplier, Path)
+ * @see #isSelectable(ConfiguredSupplier, Path2)
  *
- * @see #get(ConfiguredSupplier, Path)
+ * @see #get(ConfiguredSupplier, Path2)
  *
  * @see Settings
  */
@@ -52,7 +52,7 @@ public interface Provider extends Prioritized {
   /**
    * Returns a {@link Type} representing the upper bound of all
    * possible {@linkplain Value values} {@linkplain #get(ConfiguredSupplier,
-   * Path) supplied} by this {@link Provider}.
+   * Path2) supplied} by this {@link Provider}.
    *
    * <p>Often the value returned by implementations of this method is
    * no more specific than simply {@link Object Object.class}.</p>
@@ -65,7 +65,7 @@ public interface Provider extends Prioritized {
    *
    * @return a {@link Type} representing the upper bound of all
    * possible {@linkplain Value values} {@linkplain #get(ConfiguredSupplier,
-   * Path) supplied} by this {@link Provider}; never {@code null}
+   * Path2) supplied} by this {@link Provider}; never {@code null}
    *
    * @nullability Implementations of this method must not return
    * {@code null}.

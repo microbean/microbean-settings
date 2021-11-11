@@ -144,23 +144,20 @@ public interface ConfiguredSupplier<T> extends OptionalSupplier<T> {
 
   @OverridingDiscouraged
   public default <U> ConfiguredSupplier<U> plus(final Class<? extends U> type) {
-    return
-      this.plus(Accessor2.of(type));
+    return this.plus(Accessor2.of(type));
   }
 
   @OverridingDiscouraged
   @SuppressWarnings("unchecked")
   public default <U> ConfiguredSupplier<U> plus(final Type type) {
-    return
-      this.plus(Accessor2.of(type));
+    return this.plus(Accessor2.of(type));
   }
 
   @Convenience
   @OverridingDiscouraged
   public default <U> ConfiguredSupplier<U> plus(final String accessor,
                                                 final Class<? extends U> type) {
-    return
-      this.plus(accessor.isEmpty() ? Accessor2.of(type) : Accessor2.of(accessor, type));
+    return this.plus(accessor.isEmpty() ? Accessor2.of(type) : Accessor2.of(accessor, type));
   }
 
 
@@ -169,8 +166,7 @@ public interface ConfiguredSupplier<T> extends OptionalSupplier<T> {
   @SuppressWarnings("unchecked")
   public default <U> ConfiguredSupplier<U> plus(final String accessor,
                                                 final Type type) {
-    return
-      this.plus(accessor.isEmpty() ? Accessor2.of(type) : Accessor2.of(accessor, type));
+    return this.plus(accessor.isEmpty() ? Accessor2.of(type) : Accessor2.of(accessor, type));
   }
 
   public default <U> ConfiguredSupplier<U> plus(final Accessor2 accessor) {
@@ -179,18 +175,14 @@ public interface ConfiguredSupplier<T> extends OptionalSupplier<T> {
 
   @OverridingDiscouraged
   public default <U> ConfiguredSupplier<U> plus(final Path2 path) {
-    return
-      this.of(this,
-              this.path().plus(path)); // NOTE
+    return this.of(this, this.path().plus(path)); // NOTE
   }
 
   @Convenience
   @OverridingDiscouraged
   public default <U> ConfiguredSupplier<U> of(final ConfiguredSupplier<?> parent,
                                               final Class<? extends U> type) {
-    return
-      this.of(parent,
-              Accessor2.of(type));
+    return this.of(parent, Accessor2.of(type));
   }
 
   @Convenience
@@ -198,9 +190,7 @@ public interface ConfiguredSupplier<T> extends OptionalSupplier<T> {
   @SuppressWarnings("unchecked")
   public default <U> ConfiguredSupplier<U> of(final ConfiguredSupplier<?> parent,
                                               final Type type) {
-    return
-      this.of(parent,
-              Accessor2.of(type));
+    return this.of(parent, Accessor2.of(type));
   }
 
   @Convenience
@@ -208,9 +198,7 @@ public interface ConfiguredSupplier<T> extends OptionalSupplier<T> {
   public default <U> ConfiguredSupplier<U> of(final ConfiguredSupplier<?> parent,
                                               final String accessor,
                                               final Class<? extends U> type) {
-    return
-      this.of(parent,
-              accessor.isEmpty() ? Accessor2.of(type) : Accessor2.of(accessor, type));
+    return this.of(parent, accessor.isEmpty() ? Accessor2.of(type) : Accessor2.of(accessor, type));
   }
 
 
@@ -220,18 +208,14 @@ public interface ConfiguredSupplier<T> extends OptionalSupplier<T> {
   public default <U> ConfiguredSupplier<U> of(final ConfiguredSupplier<?> parent,
                                               final String accessor,
                                               final Type type) {
-    return
-      this.of(parent,
-              accessor.isEmpty() ? Accessor2.of(type) : Accessor2.of(accessor, type));
+    return this.of(parent, accessor.isEmpty() ? Accessor2.of(type) : Accessor2.of(accessor, type));
   }
 
   @Convenience
   @OverridingDiscouraged
   public default <U> ConfiguredSupplier<U> of(final ConfiguredSupplier<?> parent,
                                               final Accessor2 accessor) {
-    return
-      this.of(parent,
-              Path2.root().plus(accessor)); // root().plus() is critical here
+    return this.of(parent, Path2.root().plus(accessor)); // root().plus() is critical here
   }
 
   @OverridingDiscouraged
@@ -239,32 +223,27 @@ public interface ConfiguredSupplier<T> extends OptionalSupplier<T> {
     if (!absolutePath.isAbsolute()) {
       throw new IllegalArgumentException("absolutePath: " + absolutePath);
     }
-    return
-      this.of(this.root(),
-              absolutePath);
+    return this.of(this.root(), absolutePath);
   }
 
   @Convenience
   @OverridingDiscouraged
   public default <U> ConfiguredSupplier<U> of(final Class<? extends U> type) {
-    return
-      this.of(Accessor2.of(type));
+    return this.of(Accessor2.of(type));
   }
 
 
   @Convenience
   @OverridingDiscouraged
   public default <U> ConfiguredSupplier<U> of(final Type type) {
-    return
-      this.of(Accessor2.of(type));
+    return this.of(Accessor2.of(type));
   }
 
   @Convenience
   @OverridingDiscouraged
   public default <U> ConfiguredSupplier<U> of(final String accessor,
                                               final Class<? extends U> type) {
-    return
-      this.of(accessor.isEmpty() ? Accessor2.of(type) : Accessor2.of(accessor, type));
+    return this.of(accessor.isEmpty() ? Accessor2.of(type) : Accessor2.of(accessor, type));
   }
 
   @Convenience
@@ -272,15 +251,13 @@ public interface ConfiguredSupplier<T> extends OptionalSupplier<T> {
   @SuppressWarnings("unchecked")
   public default <U> ConfiguredSupplier<U> of(final String accessor,
                                               final Type type) {
-    return
-      this.of(accessor.isEmpty() ? Accessor2.of(type) : Accessor2.of(accessor, type));
+    return this.of(accessor.isEmpty() ? Accessor2.of(type) : Accessor2.of(accessor, type));
   }
 
   @Convenience
   @OverridingDiscouraged
   public default <U> ConfiguredSupplier<U> of(final Accessor2 accessor) {
-    return
-      this.of(Path2.root().plus(accessor)); // root().plus() is critical here
+    return this.of(Path2.root().plus(accessor)); // root().plus() is critical here
   }
 
   @OverridingDiscouraged
@@ -293,6 +270,7 @@ public interface ConfiguredSupplier<T> extends OptionalSupplier<T> {
     ConfiguredSupplier<?> root = this;
     ConfiguredSupplier<?> parent = root.parent();
     while (parent != null && parent != root) {
+      // (Strictly speaking, ConfiguredSupplier::parent should NEVER be null.)
       root = parent;
       parent = root.parent();
     }

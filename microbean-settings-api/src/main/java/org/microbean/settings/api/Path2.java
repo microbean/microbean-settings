@@ -269,7 +269,7 @@ public final class Path2 {
   public static final Path2 of(final Accessor2 accessor) {
     return of(List.of(accessor));
   }
-  
+
   public static final Path2 of(final List<? extends Accessor2> accessors) {
     if (accessors.isEmpty()) {
       return of();
@@ -314,7 +314,7 @@ public final class Path2 {
     private final ClassLoader cl;
 
     private final Accessor2.Parser parser;
-    
+
     public Parser(final ClassLoader cl) {
       super();
       this.cl = Objects.requireNonNull(cl, "cl");
@@ -346,7 +346,7 @@ public final class Path2 {
             break;
           default:
             break;
-          }          
+          }
         }
         // Cleanup
         if (start < length) {
@@ -360,7 +360,7 @@ public final class Path2 {
         }
       }
     }
-    
+
   }
 
 }

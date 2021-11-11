@@ -35,6 +35,7 @@ import org.microbean.development.annotation.Experimental;
 
 import org.microbean.type.Types;
 
+@Deprecated(forRemoval = true)
 public final class Path implements Assignable<Type> {
 
 
@@ -526,6 +527,7 @@ public final class Path implements Assignable<Type> {
    */
 
 
+  @Deprecated(forRemoval = true)
   @Experimental
   public static final class Parser {
 

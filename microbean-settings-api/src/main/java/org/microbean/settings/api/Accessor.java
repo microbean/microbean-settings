@@ -27,6 +27,7 @@ import org.microbean.development.annotation.Experimental;
 
 // Arguments are Strings because they are informative only and
 // Accessors are contained by Paths which are often keys in maps.
+@Deprecated(forRemoval = true)
 public record Accessor(String name, List<Class<?>> parameters, List<String> arguments) {
 
 
