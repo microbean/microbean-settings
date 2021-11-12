@@ -30,7 +30,7 @@ public class SystemPropertiesQualifiersProvider extends AbstractProvider<Qualifi
   }
 
   @Override // AbstractProvider<Qualifiers>
-  public Value<?> get(final ConfiguredSupplier<?> supplier, final Path path) {
+  public Value<?> get(final Configured<?> supplier, final Path path) {
     // Use the configuration system to find a String under the path
     // :void/qualifierPrefix:java.lang.String.
     final String prefix = supplier.of("qualifierPrefix", String.class).orElse("qualifier.");

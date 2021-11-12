@@ -67,7 +67,7 @@ public class ProxyingProvider extends AbstractProvider<Object> {
 
 
   @Override // Provider
-  public final boolean isSelectable(final ConfiguredSupplier<?> caller,
+  public final boolean isSelectable(final Configured<?> caller,
                                     final Path absolutePath) {
     if (!absolutePath.isAbsolute()) {
       throw new IllegalArgumentException("absolutePath: " + absolutePath);
@@ -77,7 +77,7 @@ public class ProxyingProvider extends AbstractProvider<Object> {
       this.isProxiable(caller, absolutePath);
   }
 
-  protected boolean isProxiable(final ConfiguredSupplier<?> caller,
+  protected boolean isProxiable(final Configured<?> caller,
                                 final Path absolutePath) {
     if (absolutePath.type() instanceof Class<?> c && c.isInterface() && !c.isHidden() && !c.isSealed()) {
       final Method[] methods = c.getMethods();
@@ -124,7 +124,7 @@ public class ProxyingProvider extends AbstractProvider<Object> {
 
   @Override // Provider
   @SuppressWarnings("unchecked")
-  public final Value<?> get(final ConfiguredSupplier<?> caller,
+  public final Value<?> get(final Configured<?> caller,
                             final Path absolutePath) {
     assert absolutePath.isAbsolute();
     assert absolutePath.startsWith(caller.path());
@@ -141,19 +141,19 @@ public class ProxyingProvider extends AbstractProvider<Object> {
                                                }));
   }
 
-  protected Qualifiers qualifiers(final ConfiguredSupplier<?> caller,
+  protected Qualifiers qualifiers(final Configured<?> caller,
                                   final Path absolutePath) {
     assert absolutePath.isAbsolute();
     return Qualifiers.of();
   }
 
-  protected Path path(final ConfiguredSupplier<?> caller,
+  protected Path path(final Configured<?> caller,
                       final Path absolutePath) {
     assert absolutePath.isAbsolute();
     return Path.of(absolutePath.type());
   }
 
-  protected Object newProxyInstance(final ConfiguredSupplier<?> caller,
+  protected Object newProxyInstance(final Configured<?> caller,
                                     final Path absolutePath,
                                     final Class<?> classToProxy) {
     assert absolutePath.isAbsolute();
@@ -293,13 +293,13 @@ public class ProxyingProvider extends AbstractProvider<Object> {
 
   private static final class Handler implements InvocationHandler {
 
-    private final ConfiguredSupplier<?> caller;
+    private final Configured<?> caller;
 
     private final Path absolutePath;
 
     private final BiFunction<? super Method, ? super Object[], ? extends Path> pathFunction;
 
-    private Handler(final ConfiguredSupplier<?> caller,
+    private Handler(final Configured<?> caller,
                     final Path absolutePath,
                     final BiFunction<? super Method, ? super Object[], ? extends Path> pathFunction) {
       super();

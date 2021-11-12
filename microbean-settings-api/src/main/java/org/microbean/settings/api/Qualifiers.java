@@ -78,12 +78,9 @@ public final class Qualifiers {
     this(emptySortedMap());
   }
 
-  private Qualifiers(final Qualifier qualifier) {
-    this(new TreeMap<>(Map.of(qualifier.name(), qualifier.value())));
-  }
-
-  private Qualifiers(final SortedSet<? extends Qualifier> qualifiers) {
-    this(toMap(qualifiers));
+  private Qualifiers(final Map<? extends String, ? extends String> qualifiers) {
+    super();
+    this.qualifiers = qualifiers == null || qualifiers.isEmpty() ? emptySortedMap() : unmodifiableSortedMap(new TreeMap<>(qualifiers));
   }
 
   private Qualifiers(final SortedMap<String, ? extends String> qualifiers) {
@@ -121,21 +118,12 @@ public final class Qualifiers {
     return this.qualifiers.get(name.toString());
   }
 
-  public final Stream<Qualifier> stream() {
-    return this.toMap().entrySet().stream().map(Qualifier::of);
-  }
-
   public final boolean contains(final Qualifiers other) {
     return this == other || this.size() >= other.size() && this.entrySet().containsAll(other.entrySet());
   }
 
   public final boolean isSubsetOf(final Qualifiers other) {
     return other == this || other.contains(this);
-  }
-
-  public final SortedSet<Qualifier> toQualifiers() {
-    final SortedMap<? extends String, ? extends String> q = this.toMap();
-    return q.isEmpty() ? emptySortedSet() : unmodifiableSortedSet(new TreeSet<>(q.entrySet().stream().map(Qualifier::of).toList()));
   }
 
   public final int intersectionSize(final Qualifiers other) {
@@ -186,7 +174,9 @@ public final class Qualifiers {
   @Override // Object
   public final String toString() {
     final StringJoiner sj = new StringJoiner(";");
-    this.stream().map(Qualifier::toString).forEach(sj::add);
+    for (final Entry<String, String> entry : this.entrySet()) {
+      sj.add(entry.getKey() + "=" + entry.getValue());
+    }
     return sj.toString();
   }
 
@@ -210,16 +200,12 @@ public final class Qualifiers {
     }
   }
 
-  public static final Qualifiers of(final SortedSet<? extends Qualifier> set) {
-    return set == null || set.isEmpty() ? of() : of(toMap(set));
-  }
-
   public static final Qualifiers of(final CharSequence value0) {
     return of("value", value0);
   }
 
   public static final Qualifiers of(final CharSequence name0, final CharSequence value0) {
-    return new Qualifiers(Qualifier.of(name0, value0));
+    return new Qualifiers(Map.of(name0.toString(), value0.toString()));
   }
 
   public static final Qualifiers of(final CharSequence name0, final CharSequence value0,
@@ -252,12 +238,6 @@ public final class Qualifiers {
       }
       return new Qualifiers(map);
     }
-  }
-
-  private static final SortedMap<String, String> toMap(final SortedSet<? extends Qualifier> qs) {
-    final SortedMap<String, String> map = new TreeMap<>();
-    qs.forEach(q -> map.put(q.name(), q.value()));
-    return unmodifiableSortedMap(map);
   }
 
 }

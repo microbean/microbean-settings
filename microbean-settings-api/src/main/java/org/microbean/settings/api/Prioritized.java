@@ -28,7 +28,7 @@ import static java.util.Comparator.comparingInt;
 
 // "Highest priority" wins; i.e. NOT "quality is job 1", NOT "DefCon 1". Sort descending.
 // So the most important thing is Integer.MAX_VALUE; the least is Integer.MIN_VALUE.
-public interface Prioritized {
+interface Prioritized {
 
   public default int priority() {
     return priority(this.getClass());

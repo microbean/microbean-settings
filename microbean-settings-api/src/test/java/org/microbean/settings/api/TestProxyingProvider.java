@@ -36,7 +36,7 @@ final class TestProxyingProvider {
 
   @Test
   final void explore() {
-    final ConfiguredSupplier<Car> carCs = ConfiguredSupplier.of().plus(Car.class);
+    final Configured<Car> carCs = Configured.of().plus(Car.class);
     final Car car = carCs.get();
     assertNotNull(car);
     assertSame(car, carCs.get());
@@ -88,7 +88,7 @@ final class TestProxyingProvider {
     }
 
     @Override
-    public final boolean isSelectable(final ConfiguredSupplier<?> supplier,
+    public final boolean isSelectable(final Configured<?> supplier,
                                       final Path path) {
       if (super.isSelectable(supplier, path)) {
         assertSame(Wheel.class, path.type());
@@ -100,7 +100,7 @@ final class TestProxyingProvider {
       }
     }
 
-    public final Value<Wheel> get(final ConfiguredSupplier<?> supplier,
+    public final Value<Wheel> get(final Configured<?> supplier,
                                   final Path path) {
       assertSame(Wheel.class, path.type());
       final Element e = path.get(path.size() - 1);

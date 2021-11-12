@@ -18,55 +18,20 @@ package org.microbean.settings.api;
 
 import java.util.Objects;
 
-public interface Qualified<T> {
+public record Qualified<T>(Qualifiers qualifiers, T qualified) {
 
-
+  
   /*
-   * Instance methods.
+   * Static methods.
    */
 
 
-  public T qualified();
+  public static final <T> Qualified<T> of(final T qualified) {
+    return of(Qualifiers.of(), qualified);
+  }
 
-  public Qualifiers qualifiers();
-
-
-  /*
-   * Inner and nested classes.
-   */
-
-
-  public record Record<T>(Qualifiers qualifiers, T qualified) implements Qualified<T> {
-
-    
-    /*
-     * Constructors.
-     */
-
-
-    public Record {
-      Objects.requireNonNull(qualifiers, "qualifiers");
-      Objects.requireNonNull(qualified, "qualified");
-    }
-
-
-    /*
-     * Static methods.
-     */
-
-
-    public static final <T> Record<T> of(final Qualified<T> q) {
-      return q instanceof Record<T> qr ? qr : new Record<>(q.qualifiers(), q.qualified());
-    }
-
-    public static final <T> Record<T> of(final T qualified) {
-      return of(Qualifiers.of(), qualified);
-    }
-
-    public static final <T> Record<T> of(final Qualifiers qualifiers, final T qualified) {
-      return new Record<>(qualifiers, qualified);
-    }
-
+  public static final <T> Qualified<T> of(final Qualifiers qualifiers, final T qualified) {
+    return new Qualified<>(qualifiers, qualified);
   }
 
 }

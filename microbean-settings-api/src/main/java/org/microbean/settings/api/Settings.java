@@ -41,17 +41,17 @@ import org.microbean.settings.api.Path.Element;
 import org.microbean.type.Types;
 
 /**
- * A subclassable default {@link ConfiguredSupplier} implementation
+ * A subclassable default {@link Configured} implementation
  * that delegates its work to {@link Provider}s.
  *
  * @author <a href="https://about.me/lairdnelson"
  * target="_parent">Laird Nelson</a>
  *
- * @see ConfiguredSupplier
+ * @see Configured
  *
  * @see Provider
  */
-public class Settings<T> implements AutoCloseable, ConfiguredSupplier<T> {
+public class Settings<T> implements AutoCloseable, Configured<T> {
 
 
   /*
@@ -60,13 +60,13 @@ public class Settings<T> implements AutoCloseable, ConfiguredSupplier<T> {
 
 
   // Package-private for testing only.
-  final ConcurrentMap<Qualified.Record<Path>, Settings<?>> settingsCache;
+  final ConcurrentMap<Qualified<Path>, Settings<?>> settingsCache;
 
   private final List<Provider> providers;
 
   private final Qualifiers qualifiers;
 
-  private final ConfiguredSupplier<?> parent;
+  private final Configured<?> parent;
 
   private final Supplier<T> supplier;
 
@@ -90,11 +90,11 @@ public class Settings<T> implements AutoCloseable, ConfiguredSupplier<T> {
    * @deprecated This constructor should be invoked by subclasses and
    * {@link ServiceLoader java.util.ServiceLoader} instances only.
    *
-   * @see ConfiguredSupplier#of()
+   * @see Configured#of()
    */
   @Deprecated // intended for use by ServiceLoader only
   public Settings() {
-    this(new ConcurrentHashMap<Qualified.Record<Path>, Settings<?>>(),
+    this(new ConcurrentHashMap<Qualified<Path>, Settings<?>>(),
          loadedProviders(),
          null, // qualifiers
          null, // parent,
@@ -106,10 +106,10 @@ public class Settings<T> implements AutoCloseable, ConfiguredSupplier<T> {
   }
 
   @SuppressWarnings("unchecked")
-  private Settings(final ConcurrentMap<Qualified.Record<Path>, Settings<?>> settingsCache,
+  private Settings(final ConcurrentMap<Qualified<Path>, Settings<?>> settingsCache,
                    final Collection<? extends Provider> providers,
                    final Qualifiers qualifiers,
-                   final ConfiguredSupplier<?> parent, // if null, will end up being "this" if path is Path.root()
+                   final Configured<?> parent, // if null, will end up being "this" if path is Path.root()
                    final Path path,
                    final Supplier<T> supplier, // if null, will end up being () -> this if path is Path.root()
                    final Supplier<? extends Consumer<? super Provider>> rejectedProvidersConsumerSupplier,
@@ -128,7 +128,7 @@ public class Settings<T> implements AutoCloseable, ConfiguredSupplier<T> {
         this.path = Path.root();
         this.supplier = supplier == null ? () -> (T)this : supplier; // NOTE
         this.parent = this; // NOTE
-        final Qualified.Record<Path> qp = Qualified.Record.of(Qualifiers.of(), Path.root());
+        final Qualified<Path> qp = Qualified.of(Qualifiers.of(), Path.root());
         this.settingsCache.put(qp, this); // NOTE
         // While the following call is in effect, our
         // final-but-as-yet-uninitialized qualifiers instance field will
@@ -188,7 +188,7 @@ public class Settings<T> implements AutoCloseable, ConfiguredSupplier<T> {
     return this.providers;
   }
 
-  @Override // ConfiguredSupplier
+  @Override // Configured
   public final Qualifiers qualifiers() {
     // NOTE: This null check is critical.  We check for null here
     // because during bootstrapping the qualifiers will not have been
@@ -199,24 +199,24 @@ public class Settings<T> implements AutoCloseable, ConfiguredSupplier<T> {
     return qualifiers == null ? Qualifiers.of() : qualifiers;
   }
 
-  @Override // ConfiguredSupplier
+  @Override // Configured
   @SuppressWarnings("unchecked")
-  public final <P> ConfiguredSupplier<P> parent() {
-    return (ConfiguredSupplier<P>)this.parent;
+  public final <P> Configured<P> parent() {
+    return (Configured<P>)this.parent;
   }
 
-  @Override // ConfiguredSupplier
+  @Override // Configured
   public final Path path() {
     return this.path;
   }
 
-  @Override // ConfiguredSupplier
+  @Override // Configured
   public final T get() {
     return this.supplier.get();
   }
 
-  @Override // ConfiguredSupplier
-  public final <U> Settings<U> of(final ConfiguredSupplier<?> parent,
+  @Override // Configured
+  public final <U> Settings<U> of(final Configured<?> parent,
                                   final Path absolutePath) {
     return
       this.of(parent,
@@ -226,7 +226,7 @@ public class Settings<T> implements AutoCloseable, ConfiguredSupplier<T> {
               this.ambiguousValuesConsumerSupplier.get());
   }
 
-  private final <U> Settings<U> of(final ConfiguredSupplier<?> parent,
+  private final <U> Settings<U> of(final Configured<?> parent,
                                    Path absolutePath,
                                    final Consumer<? super Provider> rejectedProviders,
                                    final Consumer<? super Value<?>> rejectedValues,
@@ -255,7 +255,7 @@ public class Settings<T> implements AutoCloseable, ConfiguredSupplier<T> {
     //
     // This obviously can result in unnecessary work, but most
     // configuration use cases will cause this work to happen anyway.
-    final Qualified.Record<Path> qp = Qualified.Record.of(parent.qualifiers(), absolutePath);
+    final Qualified<Path> qp = Qualified.of(parent.qualifiers(), absolutePath);
     Settings<?> settings = this.settingsCache.get(qp);
     if (settings == null) {
       settings =
@@ -300,7 +300,7 @@ public class Settings<T> implements AutoCloseable, ConfiguredSupplier<T> {
       .orElse(path);
   }
 
-  private final <U> Settings<U> computeSettings(final ConfiguredSupplier<?> parent,
+  private final <U> Settings<U> computeSettings(final Configured<?> parent,
                                                 final Path absolutePath,
                                                 final Consumer<? super Provider> rejectedProviders,
                                                 final Consumer<? super Value<?>> rejectedValues,
@@ -325,7 +325,7 @@ public class Settings<T> implements AutoCloseable, ConfiguredSupplier<T> {
                      this.ambiguousValuesConsumerSupplier);
   }
 
-  private final <U> Value<U> value(final ConfiguredSupplier<?> parent,
+  private final <U> Value<U> value(final Configured<?> parent,
                                    final Path absolutePath,
                                    final Consumer<? super Provider> rejectedProviders,
                                    final Consumer<? super Value<?>> rejectedValues,
@@ -466,7 +466,7 @@ public class Settings<T> implements AutoCloseable, ConfiguredSupplier<T> {
   }
 
   protected final boolean isSelectable(final Provider provider,
-                                       final ConfiguredSupplier<?> supplier,
+                                       final Configured<?> supplier,
                                        final Path absolutePath) {
     if (!absolutePath.isAbsolute()) {
       throw new IllegalArgumentException("absolutePath: " + absolutePath);
@@ -476,7 +476,7 @@ public class Settings<T> implements AutoCloseable, ConfiguredSupplier<T> {
       provider.isSelectable(supplier, absolutePath);
   }
 
-  @SubordinateTo("#of(ConfiguredSupplier, Path, Supplier)")
+  @SubordinateTo("#of(Configured, Path, Supplier)")
   protected int score(final Qualifiers referenceQualifiers, final Qualifiers valueQualifiers) {
     final int intersectionSize = referenceQualifiers.intersectionSize(valueQualifiers);
     if (intersectionSize > 0) {
@@ -519,7 +519,7 @@ public class Settings<T> implements AutoCloseable, ConfiguredSupplier<T> {
    * respectively.  Note that such an invocation is <em>not</em> made
    * by this method, but logically precedes it when this method is
    * called in the natural course of events by the {@link
-   * #of(ConfiguredSupplier, Path)} method.</p>
+   * #of(Configured, Path)} method.</p>
    *
    * @param absoluteReferencePath the {@link Path} against which to
    * score the supplied {@code valuePath}; must not be {@code null};
@@ -538,7 +538,7 @@ public class Settings<T> implements AutoCloseable, ConfiguredSupplier<T> {
    * @exception IllegalArgumentException if certain preconditions have
    * been violated
    *
-   * @see #of(ConfiguredSupplier, Path)
+   * @see #of(Configured, Path)
    *
    * @see #isSelectable(Path, Path)
    *
@@ -550,7 +550,7 @@ public class Settings<T> implements AutoCloseable, ConfiguredSupplier<T> {
    * invoked with the same paths.  Overrides must preserve this
    * property.
    */
-  @SubordinateTo("#of(ConfiguredSupplier, Path, Supplier)")
+  @SubordinateTo("#of(Configured, Path, Supplier)")
   protected int score(final Path absoluteReferencePath, final Path valuePath) {
     if (!absoluteReferencePath.isAbsolute()) {
       throw new IllegalArgumentException("absoluteReferencePath: " + absoluteReferencePath);
@@ -630,7 +630,7 @@ public class Settings<T> implements AutoCloseable, ConfiguredSupplier<T> {
     return score;
   }
 
-  protected <U> Value<U> disambiguate(final ConfiguredSupplier<?> supplier,
+  protected <U> Value<U> disambiguate(final Configured<?> supplier,
                                       final Path absolutePath,
                                       final Provider p0,
                                       final Value<U> v0,

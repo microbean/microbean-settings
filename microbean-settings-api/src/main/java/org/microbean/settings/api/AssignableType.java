@@ -21,7 +21,7 @@ import java.lang.reflect.Type;
 import org.microbean.type.CovariantTypeSemantics;
 import org.microbean.type.TypeSemantics;
 
-public record AssignableType(Type assignable) implements Assignable<Type>, Type {
+public record AssignableType(Type type) implements Type {
 
 
   /*
@@ -39,18 +39,17 @@ public record AssignableType(Type assignable) implements Assignable<Type>, Type 
 
   @Override // Type
   public final String getTypeName() {
-    return this.assignable().getTypeName();
+    return this.type().getTypeName();
   }
 
-  @Override // Assignable<Type>
   public boolean isAssignable(final Type payload) {
-    return covariantTypeSemantics.isAssignable(this.assignable(),
-                                               payload instanceof AssignableType a ? a.assignable() : payload);
+    return covariantTypeSemantics.isAssignable(this.type(),
+                                               payload instanceof AssignableType a ? a.type() : payload);
   }
 
   @Override // Object
   public final String toString() {
-    return this.assignable().toString();
+    return this.type().toString();
   }
 
 

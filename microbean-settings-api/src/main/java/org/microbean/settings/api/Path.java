@@ -516,7 +516,7 @@ public final class Path {
      */
 
 
-    public static final class Parser {
+    static final class Parser {
 
 
       /*
@@ -770,7 +770,7 @@ public final class Path {
 
   }
 
-  public static final class Parser {
+  static final class Parser {
 
 
     /*

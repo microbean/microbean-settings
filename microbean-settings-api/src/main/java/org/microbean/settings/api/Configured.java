@@ -39,7 +39,7 @@ import org.microbean.settings.api.Path.Element;
  *
  * @see #of()
  */
-public interface ConfiguredSupplier<T> extends OptionalSupplier<T> {
+public interface Configured<T> extends OptionalSupplier<T> {
 
 
   /*
@@ -50,12 +50,12 @@ public interface ConfiguredSupplier<T> extends OptionalSupplier<T> {
   public Qualifiers qualifiers();
 
   // Note that the root will have itself as its parent.
-  public <P> ConfiguredSupplier<P> parent();
+  public <P> Configured<P> parent();
 
   public Path path();
 
-  public <U> ConfiguredSupplier<U> of(final ConfiguredSupplier<?> parent,
-                                      final Path absolutePath);
+  public <U> Configured<U> of(final Configured<?> parent,
+                              final Path absolutePath);
 
 
   /*
@@ -81,25 +81,24 @@ public interface ConfiguredSupplier<T> extends OptionalSupplier<T> {
    * single application.</p>
    *
    * <p>Path transliteration must occur during the execution of any
-   * implementation of the {@link #of(ConfiguredSupplier, Path)}
-   * method, such that the {@link Path} supplied to that method, once
-   * it has been verified to be {@linkplain Path#isAbsolute()
-   * absolute}, is supplied to an implementation of this method. The
-   * {@link Path} returned by an implementation of this method must
-   * then be used during the rest of the invocation of the {@link
-   * #of(ConfiguredSupplier, Path)} method, as if it had been supplied
-   * in the first place.</p>
+   * implementation of the {@link #of(Configured, Path)} method, such
+   * that the {@link Path} supplied to that method, once it has been
+   * verified to be {@linkplain Path#isAbsolute() absolute}, is
+   * supplied to an implementation of this method. The {@link Path}
+   * returned by an implementation of this method must then be used
+   * during the rest of the invocation of the {@link #of(Configured,
+   * Path)} method, as if it had been supplied in the first place.</p>
    *
    * <p>Behavior resulting from any other usage of an implementation
    * of this method is undefined.</p>
    *
    * <p>The default implementation of this method simply returns the
-   * supplied {@link Path}.  Implementations of the {@link
-   * ConfiguredSupplier} interface are strongly encouraged to actually
-   * perform path transliteration.</p>
+   * supplied {@link Path}.  Implementations of the {@link Configured}
+   * interface are strongly encouraged to actually perform path
+   * transliteration.</p>
    *
-   * <p>A class that implements {@link ConfiguredSupplier} may find
-   * {@link StackWalker} particularly useful in implementing this method.</p>
+   * <p>A class that implements {@link Configured} may find {@link
+   * StackWalker} particularly useful in implementing this method.</p>
    *
    * @param path an {@linkplain Path#isAbsolute() absolute
    * <code>Path</code>}; must not be null; must return {@code true}
@@ -126,11 +125,11 @@ public interface ConfiguredSupplier<T> extends OptionalSupplier<T> {
    *
    * @see Path#transliterate(BiFunction)
    *
-   * @see #of(ConfiguredSupplier, Path)
+   * @see #of(Configured, Path)
    */
   @Experimental
   @OverridingEncouraged
-  @SubordinateTo("#of(ConfiguredSupplier, Path, Supplier")
+  @SubordinateTo("#of(Configured, Path, Supplier")
   public default Path transliterate(final Path path) {
     if (!path.isAbsolute()) {
       throw new IllegalArgumentException("!path.isAbsolute(): " + path);
@@ -145,20 +144,20 @@ public interface ConfiguredSupplier<T> extends OptionalSupplier<T> {
   }
 
   @OverridingDiscouraged
-  public default <U> ConfiguredSupplier<U> plus(final Class<? extends U> type) {
+  public default <U> Configured<U> plus(final Class<? extends U> type) {
     return this.plus(Element.of(type));
   }
 
   @OverridingDiscouraged
   @SuppressWarnings("unchecked")
-  public default <U> ConfiguredSupplier<U> plus(final Type type) {
+  public default <U> Configured<U> plus(final Type type) {
     return this.plus(Element.of(type));
   }
 
   @Convenience
   @OverridingDiscouraged
-  public default <U> ConfiguredSupplier<U> plus(final String element,
-                                                final Class<? extends U> type) {
+  public default <U> Configured<U> plus(final String element,
+                                        final Class<? extends U> type) {
     return this.plus(element.isEmpty() ? Element.of(type) : Element.of(element, type));
   }
 
@@ -166,40 +165,40 @@ public interface ConfiguredSupplier<T> extends OptionalSupplier<T> {
   @Convenience
   @OverridingDiscouraged
   @SuppressWarnings("unchecked")
-  public default <U> ConfiguredSupplier<U> plus(final String element,
-                                                final Type type) {
+  public default <U> Configured<U> plus(final String element,
+                                        final Type type) {
     return this.plus(element.isEmpty() ? Element.of(type) : Element.of(element, type));
   }
 
-  public default <U> ConfiguredSupplier<U> plus(final Element element) {
+  public default <U> Configured<U> plus(final Element element) {
     return this.plus(Path.of(element));
   }
 
   @OverridingDiscouraged
-  public default <U> ConfiguredSupplier<U> plus(final Path path) {
+  public default <U> Configured<U> plus(final Path path) {
     return this.of(this, this.path().plus(path)); // NOTE
   }
 
   @Convenience
   @OverridingDiscouraged
-  public default <U> ConfiguredSupplier<U> of(final ConfiguredSupplier<?> parent,
-                                              final Class<? extends U> type) {
+  public default <U> Configured<U> of(final Configured<?> parent,
+                                      final Class<? extends U> type) {
     return this.of(parent, Element.of(type));
   }
 
   @Convenience
   @OverridingDiscouraged
   @SuppressWarnings("unchecked")
-  public default <U> ConfiguredSupplier<U> of(final ConfiguredSupplier<?> parent,
-                                              final Type type) {
+  public default <U> Configured<U> of(final Configured<?> parent,
+                                      final Type type) {
     return this.of(parent, Element.of(type));
   }
 
   @Convenience
   @OverridingDiscouraged
-  public default <U> ConfiguredSupplier<U> of(final ConfiguredSupplier<?> parent,
-                                              final String element,
-                                              final Class<? extends U> type) {
+  public default <U> Configured<U> of(final Configured<?> parent,
+                                      final String element,
+                                      final Class<? extends U> type) {
     return this.of(parent, element.isEmpty() ? Element.of(type) : Element.of(element, type));
   }
 
@@ -207,21 +206,21 @@ public interface ConfiguredSupplier<T> extends OptionalSupplier<T> {
   @Convenience
   @OverridingDiscouraged
   @SuppressWarnings("unchecked")
-  public default <U> ConfiguredSupplier<U> of(final ConfiguredSupplier<?> parent,
-                                              final String element,
-                                              final Type type) {
+  public default <U> Configured<U> of(final Configured<?> parent,
+                                      final String element,
+                                      final Type type) {
     return this.of(parent, element.isEmpty() ? Element.of(type) : Element.of(element, type));
   }
 
   @Convenience
   @OverridingDiscouraged
-  public default <U> ConfiguredSupplier<U> of(final ConfiguredSupplier<?> parent,
-                                              final Element element) {
+  public default <U> Configured<U> of(final Configured<?> parent,
+                                      final Element element) {
     return this.of(parent, Path.root().plus(element)); // root().plus() is critical here
   }
 
   @OverridingDiscouraged
-  public default <U> ConfiguredSupplier<U> of(final Path absolutePath) {
+  public default <U> Configured<U> of(final Path absolutePath) {
     if (!absolutePath.isAbsolute()) {
       throw new IllegalArgumentException("absolutePath: " + absolutePath);
     }
@@ -230,35 +229,35 @@ public interface ConfiguredSupplier<T> extends OptionalSupplier<T> {
 
   @Convenience
   @OverridingDiscouraged
-  public default <U> ConfiguredSupplier<U> of(final Class<? extends U> type) {
+  public default <U> Configured<U> of(final Class<? extends U> type) {
     return this.of(Element.of(type));
   }
 
 
   @Convenience
   @OverridingDiscouraged
-  public default <U> ConfiguredSupplier<U> of(final Type type) {
+  public default <U> Configured<U> of(final Type type) {
     return this.of(Element.of(type));
   }
 
   @Convenience
   @OverridingDiscouraged
-  public default <U> ConfiguredSupplier<U> of(final String element,
-                                              final Class<? extends U> type) {
+  public default <U> Configured<U> of(final String element,
+                                      final Class<? extends U> type) {
     return this.of(element.isEmpty() ? Element.of(type) : Element.of(element, type));
   }
 
   @Convenience
   @OverridingDiscouraged
   @SuppressWarnings("unchecked")
-  public default <U> ConfiguredSupplier<U> of(final String element,
-                                              final Type type) {
+  public default <U> Configured<U> of(final String element,
+                                      final Type type) {
     return this.of(element.isEmpty() ? Element.of(type) : Element.of(element, type));
   }
 
   @Convenience
   @OverridingDiscouraged
-  public default <U> ConfiguredSupplier<U> of(final Element element) {
+  public default <U> Configured<U> of(final Element element) {
     return this.of(Path.root().plus(element)); // root().plus() is critical here
   }
 
@@ -268,11 +267,11 @@ public interface ConfiguredSupplier<T> extends OptionalSupplier<T> {
   }
 
   @OverridingDiscouraged
-  public default ConfiguredSupplier<?> root() {
-    ConfiguredSupplier<?> root = this;
-    ConfiguredSupplier<?> parent = root.parent();
+  public default Configured<?> root() {
+    Configured<?> root = this;
+    Configured<?> parent = root.parent();
     while (parent != null && parent != root) {
-      // (Strictly speaking, ConfiguredSupplier::parent should NEVER be null.)
+      // (Strictly speaking, Configured::parent should NEVER be null.)
       root = parent;
       parent = root.parent();
     }
@@ -290,33 +289,33 @@ public interface ConfiguredSupplier<T> extends OptionalSupplier<T> {
 
   @EntryPoint
   @SuppressWarnings("static")
-  public static ConfiguredSupplier<?> of() {
+  public static Configured<?> of() {
     return new Object() {
-      private static final ConfiguredSupplier<?> instance;
+      private static final Configured<?> instance;
       static {
 
-        final ConfiguredSupplier<?> bootstrapConfiguredSupplier =
-          ServiceLoader.load(ConfiguredSupplier.class, ConfiguredSupplier.class.getClassLoader()).findFirst().orElseThrow();
+        final Configured<?> bootstrapConfigured =
+          ServiceLoader.load(Configured.class, Configured.class.getClassLoader()).findFirst().orElseThrow();
 
-        if (!Path.root().equals(bootstrapConfiguredSupplier.path())) {
-          throw new IllegalStateException("path(): " + bootstrapConfiguredSupplier.path());
-        } else if (bootstrapConfiguredSupplier.parent() != bootstrapConfiguredSupplier) {
-          throw new IllegalStateException("parent(): " + bootstrapConfiguredSupplier.parent());
-        } else if (bootstrapConfiguredSupplier.get() != bootstrapConfiguredSupplier) {
-          throw new IllegalStateException("bootstrapConfiguredSupplier.get(): " + bootstrapConfiguredSupplier.get());
-        } else if (!bootstrapConfiguredSupplier.isRoot()) {
-          throw new IllegalStateException("!bootstrapConfiguredSupplier.isRoot()");
-        } else if (bootstrapConfiguredSupplier.root() != bootstrapConfiguredSupplier) {
-          throw new IllegalStateException("root(): " + bootstrapConfiguredSupplier.root());
+        if (!Path.root().equals(bootstrapConfigured.path())) {
+          throw new IllegalStateException("path(): " + bootstrapConfigured.path());
+        } else if (bootstrapConfigured.parent() != bootstrapConfigured) {
+          throw new IllegalStateException("parent(): " + bootstrapConfigured.parent());
+        } else if (bootstrapConfigured.get() != bootstrapConfigured) {
+          throw new IllegalStateException("bootstrapConfigured.get(): " + bootstrapConfigured.get());
+        } else if (!bootstrapConfigured.isRoot()) {
+          throw new IllegalStateException("!bootstrapConfigured.isRoot()");
+        } else if (bootstrapConfigured.root() != bootstrapConfigured) {
+          throw new IllegalStateException("root(): " + bootstrapConfigured.root());
         }
 
-        instance = bootstrapConfiguredSupplier
-          .<ConfiguredSupplier<?>>of(new TypeToken<ConfiguredSupplier<?>>() {}.type())
-          .orElse(bootstrapConfiguredSupplier);
+        instance = bootstrapConfigured
+          .<Configured<?>>of(new TypeToken<Configured<?>>() {}.type())
+          .orElse(bootstrapConfigured);
 
-        if (instance.parent() != bootstrapConfiguredSupplier) {
+        if (instance.parent() != bootstrapConfigured) {
           throw new IllegalStateException("instance.parent(): " + instance.parent());
-        } else if (!(instance.get() instanceof ConfiguredSupplier)) {
+        } else if (!(instance.get() instanceof Configured)) {
           throw new IllegalStateException("instance.get(): " + instance.get());
         }
       }

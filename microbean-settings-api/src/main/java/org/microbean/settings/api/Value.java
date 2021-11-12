@@ -32,7 +32,7 @@ import org.microbean.development.annotation.Convenience;
  * which it might be suitable.
  *
  * <p>The {@link Value} interface is not used by the {@link
- * ConfiguredSupplier} interface directly but is often quite useful in
+ * Configured} interface directly but is often quite useful in
  * implementing it.</p>
  *
  * <p>A {@link Value} once received retains no reference to whatever

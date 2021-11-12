@@ -26,7 +26,7 @@ import org.microbean.development.annotation.Convenience;
 
 /**
  * A provider of {@link Supplier}s that might be suitable for a {@link
- * ConfiguredSupplier} implementation to return.
+ * Configured} implementation to return.
  *
  * <p>{@link Provider} instances are subordinate to {@link
  * Settings}.</p>
@@ -34,9 +34,9 @@ import org.microbean.development.annotation.Convenience;
  * @author <a href="https://about.me/lairdnelson"
  * target="_parent">Laird Nelson</a>
  *
- * @see #isSelectable(ConfiguredSupplier, Path)
+ * @see #isSelectable(Configured, Path)
  *
- * @see #get(ConfiguredSupplier, Path)
+ * @see #get(Configured, Path)
  *
  * @see Settings
  */
@@ -51,7 +51,7 @@ public interface Provider extends Prioritized {
 
   /**
    * Returns a {@link Type} representing the upper bound of all
-   * possible {@linkplain Value values} {@linkplain #get(ConfiguredSupplier,
+   * possible {@linkplain Value values} {@linkplain #get(Configured,
    * Path) supplied} by this {@link Provider}.
    *
    * <p>Often the value returned by implementations of this method is
@@ -64,7 +64,7 @@ public interface Provider extends Prioritized {
    * Object Object.class}.</p>
    *
    * @return a {@link Type} representing the upper bound of all
-   * possible {@linkplain Value values} {@linkplain #get(ConfiguredSupplier,
+   * possible {@linkplain Value values} {@linkplain #get(Configured,
    * Path) supplied} by this {@link Provider}; never {@code null}
    *
    * @nullability Implementations of this method must not return
@@ -80,13 +80,13 @@ public interface Provider extends Prioritized {
     return Object.class;
   }
 
-  public default boolean isSelectable(final ConfiguredSupplier<?> supplier, final Path absolutePath) {
+  public default boolean isSelectable(final Configured<?> supplier, final Path absolutePath) {
     if (!absolutePath.isAbsolute()) {
       throw new IllegalArgumentException("absolutePath: " + absolutePath);
     }
     return AssignableType.of(this.upperBound()).isAssignable(absolutePath.type());
   }
 
-  public Value<?> get(final ConfiguredSupplier<?> supplier, final Path absolutePath);
+  public Value<?> get(final Configured<?> supplier, final Path absolutePath);
 
 }

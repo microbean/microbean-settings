@@ -18,7 +18,7 @@ package org.microbean.settings.api;
 
 public interface Disambiguator {
 
-  public <U> Value<U> disambiguate(final ConfiguredSupplier<?> parent,
+  public <U> Value<U> disambiguate(final Configured<?> parent,
                                    final Path absolutePath,
                                    final Provider p0,
                                    final Value<U> v0,
