@@ -1,0 +1,2 @@
+org.microbean.settings.ProxyingProvider
+org.microbean.settings.TestProxyingProvider$LRWheelProvider

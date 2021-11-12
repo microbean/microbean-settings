@@ -14,22 +14,19 @@
  * implied.  See the License for the specific language governing
  * permissions and limitations under the License.
  */
-package org.microbean.settings.api;
+package org.microbean.settings;
 
-public record Qualified<T>(Qualifiers qualifiers, T qualified) {
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
+@Documented
+@Retention(RetentionPolicy.RUNTIME)
+@Target({ ElementType.METHOD, ElementType.TYPE })
+public @interface Priority {
+
+  int value() default 0;
   
-  /*
-   * Static methods.
-   */
-
-
-  public static final <T> Qualified<T> of(final T qualified) {
-    return of(Qualifiers.of(), qualified);
-  }
-
-  public static final <T> Qualified<T> of(final Qualifiers qualifiers, final T qualified) {
-    return new Qualified<>(qualifiers, qualified);
-  }
-
 }

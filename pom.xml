@@ -28,7 +28,7 @@
 
   <modules>
     <module>microbean-settings-api</module>
-    <module>microbean-settings-proxy-api</module>
+    <module>microbean-settings</module>
   </modules>
   
   <dependencyManagement>
@@ -91,7 +91,7 @@
 
       <dependency>
         <groupId>${project.groupId}</groupId>
-        <artifactId>microbean-settings-proxy-api</artifactId>
+        <artifactId>microbean-settings</artifactId>
         <version>${project.version}</version>
         <type>jar</type>
       </dependency>

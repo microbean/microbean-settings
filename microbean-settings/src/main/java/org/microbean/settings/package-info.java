@@ -14,22 +14,11 @@
  * implied.  See the License for the specific language governing
  * permissions and limitations under the License.
  */
-package org.microbean.settings.api;
 
-public record Qualified<T>(Qualifiers qualifiers, T qualified) {
-
-  
-  /*
-   * Static methods.
-   */
-
-
-  public static final <T> Qualified<T> of(final T qualified) {
-    return of(Qualifiers.of(), qualified);
-  }
-
-  public static final <T> Qualified<T> of(final Qualifiers qualifiers, final T qualified) {
-    return new Qualified<>(qualifiers, qualified);
-  }
-
-}
+/**
+ * Provides classes and interfaces for implementing the microBean™ Settings API.
+ *
+ * @author <a href="https://about.me/lairdnelson"
+ * target="_parent">Laird Nelson</a>
+ */
+package org.microbean.settings;
