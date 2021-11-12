@@ -190,7 +190,7 @@ public final class Qualifiers {
     return EMPTY_QUALIFIERS;
   }
 
-  public static final Qualifiers of(final SortedMap<? extends CharSequence, ? extends CharSequence> map) {
+  public static final Qualifiers of(final Map<? extends CharSequence, ? extends CharSequence> map) {
     if (map == null || map.isEmpty()) {
       return of();
     } else {

@@ -47,15 +47,76 @@ public interface Configured<T> extends OptionalSupplier<T> {
    */
 
 
+  /**
+   * Returns the {@link Qualifiers} with which this {@link Configured}
+   * is associated.
+   *
+   * <p>Implementations of this method must not return {@code
+   * null}.</p>
+   *
+   * @return the non-{@code null} {@link Qualifiers} with which this
+   * {@link Configured} is associated
+   *
+   * @nullability Implementations of this method must not return
+   * {@code null}.
+   *
+   * @threadsafety Implementations of this method must be safe for
+   * concurrent use by multiple threads.
+   *
+   * @idempotency Implementations of this method must be idempotent
+   * and deterministic.
+   */
   public Qualifiers qualifiers();
 
+  /**
+   * Returns the {@link Configured} serving as the parent of this
+   * {@link Configured}.
+   *
+   * <p>The "root" {@link Configured} must return itself from its {@link
+   * #parent()} implementation.</p>
+   *
+   * <p>Implementations of this method must not return {@code
+   * null}.</p>
+   *
+   * @return the non-{@code null} {@link Configured} serving as the
+   * parent of this {@link Configured}; may be this {@link Configured}
+   * itself
+   *
+   * @nullability Implementations of this method must not return
+   * {@code null}.
+   *
+   * @threadsafety Implementations of this method must be safe for
+   * concurrent use by multiple threads.
+   *
+   * @idempotency Implementations of this method must be idempotent
+   * and deterministic.
+   */
   // Note that the root will have itself as its parent.
   public <P> Configured<P> parent();
 
+  /**
+   * Returns the {@linkplain Path#isAbsolute() absolute} {@link Path}
+   * with which this {@link Configured} is associated.
+   *
+   * <p>Implementations of this method must not return {@code
+   * null}.</p>
+   *
+   * @return the non-{@code null} {@linkplain Path#isAbsolute()
+   * absolute} {@link Path} with which this {@link Configured} is
+   * associated
+   *
+   * @nullability Implementations of this method must not return
+   * {@code null}.
+   *
+   * @threadsafety Implementations of this method must be safe for
+   * concurrent use by multiple threads.
+   *
+   * @idempotency Implementations of this method must be idempotent
+   * and deterministic.
+   */
   public Path path();
 
-  public <U> Configured<U> of(final Configured<?> parent,
-                              final Path absolutePath);
+  public <U> Configured<U> of(final Configured<?> parent, final Path absolutePath);
 
 
   /*
@@ -143,13 +204,14 @@ public interface Configured<T> extends OptionalSupplier<T> {
     return this.path().classLoader();
   }
 
+  @Convenience
   @OverridingDiscouraged
   public default <U> Configured<U> plus(final Class<? extends U> type) {
     return this.plus(Element.of(type));
   }
 
+  @Convenience
   @OverridingDiscouraged
-  @SuppressWarnings("unchecked")
   public default <U> Configured<U> plus(final Type type) {
     return this.plus(Element.of(type));
   }
@@ -161,10 +223,8 @@ public interface Configured<T> extends OptionalSupplier<T> {
     return this.plus(element.isEmpty() ? Element.of(type) : Element.of(element, type));
   }
 
-
   @Convenience
   @OverridingDiscouraged
-  @SuppressWarnings("unchecked")
   public default <U> Configured<U> plus(final String element,
                                         final Type type) {
     return this.plus(element.isEmpty() ? Element.of(type) : Element.of(element, type));
@@ -188,7 +248,6 @@ public interface Configured<T> extends OptionalSupplier<T> {
 
   @Convenience
   @OverridingDiscouraged
-  @SuppressWarnings("unchecked")
   public default <U> Configured<U> of(final Configured<?> parent,
                                       final Type type) {
     return this.of(parent, Element.of(type));
@@ -202,10 +261,8 @@ public interface Configured<T> extends OptionalSupplier<T> {
     return this.of(parent, element.isEmpty() ? Element.of(type) : Element.of(element, type));
   }
 
-
   @Convenience
   @OverridingDiscouraged
-  @SuppressWarnings("unchecked")
   public default <U> Configured<U> of(final Configured<?> parent,
                                       final String element,
                                       final Type type) {
@@ -219,6 +276,7 @@ public interface Configured<T> extends OptionalSupplier<T> {
     return this.of(parent, Path.root().plus(element)); // root().plus() is critical here
   }
 
+  @Convenience
   @OverridingDiscouraged
   public default <U> Configured<U> of(final Path absolutePath) {
     if (!absolutePath.isAbsolute()) {
@@ -232,7 +290,6 @@ public interface Configured<T> extends OptionalSupplier<T> {
   public default <U> Configured<U> of(final Class<? extends U> type) {
     return this.of(Element.of(type));
   }
-
 
   @Convenience
   @OverridingDiscouraged
@@ -249,7 +306,6 @@ public interface Configured<T> extends OptionalSupplier<T> {
 
   @Convenience
   @OverridingDiscouraged
-  @SuppressWarnings("unchecked")
   public default <U> Configured<U> of(final String element,
                                       final Type type) {
     return this.of(element.isEmpty() ? Element.of(type) : Element.of(element, type));

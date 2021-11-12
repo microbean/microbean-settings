@@ -18,18 +18,4 @@ package org.microbean.settings.api;
 
 public record Qualified<T>(Qualifiers qualifiers, T qualified) {
 
-  
-  /*
-   * Static methods.
-   */
-
-
-  public static final <T> Qualified<T> of(final T qualified) {
-    return of(Qualifiers.of(), qualified);
-  }
-
-  public static final <T> Qualified<T> of(final Qualifiers qualifiers, final T qualified) {
-    return new Qualified<>(qualifiers, qualified);
-  }
-
 }

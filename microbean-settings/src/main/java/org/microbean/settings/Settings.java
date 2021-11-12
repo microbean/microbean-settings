@@ -132,7 +132,7 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
         this.path = Path.root();
         this.supplier = supplier == null ? () -> (T)this : supplier; // NOTE
         this.parent = this; // NOTE
-        final Qualified<Path> qp = Qualified.of(Qualifiers.of(), Path.root());
+        final Qualified<Path> qp = new Qualified<>(Qualifiers.of(), Path.root());
         this.settingsCache.put(qp, this); // NOTE
         // While the following call is in effect, our
         // final-but-as-yet-uninitialized qualifiers instance field will
@@ -259,7 +259,7 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
     //
     // This obviously can result in unnecessary work, but most
     // configuration use cases will cause this work to happen anyway.
-    final Qualified<Path> qp = Qualified.of(parent.qualifiers(), absolutePath);
+    final Qualified<Path> qp = new Qualified<>(parent.qualifiers(), absolutePath);
     Settings<?> settings = this.settingsCache.get(qp);
     if (settings == null) {
       settings =
