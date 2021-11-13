@@ -27,6 +27,9 @@ import org.microbean.settings.api.Configured;
 import org.microbean.settings.api.Path;
 import org.microbean.settings.api.Qualifiers;
 
+import org.microbean.settings.provider.AbstractProvider;
+import org.microbean.settings.provider.Value;
+
 public class SystemPropertiesQualifiersProvider extends AbstractProvider<Qualifiers> {
 
   public SystemPropertiesQualifiersProvider() {

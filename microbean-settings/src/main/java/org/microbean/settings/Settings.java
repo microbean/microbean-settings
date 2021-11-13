@@ -42,6 +42,12 @@ import org.microbean.settings.api.Path.Element;
 import org.microbean.settings.api.Qualified;
 import org.microbean.settings.api.Qualifiers;
 
+import org.microbean.settings.provider.AssignableType;
+import org.microbean.settings.provider.Disambiguator;
+import org.microbean.settings.provider.Prioritized;
+import org.microbean.settings.provider.Provider;
+import org.microbean.settings.provider.Value;
+
 import org.microbean.type.Types;
 
 /**
@@ -744,85 +750,6 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
    * Inner and nested classes.
    */
 
-
-  /**
-   * A provider of {@link Supplier}s that might be suitable for a {@link
-   * Configured} implementation to return.
-   *
-   * <p>{@link Provider} instances are subordinate to {@link
-   * Settings}.</p>
-   *
-   * @author <a href="https://about.me/lairdnelson"
-   * target="_parent">Laird Nelson</a>
-   *
-   * @see #isSelectable(Configured, Path)
-   *
-   * @see #get(Configured, Path)
-   *
-   * @see Settings
-   */
-  @FunctionalInterface
-  public static interface Provider extends Prioritized {
-
-
-    /*
-     * Instance methods.
-     */
-
-
-    /**
-     * Returns a {@link Type} representing the upper bound of all
-     * possible {@linkplain Value values} {@linkplain #get(Configured,
-     * Path) supplied} by this {@link Provider}.
-     *
-     * <p>Often the value returned by implementations of this method is
-     * no more specific than simply {@link Object Object.class}.</p>
-     *
-     * <p>Implementations of this method must not return {@code
-     * null}.</p>
-     *
-     * <p>The default implementation of this method returns {@link
-     * Object Object.class}.</p>
-     *
-     * @return a {@link Type} representing the upper bound of all
-     * possible {@linkplain Value values} {@linkplain #get(Configured,
-     * Path) supplied} by this {@link Provider}; never {@code null}
-     *
-     * @nullability Implementations of this method must not return
-     * {@code null}.
-     *
-     * @idempotency Implementations of this method must be idempotent
-     * and deterministic.
-     *
-     * @threadsafety Implementations of this method must be safe for
-     * concurrent use by multiple threads.
-     */
-    public default Type upperBound() {
-      return Object.class;
-    }
-
-    public default boolean isSelectable(final Configured<?> supplier, final Path absolutePath) {
-      if (!absolutePath.isAbsolute()) {
-        throw new IllegalArgumentException("absolutePath: " + absolutePath);
-      }
-      return AssignableType.of(this.upperBound()).isAssignable(absolutePath.type());
-    }
-
-    public Value<?> get(final Configured<?> supplier, final Path absolutePath);
-
-  }
-
-  @FunctionalInterface
-  public static interface Disambiguator {
-
-    public <U> Value<U> disambiguate(final Configured<?> parent,
-                                     final Path absolutePath,
-                                     final Provider p0,
-                                     final Value<U> v0,
-                                     final Provider p1,
-                                     final Value<U> v1);
-  
-}
 
   
   private static final class LoadedProviders {

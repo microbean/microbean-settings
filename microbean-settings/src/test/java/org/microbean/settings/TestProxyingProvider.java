@@ -26,6 +26,9 @@ import org.microbean.settings.api.Path;
 import org.microbean.settings.api.Path.Element;
 import org.microbean.settings.api.Qualifiers;
 
+import org.microbean.settings.provider.AbstractProvider;
+import org.microbean.settings.provider.Value;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;

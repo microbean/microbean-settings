@@ -22,6 +22,8 @@ import org.junit.jupiter.api.Test;
 
 import org.microbean.settings.api.Configured;
 
+import org.microbean.settings.provider.Provider;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -39,7 +41,7 @@ final class TestProvider {
 
   @Test
   final void testLoadedProviders() {
-    final Collection<Settings.Provider> ps = Settings.loadedProviders();
+    final Collection<Provider> ps = Settings.loadedProviders();
     assertSame(ps, Settings.loadedProviders());
     assertSame(ps, Settings.loadedProviders());
   }

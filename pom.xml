@@ -10,21 +10,29 @@
   <parent>
     <groupId>org.microbean</groupId>
     <artifactId>microbean-pluginmanagement-pom</artifactId>
-    <version>17</version>
+    <version>18</version>
     <relativePath />
   </parent>
 
   <name>microBean™ Settings: Parent</name>
   <description>Settings for Java.</description>
   <inceptionYear>2019</inceptionYear>
-  <url>https://microbean.github.io/${project.artifactId}</url>
+  <url>https://microbean.github.io/microbean-settings</url>
 
   <scm>
-    <connection>scm:git:git@github.com:microbean/${project.artifactId}.git</connection>
-    <developerConnection>scm:git:git@github.com:microbean/${project.artifactId}.git</developerConnection>
-    <url>https://github.com/microbean/${project.artifactId}/</url>
+    <connection>scm:git:git@github.com:microbean/microbean-settings.git</connection>
+    <developerConnection>scm:git:git@github.com:microbean/microbean-settings.git</developerConnection>
+    <url>https://github.com/microbean/microbean-settings/</url>
     <tag>HEAD</tag>
   </scm>
+
+  <distributionManagement>
+    <site>
+      <id>microbean-settings</id>
+      <name>microBean™ Settings</name>
+      <url>https://microbean.github.io/microbean-settings</url>
+    </site>
+  </distributionManagement>
 
   <modules>
     <module>microbean-settings-api</module>
@@ -34,39 +42,7 @@
   <dependencyManagement>
     <dependencies>
 
-      <!-- Imports. -->
-
-      <dependency>
-        <groupId>org.jboss.weld</groupId>
-        <artifactId>weld-core-bom</artifactId>
-        <version>4.0.1.Final</version>
-        <type>pom</type>
-        <scope>import</scope>
-      </dependency>
-
       <!-- Normal dependencies. -->
-
-      <!-- See also org.jboss.jandex:jandex-maven-plugin below -->
-      <dependency>
-        <groupId>org.jboss</groupId>
-        <artifactId>jandex</artifactId>
-        <version>2.4.0.Final</version>
-        <type>jar</type>
-      </dependency>
-
-      <dependency>
-        <groupId>org.junit.jupiter</groupId>
-        <artifactId>junit-jupiter-api</artifactId>
-        <version>5.7.2</version>
-        <type>jar</type>
-      </dependency>
-
-      <dependency>
-        <groupId>org.junit.jupiter</groupId>
-        <artifactId>junit-jupiter-engine</artifactId>
-        <version>5.7.2</version>
-        <type>jar</type>
-      </dependency>
 
       <dependency>
         <groupId>org.microbean</groupId>
@@ -135,8 +111,23 @@
           </configuration>
         </plugin>
         <plugin>
+          <artifactId>maven-scm-publish-plugin</artifactId>
+          <version>3.1.0</version>
+        </plugin>
+        <plugin>
+          <artifactId>maven-site-plugin</artifactId>
+          <executions>
+            <execution>
+              <id>Stage site</id>
+              <goals>
+                <goal>stage</goal>
+              </goals>
+              <phase>post-site</phase>
+            </execution>
+          </executions>
+        </plugin>
+        <plugin>
           <artifactId>maven-surefire-plugin</artifactId>
-          <version>3.0.0-M5</version>
           <configuration>
             <argLine>--enable-preview</argLine>
             <systemPropertyVariables>
@@ -148,22 +139,18 @@
           </configuration>
         </plugin>
         <plugin>
+          <groupId>com.github.github</groupId>
+          <artifactId>site-maven-plugin</artifactId>
+          <inherited>false</inherited>
+        </plugin>
+        <plugin>
           <groupId>org.jboss.jandex</groupId>
           <artifactId>jandex-maven-plugin</artifactId>
-          <version>1.2.0</version>
           <configuration>
             <indexName>${jandex.indexName}</indexName>
             <processDefaultFileSet>false</processDefaultFileSet>
             <verbose>${jandex.verbose}</verbose>
           </configuration>
-          <dependencies>
-            <!-- See also org.jboss:jandex above. -->
-            <dependency>
-              <groupId>org.jboss</groupId>
-              <artifactId>jandex</artifactId>
-              <version>2.4.0.Final</version>
-            </dependency>
-          </dependencies>
           <executions>
             <execution>
               <id>Create Jandex index</id>
@@ -193,10 +180,6 @@
     </pluginManagement>
     <plugins>
       <plugin>
-        <groupId>com.github.github</groupId>
-        <artifactId>site-maven-plugin</artifactId>
-      </plugin>
-      <plugin>
         <groupId>org.jboss.jandex</groupId>
         <artifactId>jandex-maven-plugin</artifactId>
         <executions>
@@ -219,21 +202,22 @@
 
   <properties>
 
+    <!-- site-maven-plugin properties; see https://github.com/github/maven-plugins/tree/master/github-site-plugin -->
+    <github.site.dryRun>true</github.site.dryRun>
+    <github.site.skip>true</github.site.skip>
+    <siteOutputDirectory>${project.build.directory}/staging</siteOutputDirectory>
+    <topSiteUrl>https://microbean.github.io/microbean-settings/</topSiteUrl>
+
+    <!-- maven-release-plugin properties; see http://maven.apache.org/maven-release/maven-release-plugin/ -->
+    <goals>deploy,post-site</goals>
+    
     <jandex.indexName>jandex.idx</jandex.indexName>
     <jandex.verbose>true</jandex.verbose>
 
     <jdkToolchainVendor>openjdk</jdkToolchainVendor>
 
-    <!-- maven-compiler-plugin properties -->
-    <maven.compiler.release>17</maven.compiler.release>
-    <maven.compiler.source>17</maven.compiler.source>
-    <maven.compiler.target>17</maven.compiler.target>
-
     <!-- maven-javadoc-plugin properties -->
-    <links>
-      https://microbean.github.io/microbean-development-annotations/apidocs,
-      https://microbean.github.io/microbean-type/apidocs
-    </links>
+    <links>https://microbean.github.io/microbean-development-annotations/apidocs,https://microbean.github.io/microbean-type/apidocs</links>
 
   </properties>
 
@@ -243,6 +227,15 @@
         <artifactId>maven-javadoc-plugin</artifactId>
         <reportSets>
           <reportSet>
+            <id>aggregate</id>
+            <inherited>false</inherited>
+            <reports>
+              <report>aggregate-no-fork</report>
+            </reports>
+          </reportSet>
+          <reportSet>
+            <id>default</id>
+            <inherited>true</inherited>
             <reports>
               <report>javadoc-no-fork</report>
             </reports>

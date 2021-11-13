@@ -59,4 +59,8 @@
 
   </dependencies>
 
+  <properties>
+    <github.site.skip>true</github.site.skip>
+  </properties>
+  
 </project>

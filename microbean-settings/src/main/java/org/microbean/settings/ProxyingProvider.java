@@ -41,6 +41,9 @@ import org.microbean.settings.api.Path;
 import org.microbean.settings.api.Path.Element;
 import org.microbean.settings.api.Qualifiers;
 
+import org.microbean.settings.provider.AbstractProvider;
+import org.microbean.settings.provider.Value;
+
 import org.microbean.type.Types;
 
 public class ProxyingProvider extends AbstractProvider<Object> {

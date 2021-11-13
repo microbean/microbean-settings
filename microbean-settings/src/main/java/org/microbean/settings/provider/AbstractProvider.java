@@ -14,14 +14,14 @@
  * implied.  See the License for the specific language governing
  * permissions and limitations under the License.
  */
-package org.microbean.settings;
+package org.microbean.settings.provider;
 
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 
-import java.util.function.Supplier;
+import org.microbean.settings.provider.Provider;
 
-public abstract class AbstractProvider<T> implements Settings.Provider {
+public abstract class AbstractProvider<T> implements Provider {
 
   private static final ClassValue<Type> type = new ClassValue<>() {
       @Override
