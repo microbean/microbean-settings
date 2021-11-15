@@ -256,8 +256,9 @@ public final class Value<T> implements OptionalSupplier<T> {
    * Path, Supplier, boolean) construction time} and returns its
    * value, which may be {@code null}.
    *
-   * <p>Note that a return value of {@code null} does not indicate the
-   * absence of a value.</p>
+   * <p>Note that a return value of {@code null} indicates the absence
+   * of a value only if the {@link #nullsPermitted()} method returns
+   * {@code false}.</p>
    *
    * @return tbe return value of an invocation of the {@link
    * Supplier#get() get()} method of the {@link Supplier} supplied at
@@ -291,6 +292,21 @@ public final class Value<T> implements OptionalSupplier<T> {
     return this.supplier.get();
   }
 
+  /**
+   * Returns {@code true} if and only if {@code null} returned from
+   * the {@link #get()} method is a permitted value.
+   *
+   * @return {@code true} if and only if {@code null} returned from
+   * the {@link #get()} method is a permitted value
+   *
+   * @see #Value(Supplier, Qualifiers, Path, Supplier, boolean,
+   * boolean)
+   *
+   * @threadsafety This method is safe for concurrent use by multiple
+   * threads.
+   *
+   * @idempotency This method is idempotent and deterministic.
+   */
   public final boolean nullsPermitted() {
     return this.nullsPermitted;
   }
