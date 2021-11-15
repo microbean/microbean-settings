@@ -116,6 +116,47 @@ public interface Configured<T> extends OptionalSupplier<T> {
    */
   public Path path();
 
+  /**
+   * Returns a non-{@code null} {@link Configured} implementation,
+   * {@linkplain #parent() parented} by the supplied non-{@code null}
+   * {@link Configured}, whose {@link #get()} method will attempt to
+   * supply a (possibly {@code null} value suitable for the supplied
+   * non-{@code null} {@linkplain Path#isAbsolute() absolute
+   * <code>Path</code>}.
+   *
+   * <p>All other methods in this interface whose names start with
+   * {@code of} ultimately delegate to this one, unless an
+   * implementation overrides them, in which case the overall behavior
+   * of the implementation is undefined.</p>
+   *
+   * @param parent the non-{@code null} {@link Configured} that will
+   * {@linkplain #parent() parent} the returned {@link Configured};
+   * must not be this {@link Configured}
+   *
+   * @param absolutePath the non-{@code null} {@linkplain
+   * Path#isAbsolute() absolute <code>Path</code>} for which a
+   * suitable {@link Configured} should be returned
+   *
+   * @return a non-{@code null} {@link Configured} implementation
+   *
+   * @exception NullPointerException if either {@code parent} or
+   * {@code absolutePath} is {@code null}
+   *
+   * @exception IllegalArgumentException if {@code parent} is this
+   * {@link Configured} or if {@code absolutePath} {@linkplain
+   * Path#isAbsolute() is not absolute}
+   *
+   * @nullability Implementations of this method must not return
+   * {@code null}.
+   *
+   * @threadsafety Implementations of this method must be safe for
+   * concurrent use by multiple threads.
+   *
+   * @idempotency Implementations of this method need not be
+   * deterministic but should be idempotent.
+   *
+   * @see Path
+   */
   public <U> Configured<U> of(final Configured<?> parent, final Path absolutePath);
 
 
@@ -230,13 +271,22 @@ public interface Configured<T> extends OptionalSupplier<T> {
     return this.plus(element.isEmpty() ? Element.of(type) : Element.of(element, type));
   }
 
-  public default <U> Configured<U> plus(final Element element) {
-    return this.plus(Path.of(element));
+  @Convenience
+  @OverridingDiscouraged
+  public default <U> Configured<U> plus(final Element nonRootElement) {
+    if (nonRootElement.isRoot()) {
+      throw new IllegalArgumentException("nonRootElement.isRoot(): " + nonRootElement);
+    }
+    return this.plus(Path.of(nonRootElement));
   }
 
+  @Convenience
   @OverridingDiscouraged
-  public default <U> Configured<U> plus(final Path path) {
-    return this.of(this, this.path().plus(path)); // NOTE
+  public default <U> Configured<U> plus(final Path relativePath) {
+    if (!relativePath.isRelative()) {
+      throw new IllegalArgumentException("relativePath: " + relativePath);
+    }
+    return this.of(this, this.path().plus(relativePath)); // NOTE
   }
 
   @Convenience
@@ -272,8 +322,11 @@ public interface Configured<T> extends OptionalSupplier<T> {
   @Convenience
   @OverridingDiscouraged
   public default <U> Configured<U> of(final Configured<?> parent,
-                                      final Element element) {
-    return this.of(parent, Path.root().plus(element)); // root().plus() is critical here
+                                      final Element nonRootElement) {
+    if (nonRootElement.isRoot()) {
+      throw new IllegalArgumentException("nonRootElement.isRoot(): " + nonRootElement);
+    }
+    return this.of(parent, Path.root().plus(nonRootElement)); // root().plus() is critical here
   }
 
   @Convenience
@@ -313,15 +366,56 @@ public interface Configured<T> extends OptionalSupplier<T> {
 
   @Convenience
   @OverridingDiscouraged
-  public default <U> Configured<U> of(final Element element) {
-    return this.of(Path.root().plus(element)); // root().plus() is critical here
+  public default <U> Configured<U> of(final Element nonRootElement) {
+    if (nonRootElement.isRoot()) {
+      throw new IllegalArgumentException("nonRootElement.isRoot(): " + nonRootElement);
+    }
+    return this.of(Path.root().plus(nonRootElement)); // root().plus() is critical here
   }
 
+  /**
+   * Returns {@code true} if {@code this} is the instance returned by
+   * the {@link #parent()} method.
+   *
+   * @return {@code true} if {@code this} is the instance returned by
+   * the {@link #parent()} method
+   *
+   * @threadsafety This method is, and (discouraged) overrides of this
+   * method must be, safe for concurrent use by multiple threads.
+   *
+   * @idempotency This method is, and (discouraged) overrides of this
+   * method must be, both idempotent and deterministic.
+   *
+   * @see #parent()
+   *
+   * @see #root()
+   */
   @OverridingDiscouraged
   public default boolean isRoot() {
     return this.parent() == this;
   }
 
+  /**
+   * Returns the non-{@code null} {@link Configured} that is at the
+   * root of a chain of {@linkplain #parent() parented} {@link
+   * Configured} implementations.
+   *
+   * <p>The returned {@link Configured} must return itself from its
+   * {@link #parent()} method or undefined behavior will result.</p>
+   *
+   * @return the non-{@code null} {@link Configured} that is at the
+   * root of a chain of {@linkplain #parent() parented} {@link
+   * Configured} implementations
+   *
+   * @nullability This method does not, and (discouraged) overrides of
+   * this method must not, return {@code null}.
+   *
+   * @threadsafety This method is, and (discouraged) overrides of this
+   * method must be, safe for concurrent use by multiple threads.
+   *
+   * @idempotency This method is, and (discouraged) overrides of this
+   * method must be, both idempotent and deterministic.
+   */
   @OverridingDiscouraged
   public default Configured<?> root() {
     Configured<?> root = this;
@@ -343,6 +437,66 @@ public interface Configured<T> extends OptionalSupplier<T> {
    */
 
 
+  /**
+   * Returns a non-{@code null} {@linkplain #root() root} {@link
+   * Configured} that can be used to acquire configured objects.
+   *
+   * <p>The {@linkplain #root() root} {@link Configured} is located
+   * using the {@link ServiceLoader}.  The first of all discovered
+   * {@link Configured} instances is used and all others are ignored.</p>
+   *
+   * <p>The {@link Configured} that is loaded via this mechanism is
+   * subject to the following restrictions:</p>
+   *
+   * <ul>
+   *
+   * <li>It must return a {@link Path} from its {@link #path()}
+   * implementation that is equal to {@link Path#root()
+   * Path.root()}.</li>
+   *
+   * <li>It must return itself from its {@link #parent()}
+   * implementation.</li>
+   *
+   * <li>It must return itself from its {@link #get()} method.</li>
+   *
+   * <li>It must return {@code true} from its {@link #isRoot()}
+   * implementation.</li>
+   *
+   * <li>It must return itself from its {@link #root()} method.</li>
+   *
+   * </ul>
+   *
+   * <p>That <em>bootstrap</em> instance is then used to find the
+   * "real" {@link Configured} implementation, which in most cases is
+   * simply itself.</p>
+   *
+   * <p>The {@link Configured} that is supplied by the bootstrap
+   * instance is subject to the following restrictions (which are
+   * compatible with the instance's being the bootstrap instance
+   * itself):</p>
+   *
+   * <ul>
+   *
+   * <li>It must return a {@link Path} from its {@link #path()}
+   * implementation that is equal to {@link Path#root()
+   * Path.root()}.</li>
+   *
+   * <li>It must return the bootstrap instance from its {@link
+   * #parent()} implementation.</li>
+   *
+   * <li>It must return a {@link Configured} implementation, normally
+   * itself, from its {@link #get()} method.</li>
+   *
+   * </ul>
+   *
+   * <p>This is the entry point for end users of this framework.</p>
+   *
+   * @return a non-{@code null} {@linkplain #root() root} {@link
+   * Configured} that can be used to acquire configured objects
+   *
+   * @exception IllegalStateException if any of the restrictions above
+   * is violated
+   */
   @EntryPoint
   @SuppressWarnings("static")
   public static Configured<?> of() {
@@ -354,22 +508,24 @@ public interface Configured<T> extends OptionalSupplier<T> {
           ServiceLoader.load(Configured.class, Configured.class.getClassLoader()).findFirst().orElseThrow();
 
         if (!Path.root().equals(bootstrapConfigured.path())) {
-          throw new IllegalStateException("path(): " + bootstrapConfigured.path());
+          throw new IllegalStateException("bootstrapConfigured.path(): " + bootstrapConfigured.path());
         } else if (bootstrapConfigured.parent() != bootstrapConfigured) {
-          throw new IllegalStateException("parent(): " + bootstrapConfigured.parent());
+          throw new IllegalStateException("bootstrapConfigured.parent(): " + bootstrapConfigured.parent());
         } else if (bootstrapConfigured.get() != bootstrapConfigured) {
           throw new IllegalStateException("bootstrapConfigured.get(): " + bootstrapConfigured.get());
         } else if (!bootstrapConfigured.isRoot()) {
           throw new IllegalStateException("!bootstrapConfigured.isRoot()");
         } else if (bootstrapConfigured.root() != bootstrapConfigured) {
-          throw new IllegalStateException("root(): " + bootstrapConfigured.root());
+          throw new IllegalStateException("bootstrapConfigured.root(): " + bootstrapConfigured.root());
         }
 
         instance = bootstrapConfigured
           .<Configured<?>>of(new TypeToken<Configured<?>>() {}.type())
           .orElse(bootstrapConfigured);
 
-        if (instance.parent() != bootstrapConfigured) {
+        if (!Path.root().equals(bootstrapConfigured.path())) {
+          throw new IllegalStateException("instance.path(): " + instance.path());
+        } else if (instance.parent() != bootstrapConfigured) {
           throw new IllegalStateException("instance.parent(): " + instance.parent());
         } else if (!(instance.get() instanceof Configured)) {
           throw new IllegalStateException("instance.get(): " + instance.get());

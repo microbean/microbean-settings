@@ -32,6 +32,7 @@ import java.util.function.BiPredicate;
 
 import java.util.stream.Stream;
 
+import org.microbean.development.annotation.Convenience;
 import org.microbean.development.annotation.Experimental;
 
 import org.microbean.type.Types;
@@ -75,6 +76,8 @@ public final class Path {
       for (int i = 0; i < size; i++) {
         final Element e = Objects.requireNonNull(elements.get(i));
         if (i != 0 && (e.isRoot() || i + 1 >= size && e.type().isEmpty())) {
+          // No element other than the first one can be root.
+          // The last element must have a present Type.
           throw new IllegalArgumentException("elements: " + elements);
         }
         newList.add(e);
@@ -116,7 +119,12 @@ public final class Path {
   }
 
   public final boolean isAbsolute() {
-    return this.size() > 0 && this.first().isRoot();
+    return this.first().isRoot();
+  }
+
+  @Convenience
+  public final boolean isRelative() {
+    return !this.isAbsolute();
   }
 
   public final int size() {

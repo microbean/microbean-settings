@@ -35,6 +35,9 @@ import org.microbean.settings.api.Qualifiers;
  * identifying the kinds of {@link Qualifiers} and {@link Path}s for
  * which it might be suitable.
  *
+ * <p>{@link Value}s are typically returned by {@link Provider}
+ * implementations.</p>
+ *
  * <p>A {@link Value} once received retains no reference to whatever
  * produced it and can be regarded as an authoritative source for
  * (possibly ever-changing) values going forward.  Notably, it can be
@@ -44,8 +47,18 @@ import org.microbean.settings.api.Qualifiers;
  *
  * @author <a href="https://about.me/lairdnelson"
  * target="_parent">Laird Nelson</a>
+ *
+ * @see OptionalSupplier
+ *
+ * @see Provider
  */
 public final class Value<T> implements OptionalSupplier<T> {
+
+
+  /*
+   * Instance fields.
+   */
+
 
   private final Qualifiers qualifiers;
 
@@ -53,33 +66,41 @@ public final class Value<T> implements OptionalSupplier<T> {
 
   private final Supplier<? extends T> supplier;
 
+  private final boolean nullsPermitted;
+  
   private final boolean deterministic;
 
+
+  /*
+   * Constructors.
+   */
+
+
   public Value(final Qualifiers qualifiers, final Path path, final T value) {
-    this(null, qualifiers, path, () -> value, true);
+    this(null, qualifiers, path, () -> value, false, true);
   }
 
   public Value(final Qualifiers qualifiers, final Path path, final Supplier<? extends T> supplier) {
-    this(null, qualifiers, path, supplier, false);
+    this(null, qualifiers, path, supplier, false, false);
   }
 
   public Value(final Qualifiers qualifiers, final Path path, final Supplier<? extends T> supplier, final boolean deterministic) {
-    this(null, qualifiers, path, supplier, deterministic);
+    this(null, qualifiers, path, supplier, false, deterministic);
   }
 
   public Value(final Supplier<? extends T> defaults,
                final Qualifiers qualifiers,
                final Path path,
                final Supplier<? extends T> supplier) {
-    this(defaults, qualifiers, path, supplier, false);
+    this(defaults, qualifiers, path, supplier, false, false);
   }
 
   public Value(final Supplier<? extends T> defaults, final Value<? extends T> source) {
-    this(defaults, source.qualifiers(), source.path(), source, source.deterministic());
+    this(defaults, source.qualifiers(), source.path(), source, source.nullsPermitted(), source.deterministic());
   }
 
   public Value(final Value<? extends T> source) {
-    this(null, source.qualifiers(), source.path(), source, source.deterministic());
+    this(null, source.qualifiers(), source.path(), source, source.nullsPermitted(), source.deterministic());
   }
 
   public Value(final Supplier<? extends T> defaults,
@@ -87,13 +108,97 @@ public final class Value<T> implements OptionalSupplier<T> {
                final Path path,
                final Supplier<? extends T> supplier,
                final boolean deterministic) {
+    this(defaults, qualifiers, path, supplier, false, deterministic);
+  }
+
+  /**
+   * Creates a new {@link Value}.
+   *
+   * @param defaults a {@link Supplier} to be used in case this {@link
+   * Value}'s {@link #get()} method throws either a {@link
+   * NoSuchElementException} or an {@link
+   * UnsupportedOperationException}; may be {@code null}
+   *
+   * @param qualifiers the {@link Qualifiers} for which this {@link
+   * Value} is suitable; must not be {@code null}
+   *
+   * @param path the {@link Path}, possibly {@linkplain
+   * Path#isRelative() relative}, for which this {@link Value} is
+   * suitable; must not be {@code null}
+   *
+   * @param supplier the actual {@link Supplier} that will return
+   * values; must not be {@code null}
+   *
+   * @param nullsPermitted whether {@code null} values returned from
+   * the {@link #get()} method are legal values or indicate the
+   * (possibly transitory) absence of a value
+   *
+   * @param deterministic a {@code boolean} indicating whether the
+   * supplied {@code supplier} returns a singleton from its {@link
+   * Supplier#get()} method
+   *
+   * @see #get()
+   */
+  public Value(final Supplier<? extends T> defaults,
+               final Qualifiers qualifiers,
+               final Path path,
+               final Supplier<? extends T> supplier,
+               final boolean nullsPermitted,
+               final boolean deterministic) {
     super();
     this.qualifiers = Objects.requireNonNull(qualifiers, "qualifiers");
     this.path = Objects.requireNonNull(path, "path");
     Objects.requireNonNull(supplier, "supplier");
-    if (defaults == null) {
+    this.nullsPermitted = nullsPermitted;
+    this.deterministic = deterministic;
+    if (deterministic) {
+      if (defaults == null) {
+        this.supplier = supplier;
+      } else if (nullsPermitted) {
+        this.supplier = new Supplier<>() {
+            private volatile Supplier<? extends T> s = supplier;
+            @Override
+            public final T get() {
+              final Supplier<? extends T> s = this.s;
+              try {
+                return s.get();
+              } catch (final NoSuchElementException | UnsupportedOperationException e) {
+                if (s == defaults) {
+                  throw e;
+                }
+                this.s = defaults;
+                return defaults.get();
+              }
+            }
+          };
+      } else {
+        this.supplier = new Supplier<>() {
+            private volatile Supplier<? extends T> s = supplier;
+            @Override
+            public final T get() {
+              final Supplier<? extends T> s = this.s;
+              T value = null;
+              try {
+                value = s.get();
+              } catch (final NoSuchElementException | UnsupportedOperationException e) {
+                if (s == defaults) {
+                  throw e;
+                }
+                return defaults.get();
+              }
+              if (value == null) {
+                if (s != defaults) {
+                  this.s = defaults;
+                  value = defaults.get();
+                }
+              }
+              return value;
+            }
+          };
+      }
+    } else if (defaults == null) {
       this.supplier = supplier;
-    } else {
+    } else if (nullsPermitted) {
       this.supplier = new Supplier<>() {
           private volatile Supplier<? extends T> s = supplier;
           @Override
@@ -104,16 +209,38 @@ public final class Value<T> implements OptionalSupplier<T> {
             } catch (final NoSuchElementException | UnsupportedOperationException e) {
               if (s == defaults) {
                 throw e;
-              } else {
-                this.s = defaults;
-                return defaults.get();
               }
+              this.s = defaults;
+              return defaults.get();
             }
           }
         };
+    } else {
+      this.supplier = new Supplier<>() {
+          private volatile Supplier<? extends T> s = supplier;
+          @Override
+          public final T get() {
+            final Supplier<? extends T> s = this.s;
+            T value = null;
+            try {
+              value = s.get();
+            } catch (final NoSuchElementException | UnsupportedOperationException e) {
+              if (s == defaults) {
+                throw e;
+              }
+              return defaults.get();
+            }
+            return value == null ? defaults.get() : value;
+          }
+        };
     }
-    this.deterministic = deterministic;
   }
+
+
+  /*
+   * Instance methods.
+   */
+
 
   public final Qualifiers qualifiers() {
     return this.qualifiers;
@@ -123,11 +250,62 @@ public final class Value<T> implements OptionalSupplier<T> {
     return this.path;
   }
 
+  /**
+   * Invokes the {@link Supplier#get() get()} method of the {@link
+   * Supplier} supplied at {@linkplain #Value(Supplier, Qualifiers,
+   * Path, Supplier, boolean) construction time} and returns its
+   * value, which may be {@code null}.
+   *
+   * <p>Note that a return value of {@code null} does not indicate the
+   * absence of a value.</p>
+   *
+   * @return tbe return value of an invocation of the {@link
+   * Supplier#get() get()} method of the {@link Supplier} supplied at
+   * {@linkplain #Value(Supplier, Qualifiers, Path, Supplier, boolean)
+   * construction time}, which may be {@code null}
+   *
+   * @exception NoSuchElementException if this method should no longer
+   * be invoked because there is no chance it will ever produce a
+   * suitable value again
+   *
+   * @exception UnsupportedOperationException if this method should no longer
+   * be invoked because there is no chance it will ever produce a
+   * suitable value again
+   *
+   * @see #Value(Supplier, Qualifiers, Path, Supplier, boolean)
+   *
+   * @nullability This method may return {@code null}.
+   *
+   * @threadsafety This method is safe for concurrent use by multiple
+   * threads, provided that the {@link Supplier} supplied at
+   * {@linkplain #Value(Supplier, Qualifiers, Path, Supplier, boolean)
+   * construction time} is also safe for concurrent use by multiple
+   * threads.
+   *
+   * @idempotency This method is as idempotent and deterministic as
+   * the {@link Supplier} supplied at {@linkplain #Value(Supplier,
+   * Qualifiers, Path, Supplier, boolean) construction time}.
+   */
   @Override // OptionalSupplier<T>
   public final T get() {
     return this.supplier.get();
   }
 
+  public final boolean nullsPermitted() {
+    return this.nullsPermitted;
+  }
+  
+  /**
+   * Returns {@code true} if and only if it is known that the {@link
+   * Supplier} supplied at {@linkplain #Value(Supplier, Qualifiers,
+   * Path, Supplier, boolean) construction time} will return one and
+   * only one value from its {@link Supplier#get() get()} method.
+   *
+   * @return {@code true} if and only if it is known that the {@link
+   * Supplier} supplied at {@linkplain #Value(Supplier, Qualifiers,
+   * Path, Supplier, boolean) construction time} will return one and
+   * only one value from its {@link Supplier#get() get()} method
+   */
   public final boolean deterministic() {
     return this.deterministic;
   }
@@ -169,6 +347,9 @@ public final class Value<T> implements OptionalSupplier<T> {
     c = v == null ? 0 : v.hashCode();
     hashCode = 37 * hashCode + c;
 
+    c = this.nullsPermitted() ? 1 : 0;
+    hashCode = 37 * hashCode + c;
+    
     c = this.deterministic() ? 1 : 0;
     hashCode = 37 * hashCode + c;
 
@@ -184,6 +365,7 @@ public final class Value<T> implements OptionalSupplier<T> {
       return
         Objects.equals(this.qualifiers(), her.qualifiers()) &&
         Objects.equals(this.path(), her.path()) &&
+        this.nullsPermitted() && her.nullsPermitted() &&
         this.deterministic() && her.deterministic();
     } else {
       return false;

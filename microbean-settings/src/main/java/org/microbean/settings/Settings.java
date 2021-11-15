@@ -120,8 +120,8 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
                    final Collection<? extends Provider> providers,
                    final Qualifiers qualifiers,
                    final Configured<?> parent, // if null, will end up being "this" if path is Path.root()
-                   final Path path,
-                   final Supplier<T> supplier, // if null, will end up being () -> this if path is Path.root()
+                   final Path absolutePath,
+                   final Supplier<T> supplier, // if null, will end up being () -> this if absolutePath is Path.root()
                    final Supplier<? extends Consumer<? super Provider>> rejectedProvidersConsumerSupplier,
                    final Supplier<? extends Consumer<? super Value<?>>> rejectedValuesConsumerSupplier,
                    final Supplier<? extends Consumer<? super Value<?>>> ambiguousValuesConsumerSupplier) {
@@ -134,7 +134,7 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
     if (parent == null) {
       // Bootstrap case, i.e. the zero-argument constructor called us.
       // Pay attention.
-      if (path.equals(Path.root())) {
+      if (absolutePath.equals(Path.root())) {
         this.path = Path.root();
         this.supplier = supplier == null ? () -> (T)this : supplier; // NOTE
         this.parent = this; // NOTE
@@ -150,12 +150,14 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
           this.settingsCache.remove(qp);
         }
       } else {
-        throw new IllegalArgumentException("path: " + path);
+        throw new IllegalArgumentException("absolutePath: " + absolutePath);
       }
-    } else if (path.equals(Path.root())) {
-      throw new IllegalArgumentException("path: " + path);
+    } else if (absolutePath.equals(Path.root())) {
+      throw new IllegalArgumentException("absolutePath: " + absolutePath);
+    } else if (!absolutePath.isAbsolute()) {
+      throw new IllegalArgumentException("!absolutePath.isAbsolute(): " + absolutePath);
     } else {
-      this.path = path;
+      this.path = absolutePath;
       this.supplier = Objects.requireNonNull(supplier, "supplier");
       this.parent = parent;
       this.qualifiers = Objects.requireNonNull(qualifiers, "qualifiers");
@@ -640,12 +642,12 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
     return score;
   }
 
-  protected <U> Value<U> disambiguate(final Configured<?> supplier,
-                                      final Path absolutePath,
-                                      final Provider p0,
-                                      final Value<U> v0,
-                                      final Provider p1,
-                                      final Value<U> v1) {
+  private final <U> Value<U> disambiguate(final Configured<?> supplier,
+                                          final Path absolutePath,
+                                          final Provider p0,
+                                          final Value<U> v0,
+                                          final Provider p1,
+                                          final Value<U> v1) {
     if (!absolutePath.isAbsolute()) {
       throw new IllegalArgumentException("absolutePath: " + absolutePath);
     }
@@ -751,7 +753,6 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
    */
 
 
-  
   private static final class LoadedProviders {
 
     // We hide this static field inside a private nested class so it
