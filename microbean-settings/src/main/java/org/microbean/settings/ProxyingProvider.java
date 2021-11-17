@@ -157,7 +157,7 @@ public class ProxyingProvider extends AbstractProvider<Object> {
   protected Path path(final Configured<?> caller,
                       final Path absolutePath) {
     assert absolutePath.isAbsolute();
-    return Path.of(absolutePath.type());
+    return Path.relative(absolutePath.type());
   }
 
   protected Object newProxyInstance(final Configured<?> caller,
@@ -169,11 +169,11 @@ public class ProxyingProvider extends AbstractProvider<Object> {
                              new Class<?>[] { classToProxy },
                              new Handler(caller,
                                          absolutePath,
-                                         (m, args) -> Path.of(Element.of(propertyName(m.getName(),
-                                                                                      boolean.class == m.getReturnType()),
-                                                                         m.getGenericReturnType(),
-                                                                         Arrays.asList(m.getParameterTypes()),
-                                                                         stringArgs(args)))));
+                                         (m, args) -> Path.relative(Element.of(propertyName(m.getName(),
+                                                                                            boolean.class == m.getReturnType()),
+                                                                               m.getGenericReturnType(),
+                                                                               Arrays.asList(m.getParameterTypes()),
+                                                                               stringArgs(args)))));
   }
 
 

@@ -38,10 +38,12 @@ import org.microbean.settings.api.Path;
  *
  * @see #get(Configured, Path)
  *
+ * @see AbstractProvider
+ *
  * @see org.microbean.settings.Settings
  */
 @FunctionalInterface
-public interface Provider extends Prioritized {
+public interface Provider {
 
 
   /*
@@ -82,8 +84,8 @@ public interface Provider extends Prioritized {
 
   /**
    * Returns {@code false} if this {@link Provider} implementation
-   * absolutely cannot provide values suitable for the supplied {@link
-   * Configured} and {@link Path}.
+   * <strong>absolutely will not</strong> provide values suitable for
+   * the supplied {@link Configured} and {@link Path}.
    *
    * <p>Returning {@code true} from an implementation of this method
    * does <em>not</em> mean that a suitable value <em>will</em> be
@@ -96,7 +98,10 @@ public interface Provider extends Prioritized {
    * if and only if this {@link Provider}'s {@linkplain #upperBound()
    * upper bound} {@linkplain AssignableType#isAssignable(Type) is
    * assignable from} the supplied {@link Path}'s {@linkplain
-   * Path#type() type}.</p>
+   * Path#type() type}.  Overrides are strongly encouraged, but not
+   * required, to call {@code Provider.super.isSelectable(supplier,
+   * absolutePath)} from their implementation and to proceed only if
+   * the call returns {@code true}.</p>
    *
    * @param supplier the {@link Configured} that may request a value
    * if this method returns {@code true}; must not be {@code null}

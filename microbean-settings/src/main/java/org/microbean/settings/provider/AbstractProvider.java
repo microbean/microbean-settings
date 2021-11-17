@@ -24,7 +24,7 @@ import org.microbean.settings.provider.Provider;
 /**
  * A skeletal {@link Provider} implementation.
  *
- * @param <T> the upper bound of tye types of objects produced by the
+ * @param <T> the upper bound of the types of objects produced by the
  * {@link #get(Configured, Path)} method
 
  * @author <a href="https://about.me/lairdnelson"

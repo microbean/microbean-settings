@@ -114,10 +114,10 @@ final class TestProxyingProvider {
       assertEquals(List.of(String.class), e.parameters().orElseThrow());
       assertEquals("LR", e.arguments().orElseThrow().get(0));
       return new Value<>(Qualifiers.of(),
-                         Path.of(Element.of("wheel",
-                                            Wheel.class,
-                                            List.of(String.class),
-                                            List.of("LR"))),
+                         Path.relative(Element.of("wheel",
+                                                  Wheel.class,
+                                                  List.of(String.class),
+                                                  List.of("LR"))),
                          new Wheel() {
                            @Override
                            public final int getDiameterInInches() {

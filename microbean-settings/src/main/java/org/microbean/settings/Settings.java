@@ -28,6 +28,7 @@ import java.util.ServiceLoader;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import java.util.function.BiConsumer;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -42,9 +43,8 @@ import org.microbean.settings.api.Path.Element;
 import org.microbean.settings.api.Qualified;
 import org.microbean.settings.api.Qualifiers;
 
+import org.microbean.settings.provider.AmbiguityHandler;
 import org.microbean.settings.provider.AssignableType;
-import org.microbean.settings.provider.Disambiguator;
-import org.microbean.settings.provider.Prioritized;
 import org.microbean.settings.provider.Provider;
 import org.microbean.settings.provider.Value;
 
@@ -72,21 +72,17 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
   // Package-private for testing only.
   final ConcurrentMap<Qualified<Path>, Settings<?>> settingsCache;
 
-  private final List<Provider> providers;
-
-  private final Qualifiers qualifiers;
+  private final Path path;
 
   private final Configured<?> parent;
 
   private final Supplier<T> supplier;
 
-  private final Path path;
+  private final Collection<Provider> providers;
 
-  private final Supplier<? extends Consumer<? super Provider>> rejectedProvidersConsumerSupplier;
+  private final Qualifiers qualifiers;
 
-  private final Supplier<? extends Consumer<? super Value<?>>> rejectedValuesConsumerSupplier;
-
-  private final Supplier<? extends Consumer<? super Value<?>>> ambiguousValuesConsumerSupplier;
+  private final AmbiguityHandler ambiguityHandler;
 
 
   /*
@@ -105,62 +101,60 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
   @Deprecated // intended for use by ServiceLoader only
   public Settings() {
     this(new ConcurrentHashMap<Qualified<Path>, Settings<?>>(),
-         loadedProviders(),
+         null, // providers
          null, // qualifiers
          null, // parent,
          Path.root(),
          null, // supplier
-         Settings::generateSink,
-         Settings::generateSink,
-         Settings::generateSink);
+         null);
   }
 
   @SuppressWarnings("unchecked")
   private Settings(final ConcurrentMap<Qualified<Path>, Settings<?>> settingsCache,
                    final Collection<? extends Provider> providers,
                    final Qualifiers qualifiers,
-                   final Configured<?> parent, // if null, will end up being "this" if path is Path.root()
+                   final Configured<?> parent, // if null, will end up being "this" if absolutePath is Path.root()
                    final Path absolutePath,
                    final Supplier<T> supplier, // if null, will end up being () -> this if absolutePath is Path.root()
-                   final Supplier<? extends Consumer<? super Provider>> rejectedProvidersConsumerSupplier,
-                   final Supplier<? extends Consumer<? super Value<?>>> rejectedValuesConsumerSupplier,
-                   final Supplier<? extends Consumer<? super Value<?>>> ambiguousValuesConsumerSupplier) {
+                   final AmbiguityHandler ambiguityHandler) {
     super();
     this.settingsCache = Objects.requireNonNull(settingsCache, "settingsCache");
-    this.rejectedProvidersConsumerSupplier = Objects.requireNonNull(rejectedProvidersConsumerSupplier, "rejectedProvidersConsumerSupplier");
-    this.rejectedValuesConsumerSupplier = Objects.requireNonNull(rejectedValuesConsumerSupplier, "rejectedValuesConsumerSupplier");
-    this.ambiguousValuesConsumerSupplier = Objects.requireNonNull(ambiguousValuesConsumerSupplier, "ambiguousValuesConsumerSupplier");
-    this.providers = List.copyOf(providers);
     if (parent == null) {
       // Bootstrap case, i.e. the zero-argument constructor called us.
       // Pay attention.
       if (absolutePath.equals(Path.root())) {
         this.path = Path.root();
-        this.supplier = supplier == null ? () -> (T)this : supplier; // NOTE
         this.parent = this; // NOTE
+        this.supplier = supplier == null ? this::returnThis : supplier; // NOTE
+        this.providers = List.copyOf(providers == null ? loadedProviders() : providers);
         final Qualified<Path> qp = new Qualified<>(Qualifiers.of(), Path.root());
         this.settingsCache.put(qp, this); // NOTE
         // While the following call is in effect, our
-        // final-but-as-yet-uninitialized qualifiers instance field will
-        // be null.  Note that the qualifiers() element method accounts
-        // for this and will return Qualifiers.of() instead.
+        // final-but-as-yet-uninitialized qualifiers field and our
+        // final-but-as-yet-uninitialized ambiguityHandler field will
+        // both be null.  Note that the qualifiers() instance method
+        // accounts for this and will return Qualifiers.of() instead,
+        // and the ambiguityHandler() instance method does as well.
         try {
           this.qualifiers = this.of(Qualifiers.class).orElseGet(Qualifiers::of);
+          this.ambiguityHandler = this.of(AmbiguityHandler.class).orElseGet(Settings::loadedAmbiguityHandler);
         } finally {
           this.settingsCache.remove(qp);
         }
       } else {
-        throw new IllegalArgumentException("absolutePath: " + absolutePath);
+        throw new IllegalArgumentException("!absolutePath.equals(Path.root()): " + absolutePath);
       }
     } else if (absolutePath.equals(Path.root())) {
-      throw new IllegalArgumentException("absolutePath: " + absolutePath);
+      throw new IllegalArgumentException("absolutePath.equals(Path.root()): " + absolutePath);
     } else if (!absolutePath.isAbsolute()) {
       throw new IllegalArgumentException("!absolutePath.isAbsolute(): " + absolutePath);
     } else {
       this.path = absolutePath;
-      this.supplier = Objects.requireNonNull(supplier, "supplier");
       this.parent = parent;
+      this.supplier = Objects.requireNonNull(supplier, "supplier");
+      this.providers = List.copyOf(providers);
       this.qualifiers = Objects.requireNonNull(qualifiers, "qualifiers");
+      this.ambiguityHandler = Objects.requireNonNull(ambiguityHandler, "ambiguityHandler");
     }
   }
 
@@ -200,6 +194,17 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
     return this.providers;
   }
 
+  public final AmbiguityHandler ambiguityHandler() {
+    // NOTE: This null check is critical.  We check for null here
+    // because during bootstrapping the AmbiguityHandler will not have
+    // been loaded yet, and yet the bootstrapping mechanism may still
+    // end up calling this.ambiguityHandler().  The alternative would
+    // be to make the ambiguityHandler field non-final and I don't
+    // want to do that.
+    final AmbiguityHandler ambiguityHandler = this.ambiguityHandler;
+    return ambiguityHandler == null ? NoOpAmbiguityHandler.INSTANCE : ambiguityHandler;
+  }
+
   @Override // Configured
   public final Qualifiers qualifiers() {
     // NOTE: This null check is critical.  We check for null here
@@ -228,27 +233,9 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
   }
 
   @Override // Configured
-  public final <U> Settings<U> of(final Configured<?> parent,
-                                  final Path absolutePath) {
-    return
-      this.of(parent,
-              absolutePath,
-              this.rejectedProvidersConsumerSupplier.get(),
-              this.rejectedValuesConsumerSupplier.get(),
-              this.ambiguousValuesConsumerSupplier.get());
-  }
-
-  private final <U> Settings<U> of(final Configured<?> parent,
-                                   Path absolutePath,
-                                   final Consumer<? super Provider> rejectedProviders,
-                                   final Consumer<? super Value<?>> rejectedValues,
-                                   final Consumer<? super Value<?>> ambiguousValues) {
-    // TODO: temporary assertions
-    assert parent.isRoot();
-    assert parent.path().isRoot();
-
+  public final <U> Settings<U> of(final Configured<?> requestor, Path absolutePath) {
     if (absolutePath.isAbsolute()) {
-      if (absolutePath.size() == 1 && parent != this) {
+      if (absolutePath.size() == 1 && requestor != this) {
         throw new IllegalArgumentException("absolutePath.isRoot(): " + absolutePath);
       }
     } else {
@@ -267,16 +254,10 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
     //
     // This obviously can result in unnecessary work, but most
     // configuration use cases will cause this work to happen anyway.
-    final Qualified<Path> qp = new Qualified<>(parent.qualifiers(), absolutePath);
+    final Qualified<Path> qp = new Qualified<>(requestor.qualifiers(), absolutePath);
     Settings<?> settings = this.settingsCache.get(qp);
     if (settings == null) {
-      settings =
-        this.settingsCache.putIfAbsent(qp,
-                                       this.computeSettings(parent,
-                                                            absolutePath,
-                                                            rejectedProviders,
-                                                            rejectedValues,
-                                                            ambiguousValues));
+      settings = this.settingsCache.putIfAbsent(qp, this.computeSettings(requestor, absolutePath));
       if (settings == null) {
         settings = this.settingsCache.get(qp);
       }
@@ -284,7 +265,7 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
     assert settings != null;
     assert settings == this.settingsCache.get(qp);
     @SuppressWarnings("unchecked")
-      final Settings<U> returnValue = (Settings<U>)settings;
+    final Settings<U> returnValue = (Settings<U>)settings;
     return returnValue;
   }
 
@@ -312,13 +293,9 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
       .orElse(path);
   }
 
-  private final <U> Settings<U> computeSettings(final Configured<?> parent,
-                                                final Path absolutePath,
-                                                final Consumer<? super Provider> rejectedProviders,
-                                                final Consumer<? super Value<?>> rejectedValues,
-                                                final Consumer<? super Value<?>> ambiguousValues) {
+  private final <U> Settings<U> computeSettings(final Configured<?> requestor, final Path absolutePath) {
     assert absolutePath.isAbsolute() : "absolutePath: " + absolutePath;
-    final Value<U> value = this.value(parent, absolutePath, rejectedProviders, rejectedValues, ambiguousValues);
+    final Value<U> value = this.value(requestor, absolutePath);
     final Supplier<U> supplier;
     if (value == null) {
       supplier = Settings::throwNoSuchElementException;
@@ -327,50 +304,44 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
     }
     return
       new Settings<>(this.settingsCache,
-                     this.providers,
-                     parent.qualifiers(),
-                     parent,
+                     this.providers(),
+                     requestor.qualifiers(),
+                     requestor, // parent (but really TODO: shouldn't it just be this, and shouldn't requestor go away entirely?)
                      absolutePath,
                      supplier,
-                     this.rejectedProvidersConsumerSupplier,
-                     this.rejectedValuesConsumerSupplier,
-                     this.ambiguousValuesConsumerSupplier);
+                     this.ambiguityHandler());
   }
 
-  private final <U> Value<U> value(final Configured<?> parent,
-                                   final Path absolutePath,
-                                   final Consumer<? super Provider> rejectedProviders,
-                                   final Consumer<? super Value<?>> rejectedValues,
-                                   final Consumer<? super Value<?>> ambiguousValues) {
+  private final <U> Value<U> value(final Configured<?> requestor, final Path absolutePath) {
     assert absolutePath.isAbsolute() : "absolutePath: " + absolutePath;
-    final Collection<? extends Provider> providers = this.providers();
 
+    final Collection<? extends Provider> providers = this.providers();
     if (providers.isEmpty()) {
       return null;
     }
+
+    final AmbiguityHandler ambiguityHandler = this.ambiguityHandler();
 
     if (providers.size() == 1) {
       final Provider provider = providers instanceof List<? extends Provider> list ? list.get(0) : providers.iterator().next();
       if (provider == null) {
         return null;
-      } else if (!this.isSelectable(provider, parent, absolutePath)) {
-        rejectedProviders.accept(provider);
+      } else if (!this.isSelectable(provider, requestor, absolutePath)) {
+        ambiguityHandler.providerRejected(requestor, absolutePath, provider);
         return null;
       } else {
-        final Value<?> value = provider.get(parent, absolutePath);
-        if (value == null) {
-          return null;
-        } else if (!isSelectable(parent.qualifiers(), absolutePath, value.qualifiers(), value.path())) {
-          rejectedValues.accept(value);
-          return null;
-        }
         @SuppressWarnings("unchecked")
-          final Value<U> v = (Value<U>)value;
-        return v;
+        final Value<U> value = (Value<U>)provider.get(requestor, absolutePath);
+        if (value == null) {
+          ambiguityHandler.providerRejected(requestor, absolutePath, provider);
+        } else if (!isSelectable(requestor.qualifiers(), absolutePath, value.qualifiers(), value.path())) {
+          ambiguityHandler.valueRejected(requestor, absolutePath, provider, value);
+        }
+        return value;
       }
     }
 
-    final Qualifiers qualifiers = parent.qualifiers();
+    final Qualifiers qualifiers = requestor.qualifiers();
 
     Value<U> candidate = null;
     Provider candidateProvider = null;
@@ -381,21 +352,26 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
     PROVIDER_LOOP:
     for (final Provider provider : providers) {
 
-      if (provider == null || !this.isSelectable(provider, parent, absolutePath)) {
-        rejectedProviders.accept(provider);
+      if (provider == null || !this.isSelectable(provider, requestor, absolutePath)) {
+        ambiguityHandler.providerRejected(requestor, absolutePath, provider);
         continue PROVIDER_LOOP;
       }
 
       @SuppressWarnings("unchecked")
-        final Value<U> v = (Value<U>)provider.get(parent, absolutePath);
+      final Value<U> v = (Value<U>)provider.get(requestor, absolutePath);
       Value<U> value = v;
+
+      if (value == null) {
+        ambiguityHandler.providerRejected(requestor, absolutePath, provider);
+        continue PROVIDER_LOOP;
+      }
 
       // NOTE: INFINITE LOOP POSSIBILITY; read carefully!
       VALUE_EVALUATION_LOOP:
       while (true) {
 
         if (!isSelectable(qualifiers, absolutePath, value.qualifiers(), value.path())) {
-          rejectedValues.accept(value);
+          ambiguityHandler.valueRejected(requestor, absolutePath, provider, value);
           break VALUE_EVALUATION_LOOP;
         }
 
@@ -438,12 +414,12 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
           break VALUE_EVALUATION_LOOP;
         }
 
-        final Value<U> disambiguatedValue = this.disambiguate(parent, absolutePath, candidateProvider, candidate, provider, value);
+        final Value<U> disambiguatedValue =
+          ambiguityHandler.disambiguate(requestor, absolutePath, candidateProvider, candidate, provider, value);
 
         if (disambiguatedValue == null) {
           // Couldn't disambiguate.
-          ambiguousValues.accept(candidate);
-          ambiguousValues.accept(value);
+          //
           // TODO: I'm not sure whether to null the candidate bits and
           // potentially grab another less suitable one, keep the
           // existing one even though it's ambiguous, or, if we keep
@@ -642,27 +618,22 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
     return score;
   }
 
-  private final <U> Value<U> disambiguate(final Configured<?> supplier,
-                                          final Path absolutePath,
-                                          final Provider p0,
-                                          final Value<U> v0,
-                                          final Provider p1,
-                                          final Value<U> v1) {
-    if (!absolutePath.isAbsolute()) {
-      throw new IllegalArgumentException("absolutePath: " + absolutePath);
-    }
-    final Disambiguator d = supplier.of(Disambiguator.class).orElse(null);
-    return d == null ? null : d.disambiguate(supplier, absolutePath, p0, v0, p1, v1);
+  @SuppressWarnings("unchecked")
+  private final <X> X returnThis() {
+    return (X)this;
   }
-
 
   /*
    * Static methods.
    */
 
 
-  public static final Collection<Provider> loadedProviders() {
-    return LoadedProviders.loadedProviders;
+  static final Collection<Provider> loadedProviders() {
+    return Loaded.providers;
+  }
+
+  private static final AmbiguityHandler loadedAmbiguityHandler() {
+    return Loaded.ambiguityHandler;
   }
 
   private static final boolean isSelectable(final Qualifiers referenceQualifiers,
@@ -738,7 +709,7 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
   private static final <T> T throwNoSuchElementException() {
     throw new NoSuchElementException();
   }
-
+  
   private static final void sink(final Object ignored) {
 
   }
@@ -753,16 +724,30 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
    */
 
 
-  private static final class LoadedProviders {
+  private static final class Loaded {
 
-    // We hide this static field inside a private nested class so it
-    // isn't initialized unless it's actually used.
-    private static final List<Provider> loadedProviders =
+    private static final List<Provider> providers =
       ServiceLoader.load(Provider.class, Provider.class.getClassLoader())
       .stream()
       .map(ServiceLoader.Provider::get)
-      .sorted(Prioritized.COMPARATOR_DESCENDING)
       .toList();
+
+    private static final AmbiguityHandler ambiguityHandler =
+      ServiceLoader.load(AmbiguityHandler.class, AmbiguityHandler.class.getClassLoader())
+      .stream()
+      .map(ServiceLoader.Provider::get)
+      .findFirst()
+      .orElse(NoOpAmbiguityHandler.INSTANCE);
+
+  }
+
+  private static final class NoOpAmbiguityHandler implements AmbiguityHandler {
+
+    private static final NoOpAmbiguityHandler INSTANCE = new NoOpAmbiguityHandler();
+
+    private NoOpAmbiguityHandler() {
+      super();
+    }
 
   }
 

@@ -34,6 +34,12 @@ import org.microbean.settings.api.Path.Element;
 /**
  * An {@link OptionalSupplier} of configured objects.
  *
+ * <p><strong>Note:</strong> {@link Configured} implementations are
+ * expected to be immutable with respect to the methods exposed by
+ * this interface.  All methods in this interface that have a {@link
+ * Configured}-typed return type require their implementations to
+ * return a <em>new</em> {@link Configured}.</p>
+ *
  * @author <a href="https://about.me/lairdnelson"
  * target="_parent">Laird Nelson</a>
  *
@@ -77,6 +83,8 @@ public interface Configured<T> extends OptionalSupplier<T> {
    *
    * <p>Implementations of this method must not return {@code
    * null}.</p>
+   *
+   * @param <P> the type of object that the parent can return
    *
    * @return the non-{@code null} {@link Configured} serving as the
    * parent of this {@link Configured}; may be this {@link Configured}
@@ -129,9 +137,11 @@ public interface Configured<T> extends OptionalSupplier<T> {
    * implementation overrides them, in which case the overall behavior
    * of the implementation is undefined.</p>
    *
-   * @param parent the non-{@code null} {@link Configured} that will
-   * {@linkplain #parent() parent} the returned {@link Configured};
-   * must not be this {@link Configured}
+   * @param <U> the type of object the {@link Configured} can return
+   *
+   * @param requestor the non-{@code null} {@link Configured} that
+   * will {@linkplain #parent() parent} the returned {@link
+   * Configured}; must not be this {@link Configured}
    *
    * @param absolutePath the non-{@code null} {@linkplain
    * Path#isAbsolute() absolute <code>Path</code>} for which a
@@ -139,10 +149,10 @@ public interface Configured<T> extends OptionalSupplier<T> {
    *
    * @return a non-{@code null} {@link Configured} implementation
    *
-   * @exception NullPointerException if either {@code parent} or
+   * @exception NullPointerException if either {@code requestor} or
    * {@code absolutePath} is {@code null}
    *
-   * @exception IllegalArgumentException if {@code parent} is this
+   * @exception IllegalArgumentException if {@code requestor} is this
    * {@link Configured} or if {@code absolutePath} {@linkplain
    * Path#isAbsolute() is not absolute}
    *
@@ -157,7 +167,7 @@ public interface Configured<T> extends OptionalSupplier<T> {
    *
    * @see Path
    */
-  public <U> Configured<U> of(final Configured<?> parent, final Path absolutePath);
+  public <U> Configured<U> of(final Configured<?> requestor, final Path absolutePath);
 
 
   /*
@@ -277,7 +287,7 @@ public interface Configured<T> extends OptionalSupplier<T> {
     if (nonRootElement.isRoot()) {
       throw new IllegalArgumentException("nonRootElement.isRoot(): " + nonRootElement);
     }
-    return this.plus(Path.of(nonRootElement));
+    return this.plus(Path.relative(nonRootElement));
   }
 
   @Convenience
@@ -291,42 +301,42 @@ public interface Configured<T> extends OptionalSupplier<T> {
 
   @Convenience
   @OverridingDiscouraged
-  public default <U> Configured<U> of(final Configured<?> parent,
+  public default <U> Configured<U> of(final Configured<?> requestor,
                                       final Class<? extends U> type) {
-    return this.of(parent, Element.of(type));
+    return this.of(requestor, Element.of(type));
   }
 
   @Convenience
   @OverridingDiscouraged
-  public default <U> Configured<U> of(final Configured<?> parent,
+  public default <U> Configured<U> of(final Configured<?> requestor,
                                       final Type type) {
-    return this.of(parent, Element.of(type));
+    return this.of(requestor, Element.of(type));
   }
 
   @Convenience
   @OverridingDiscouraged
-  public default <U> Configured<U> of(final Configured<?> parent,
+  public default <U> Configured<U> of(final Configured<?> requestor,
                                       final String element,
                                       final Class<? extends U> type) {
-    return this.of(parent, element.isEmpty() ? Element.of(type) : Element.of(element, type));
+    return this.of(requestor, element.isEmpty() ? Element.of(type) : Element.of(element, type));
   }
 
   @Convenience
   @OverridingDiscouraged
-  public default <U> Configured<U> of(final Configured<?> parent,
+  public default <U> Configured<U> of(final Configured<?> requestor,
                                       final String element,
                                       final Type type) {
-    return this.of(parent, element.isEmpty() ? Element.of(type) : Element.of(element, type));
+    return this.of(requestor, element.isEmpty() ? Element.of(type) : Element.of(element, type));
   }
 
   @Convenience
   @OverridingDiscouraged
-  public default <U> Configured<U> of(final Configured<?> parent,
+  public default <U> Configured<U> of(final Configured<?> requestor,
                                       final Element nonRootElement) {
     if (nonRootElement.isRoot()) {
       throw new IllegalArgumentException("nonRootElement.isRoot(): " + nonRootElement);
     }
-    return this.of(parent, Path.root().plus(nonRootElement)); // root().plus() is critical here
+    return this.of(requestor, Path.root().plus(nonRootElement)); // root().plus() is critical here
   }
 
   @Convenience

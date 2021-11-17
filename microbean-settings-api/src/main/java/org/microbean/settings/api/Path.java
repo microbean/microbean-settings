@@ -131,6 +131,18 @@ public final class Path {
     return this.elements.size();
   }
 
+  public final Path with(final Type type) {
+    if (type == this.type()) {
+      return this;
+    } else {
+      final Element last = this.last().with(type);
+      final List<Element> newElements = new ArrayList<>(this.size());
+      newElements.addAll(this.elements.subList(0, this.size() - 1));
+      newElements.add(this.last().with(type));
+      return new Path(newElements, this.isTransliterated());
+    }
+  }
+
   public final Path plus(final String name, final Type type) {
     return this.plus(Element.of(name, type));
   }
@@ -172,8 +184,12 @@ public final class Path {
     return type;
   }
 
+  public final Class<?> typeErasure() {
+    return Types.erase(this.type());
+  }
+
   public final ClassLoader classLoader() {
-    return Types.erase(this.type()).getClassLoader();
+    return this.typeErasure().getClassLoader();
   }
 
   public final int indexOf(final Path other) {
@@ -279,7 +295,11 @@ public final class Path {
     return ROOT;
   }
 
-  public static final Path of(final Element element) {
+  public static final Path relative(final Type type) {
+    return relative(Element.of("", type, (List<? extends Class<?>>)null, (List<? extends String>)null));
+  }
+
+  public static final Path relative(final Element element) {
     return of(List.of(element));
   }
 
@@ -291,10 +311,6 @@ public final class Path {
     } else {
       return new Path(elements, false);
     }
-  }
-
-  public static final Path of(final Type type) {
-    return new Path(List.of(Element.of("", type, (List<? extends Class<?>>)null, (List<? extends String>)null)), false);
   }
 
   private static final String findUserPackageName(final Stream<StackFrame> stream) {
@@ -423,6 +439,14 @@ public final class Path {
 
     public final Optional<Type> type() {
       return this.type;
+    }
+
+    public final Element with(final Type type) {
+      if (type == this.type().orElse(null)) {
+        return this;
+      } else {
+        return new Element(this.name(), type, this.parameters().orElse(null), this.arguments().orElse(null), false);
+      }
     }
 
     public final Optional<List<Class<?>>> parameters() {
