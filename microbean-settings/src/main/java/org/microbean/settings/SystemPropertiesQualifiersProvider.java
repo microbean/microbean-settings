@@ -37,10 +37,10 @@ public class SystemPropertiesQualifiersProvider extends AbstractProvider<Qualifi
   }
 
   @Override // AbstractProvider<Qualifiers>
-  public Value<?> get(final Configured<?> supplier, final Path path) {
+  public <T> Value<T> get(final Configured<?> requestor, final Path<T> path) {
     // Use the configuration system to find a String under the path
     // :void/qualifierPrefix:java.lang.String.
-    final String prefix = supplier.of("qualifierPrefix", String.class).orElse("qualifier.");
+    final String prefix = requestor.of("qualifierPrefix", String.class).orElse("qualifier.");
     final int prefixLength = prefix.length();
     final Properties systemProperties = System.getProperties();
     final SortedMap<String, String> map = new TreeMap<>();
@@ -52,7 +52,8 @@ public class SystemPropertiesQualifiersProvider extends AbstractProvider<Qualifi
         }
       }
     }
-    return new Value<>(Qualifiers.of(), Path.relative(Qualifiers.class), Qualifiers.of(map));
+    final Class<T> qualifiersClass = path.typeErasure();
+    return new Value<>(Qualifiers.of(), Path.of(qualifiersClass), qualifiersClass.cast(Qualifiers.of(map)));
   }
 
 }

@@ -18,9 +18,6 @@ package org.microbean.settings.api;
 
 import java.io.Serializable;
 
-import java.lang.constant.Constable;
-import java.lang.constant.ConstantDesc;
-
 import java.lang.reflect.Array;
 import java.lang.reflect.GenericArrayType;
 import java.lang.reflect.Modifier;
@@ -32,7 +29,7 @@ import java.lang.reflect.WildcardType;
 import java.util.Objects;
 import java.util.Optional;
 
-public abstract class TypeToken<T> implements AutoCloseable, Constable, Serializable {
+public abstract class TypeToken<T> implements AutoCloseable, Serializable {
 
 
   /*
@@ -62,18 +59,13 @@ public abstract class TypeToken<T> implements AutoCloseable, Constable, Serializ
     return ActualTypeArgumentExtractor.INSTANCE.get(this.getClass());
   }
 
-  @Override
+  @Override // AutoCloseable
   public final void close() {
     ActualTypeArgumentExtractor.INSTANCE.remove(this.getClass());
   }
 
   public final Class<?> erase() {
     return erase(this.type());
-  }
-
-  @Override // Constable
-  public final Optional<? extends ConstantDesc> describeConstable() {
-    return Optional.ofNullable(this.erase()).flatMap(Class::describeConstable);
   }
 
   public String getTypeName() {

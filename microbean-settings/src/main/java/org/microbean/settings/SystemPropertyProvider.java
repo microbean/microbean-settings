@@ -112,7 +112,7 @@ public final class SystemPropertyProvider extends AbstractProvider<Object> {
    * idempotent and deterministic.
    */
   @Override // AbstractProvider<Object>
-  public boolean isSelectable(final Configured<?> supplier, final Path absolutePath) {
+  public boolean isSelectable(final Configured<?> supplier, final Path<?> absolutePath) {
     return
       super.isSelectable(supplier, absolutePath) &&
       absolutePath.isAbsolute() &&
@@ -182,21 +182,21 @@ public final class SystemPropertyProvider extends AbstractProvider<Object> {
    * <em>not</em> guaranteed to be idempotent or deterministic.
    */
   @Override // AbstractProvider<Object>
-  public Value<?> get(final Configured<?> supplier, final Path absolutePath) {
-    final Class<?> pathTypeErasure = absolutePath.typeErasure();
-    final Supplier<?> s;
+  public <T> Value<T> get(final Configured<?> supplier, final Path<T> absolutePath) {
+    final Class<T> pathTypeErasure = absolutePath.typeErasure();
+    final Supplier<T> s;
     if (pathTypeErasure.isAssignableFrom(String.class)) {
-      s = () -> getCharSequenceAssignableSystemProperty(absolutePath.last().name(), pathTypeErasure);
+      s = () -> pathTypeErasure.cast(getCharSequenceAssignableSystemProperty(absolutePath.last().name(), pathTypeErasure));
     } else {
-      s = () -> getSystemProperty(absolutePath.last().name(), pathTypeErasure);
+      s = () -> pathTypeErasure.cast(getSystemProperty(absolutePath.last().name(), pathTypeErasure));
     }
     return
-      new Value<Object>(null, // no defaults
-                        Qualifiers.of(),
-                        Path.relative(absolutePath.last()),
-                        s,
-                        false, // nulls are not legal values
-                        false); // not deterministic
+      new Value<>(null, // no defaults
+                  Qualifiers.of(),
+                  Path.of(absolutePath.last()),
+                  s,
+                  false, // nulls are not legal values
+                  false); // not deterministic
   }
 
   private static final <T> T getCharSequenceAssignableSystemProperty(final String propertyName, final Class<T> typeErasure) {

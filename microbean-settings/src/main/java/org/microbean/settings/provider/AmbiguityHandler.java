@@ -21,11 +21,11 @@ import org.microbean.settings.api.Path;
 
 public interface AmbiguityHandler {
 
-  public default void providerRejected(final Configured<?> rejector, final Path absolutePath, final Provider provider) {
+  public default void providerRejected(final Configured<?> rejector, final Path<?> absolutePath, final Provider provider) {
 
   }
 
-  public default void valueRejected(final Configured<?> rejector, final Path absolutePath, final Provider provider, final Value<?> value) {
+  public default void valueRejected(final Configured<?> rejector, final Path<?> absolutePath, final Provider provider, final Value<?> value) {
 
   }
 
@@ -74,7 +74,7 @@ public interface AmbiguityHandler {
    * this method is deterministic, but its overrides need not be.
    */
   public default <U> Value<U> disambiguate(final Configured<?> requestor,
-                                           final Path absolutePath,
+                                           final Path<?> absolutePath,
                                            final Provider p0,
                                            final Value<U> v0,
                                            final Provider p1,

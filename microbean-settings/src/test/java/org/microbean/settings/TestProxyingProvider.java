@@ -42,7 +42,8 @@ final class TestProxyingProvider {
 
   @Test
   final void explore() {
-    final Configured<Car> carCs = Configured.of().plus(Car.class);
+    // final Configured<Car> carCs = Configured.of().plus(Car.class);
+    final Configured<Car> carCs = Configured.of().of(Car.class);
     final Car car = carCs.get();
     assertNotNull(car);
     assertSame(car, carCs.get());
@@ -95,10 +96,10 @@ final class TestProxyingProvider {
 
     @Override
     public final boolean isSelectable(final Configured<?> supplier,
-                                      final Path path) {
+                                      final Path<?> path) {
       if (super.isSelectable(supplier, path)) {
         assertSame(Wheel.class, path.type());
-        final Element e = path.get(path.size() - 1);
+        final Element<?> e = path.last();
         final List<String> arguments = e.arguments().orElse(null);
         return "wheel".equals(e.name()) && arguments != null && !arguments.isEmpty() && "LR".equals(arguments.get(0));
       } else {
@@ -106,24 +107,25 @@ final class TestProxyingProvider {
       }
     }
 
-    public final Value<Wheel> get(final Configured<?> supplier,
-                                  final Path path) {
-      assertSame(Wheel.class, path.type());
-      final Element e = path.get(path.size() - 1);
+    @Override
+    public final <T> Value<T> get(final Configured<?> supplier, final Path<T> path) {
+      assertSame(Wheel.class, path.typeErasure());
+      final Class<T> wheelClass = path.typeErasure();
+      final Element<T> e = path.last();
       assertEquals("wheel", e.name());
       assertEquals(List.of(String.class), e.parameters().orElseThrow());
       assertEquals("LR", e.arguments().orElseThrow().get(0));
       return new Value<>(Qualifiers.of(),
-                         Path.relative(Element.of("wheel",
-                                                  Wheel.class,
-                                                  List.of(String.class),
-                                                  List.of("LR"))),
-                         new Wheel() {
-                           @Override
-                           public final int getDiameterInInches() {
-                             return 24;
-                           }
-                         });
+                         Path.of(Element.of("wheel",
+                                            wheelClass,
+                                            List.of(String.class),
+                                            List.of("LR"))),
+                         wheelClass.cast(new Wheel() {
+                             @Override
+                               public final int getDiameterInInches() {
+                               return 24;
+                             }
+                           }));
     }
 
   }

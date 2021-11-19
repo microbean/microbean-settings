@@ -62,7 +62,7 @@ public final class Value<T> implements OptionalSupplier<T> {
 
   private final Qualifiers qualifiers;
 
-  private final Path path;
+  private final Path<T> path;
 
   private final Supplier<? extends T> supplier;
 
@@ -76,36 +76,36 @@ public final class Value<T> implements OptionalSupplier<T> {
    */
 
 
-  public Value(final Qualifiers qualifiers, final Path path, final T value) {
+  public Value(final Qualifiers qualifiers, final Path<T> path, final T value) {
     this(null, qualifiers, path, () -> value, true, true);
   }
 
-  public Value(final Qualifiers qualifiers, final Path path, final Supplier<? extends T> supplier) {
+  public Value(final Qualifiers qualifiers, final Path<T> path, final Supplier<? extends T> supplier) {
     this(null, qualifiers, path, supplier, true, false);
   }
 
-  public Value(final Qualifiers qualifiers, final Path path, final Supplier<? extends T> supplier, final boolean deterministic) {
+  public Value(final Qualifiers qualifiers, final Path<T> path, final Supplier<? extends T> supplier, final boolean deterministic) {
     this(null, qualifiers, path, supplier, true, deterministic);
   }
 
   public Value(final Supplier<? extends T> defaults,
                final Qualifiers qualifiers,
-               final Path path,
+               final Path<T> path,
                final Supplier<? extends T> supplier) {
     this(defaults, qualifiers, path, supplier, true, false);
   }
 
-  public Value(final Supplier<? extends T> defaults, final Value<? extends T> source) {
+  public Value(final Supplier<? extends T> defaults, final Value<T> source) {
     this(defaults, source.qualifiers(), source.path(), source, source.nullsPermitted(), source.deterministic());
   }
 
-  public Value(final Value<? extends T> source) {
+  public Value(final Value<T> source) {
     this(null, source.qualifiers(), source.path(), source, source.nullsPermitted(), source.deterministic());
   }
 
   public Value(final Supplier<? extends T> defaults,
                final Qualifiers qualifiers,
-               final Path path,
+               final Path<T> path,
                final Supplier<? extends T> supplier,
                final boolean deterministic) {
     this(defaults, qualifiers, path, supplier, true, deterministic);
@@ -141,7 +141,7 @@ public final class Value<T> implements OptionalSupplier<T> {
    */
   public Value(final Supplier<? extends T> defaults,
                final Qualifiers qualifiers,
-               final Path path,
+               final Path<T> path,
                final Supplier<? extends T> supplier,
                final boolean nullsPermitted,
                final boolean deterministic) {
@@ -246,7 +246,7 @@ public final class Value<T> implements OptionalSupplier<T> {
     return this.qualifiers;
   }
 
-  public final Path path() {
+  public final Path<T> path() {
     return this.path;
   }
 

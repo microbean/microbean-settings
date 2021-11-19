@@ -24,10 +24,8 @@ import java.util.function.Supplier;
 
 import org.microbean.development.annotation.Convenience;
 import org.microbean.development.annotation.EntryPoint;
-import org.microbean.development.annotation.Experimental;
 import org.microbean.development.annotation.OverridingDiscouraged;
 import org.microbean.development.annotation.OverridingEncouraged;
-import org.microbean.development.annotation.SubordinateTo;
 
 import org.microbean.settings.api.Path.Element;
 
@@ -40,10 +38,17 @@ import org.microbean.settings.api.Path.Element;
  * Configured}-typed return type require their implementations to
  * return a <em>new</em> {@link Configured}.</p>
  *
+ * @param <T> the type of configured objects this {@link Configured}
+ * supplies
+ *
  * @author <a href="https://about.me/lairdnelson"
  * target="_parent">Laird Nelson</a>
  *
  * @see #of()
+ *
+ * @see OptionalSupplier#get()
+ *
+ * @see #of(Path)
  */
 public interface Configured<T> extends OptionalSupplier<T> {
 
@@ -122,9 +127,58 @@ public interface Configured<T> extends OptionalSupplier<T> {
    * @idempotency Implementations of this method must be idempotent
    * and deterministic.
    */
-  public Path absolutePath();
+  public Path<T> absolutePath();
 
-  public <U> Configured<U> of(final Configured<?> requestor, final Path absolutePath);
+  /**
+   * Returns a {@link Configured} that can supply configured objects
+   * that are suitable for the supplied {@code path}.
+   *
+   * <p>After {@linkplain #of() bootstrapping}, this method serves as
+   * the main entry point into this framework.</p>
+   *
+   * <p>Implementations of this method must obtain a normalized {@link
+   * Path} as if by passing the supplied {@code path} to the default
+   * implementation of the {@link #normalize(Path)} method and using
+   * its return value.</p>
+   *
+   * <p>Implementations of this method that may invoke other
+   * mechanisms expecting a {@link Configured} must supply them with a
+   * {@link Configured} as if returned by the {@link
+   * #configuredFor(Path)} method when supplied with the supplied
+   * {@code path}.</p>
+   *
+   * <p>Although implementations of this method must not return {@code
+   * null}, the {@link Configured} that is returned may return {@code
+   * null} from its {@link Configured#get() get()} method.
+   * Additionally, the {@link Configured} that is returned may throw
+   * {@link java.util.NoSuchElementException} or {@link
+   * UnsupportedOperationException} from its {@link Configured#get()
+   * get()} method.</p>
+   *
+   * @param path the {@link Path} for which a {@link Configured}
+   * should be returned; must not be {@code null}
+   *
+   * @return a {@link Configured} capable of supplying configured
+   * objects suitable for the supplied {@code path}; never {@code
+   * null}
+   *
+   * @exception NullPointerException if {@code path} is {@code null}
+   *
+   * @exception IllegalArgumentException if the {@code path}, after
+   * {@linkplain #normalize(Path) normalization}, {@linkplain
+   * Path#isRoot() is the root <code>Path</code>}
+   *
+   * @nullability Implementations of this method must not return
+   * {@code null}.
+   *
+   * @threadsafety Implementations of this method must be safe for
+   * concurrent use by multiple threads.
+   *
+   * @threadsafety Implementations of this method must be idempotent
+   * and deterministic.
+   */
+  @EntryPoint
+  public <U> Configured<U> of(final Path<U> path);
 
 
   /*
@@ -150,13 +204,13 @@ public interface Configured<T> extends OptionalSupplier<T> {
    * single application.</p>
    *
    * <p>Path transliteration must occur during the execution of any
-   * implementation of the {@link #of(Configured, Path)} method, such
-   * that the {@link Path} supplied to that method, once it has been
-   * verified to be {@linkplain Path#isAbsolute() absolute}, is
-   * supplied to an implementation of this method. The {@link Path}
-   * returned by an implementation of this method must then be used
-   * during the rest of the invocation of the {@link #of(Configured,
-   * Path)} method, as if it had been supplied in the first place.</p>
+   * implementation of the {@link #of(Path)} method, such that the
+   * {@link Path} supplied to that method, once it has been verified
+   * to be {@linkplain Path#isAbsolute() absolute}, is supplied to an
+   * implementation of this method. The {@link Path} returned by an
+   * implementation of this method must then be used during the rest
+   * of the invocation of the {@link #of(Path)} method, as if it had
+   * been supplied in the first place.</p>
    *
    * <p>Behavior resulting from any other usage of an implementation
    * of this method is undefined.</p>
@@ -166,12 +220,23 @@ public interface Configured<T> extends OptionalSupplier<T> {
    * interface are strongly encouraged to actually perform path
    * transliteration.</p>
    *
-   * <p>A class that implements {@link Configured} may find {@link
-   * StackWalker} particularly useful in implementing this method.</p>
+   * <p>Implementations of this method <strong>must not call {@link
+   * #normalize(Path)}</strong> or an infinite loop may result.</p>
+   *
+   * <p>Implementations of this method <strong>must not call {@link
+   * #configuredFor(Path)}</strong> or an infinite loop may
+   * result.</p>
+   *
+   * <p>Implementations of this method <strong>must not call {@link
+   * #of(Path)} with the supplied {@code path}</strong> or an infinite
+   * loop may result.</p>
+   *
+   * <p>An implementation of {@link Configured} will find {@link
+   * Path#transliterate(java.util.function.BiFunction)} particularly
+   * useful in implementing this method.</p>
    *
    * @param path an {@linkplain Path#isAbsolute() absolute
-   * <code>Path</code>}; must not be null; must return {@code true}
-   * from its {@link Path#isAbsolute() isAbsolute()} method
+   * <code>Path</code>}; must not be null
    *
    * @return the transliterated {@link Path}; never {@code null}
    *
@@ -181,25 +246,28 @@ public interface Configured<T> extends OptionalSupplier<T> {
    * {@code false} from its {@link Path#isAbsolute() isAbsolute()}
    * method
    *
-   * @nullability Implementations of this method must not return
-   * {@code null}.
+   * @nullability The default implementation of this method does not,
+   * and its overrides must not, return {@code null}.
    *
-   * @threadsafety Implementations of this method must be safe for
-   * concurrent use by multiple threads.
+   * @threadsafety The default implementation of this method is, and
+   * its overrides must be, safe for concurrent use by multiple
+   * threads.
    *
-   * @idempotency Implementations of this method must be idempotent
-   * and deterministic.
+   * @idempotency The default implementation of this method is, and
+   * its overrides must be, idempotent and deterministic.
    *
    * @see Path#isAbsolute()
    *
-   * @see Path#transliterate(BiFunction)
+   * @see Path#transliterate(java.util.function.BiFunction)
    *
-   * @see #of(Configured, Path)
+   * @see #normalize(Path)
+   *
+   * @see #configuredFor(Path)
+   *
+   * @see #of(Path)
    */
-  @Experimental
   @OverridingEncouraged
-  @SubordinateTo("#of(Configured, Path, Supplier")
-  public default Path transliterate(final Path path) {
+  public default <U> Path<U> transliterate(final Path<U> path) {
     if (!path.isAbsolute()) {
       throw new IllegalArgumentException("!path.isAbsolute(): " + path);
     }
@@ -208,96 +276,166 @@ public interface Configured<T> extends OptionalSupplier<T> {
 
   @Convenience
   @OverridingDiscouraged
-  public default ClassLoader classLoader() {
-    return this.absolutePath().classLoader();
-  }
-
-  @Convenience
-  @OverridingDiscouraged
-  public default <U> Configured<U> plus(final Class<? extends U> type) {
-    return this.plus(Element.of(type));
-  }
-
-  @Convenience
-  @OverridingDiscouraged
-  public default <U> Configured<U> plus(final Type type) {
-    return this.plus(Element.of(type));
-  }
-
-  @Convenience
-  @OverridingDiscouraged
-  public default <U> Configured<U> plus(final String element,
-                                        final Class<? extends U> type) {
-    return this.plus(element.isEmpty() ? Element.of(type) : Element.of(element, type));
-  }
-
-  @Convenience
-  @OverridingDiscouraged
-  public default <U> Configured<U> plus(final String element,
-                                        final Type type) {
-    return this.plus(element.isEmpty() ? Element.of(type) : Element.of(element, type));
-  }
-
-  @Convenience
-  @OverridingDiscouraged
-  public default <U> Configured<U> plus(final Element nonRootElement) {
-    if (nonRootElement.isRoot()) {
-      throw new IllegalArgumentException("nonRootElement.isRoot(): " + nonRootElement);
-    }
-    return this.plus(Path.relative(nonRootElement));
-  }
-
-  @Convenience
-  @OverridingDiscouraged
-  public default <U> Configured<U> plus(final Path relativePath) {
-    if (!relativePath.isRelative()) {
-      throw new IllegalArgumentException("relativePath: " + relativePath);
-    }
-    return this.of(this.root(), this.absolutePath().plus(relativePath)); // NOTE
-  }
-
-  @Convenience
-  @OverridingDiscouraged
-  public default <U> Configured<U> of(final Path absolutePath) {
-    if (!absolutePath.isAbsolute()) {
-      throw new IllegalArgumentException("absolutePath: " + absolutePath);
-    }
-    return this.of(this.root(), absolutePath);
-  }
-
-  @Convenience
-  @OverridingDiscouraged
-  public default <U> Configured<U> of(final Class<? extends U> type) {
+  public default <U> Configured<U> of(final Class<U> type) {
     return this.of(Element.of(type));
   }
 
   @Convenience
   @OverridingDiscouraged
-  public default <U> Configured<U> of(final Type type) {
+  public default <U> Configured<U> of(final TypeToken<U> type) {
     return this.of(Element.of(type));
   }
 
   @Convenience
   @OverridingDiscouraged
-  public default <U> Configured<U> of(final String element,
-                                      final Class<? extends U> type) {
-    return this.of(element.isEmpty() ? Element.of(type) : Element.of(element, type));
+  public default <U> Configured<U> of(final String element, final Class<U> type) {
+    final Element<U> e;
+    if (element.isEmpty()) {
+      e = Element.of(type);
+    } else {
+      e = Element.of(element, type);
+    }
+    return this.of(e);
   }
 
   @Convenience
   @OverridingDiscouraged
-  public default <U> Configured<U> of(final String element,
-                                      final Type type) {
-    return this.of(element.isEmpty() ? Element.of(type) : Element.of(element, type));
+  public default <U> Configured<U> of(final String element, final TypeToken<U> type) {
+    final Element<U> e;
+    if (element.isEmpty()) {
+      e = Element.of(type);
+    } else {
+      e = Element.of(element, type);
+    }
+    return this.of(e);
   }
-
+  
   @Convenience
   @OverridingDiscouraged
-  public default <U> Configured<U> of(final Element nonRootElement) {
+  public default <U> Configured<U> of(final Element<U> nonRootElement) {
     if (nonRootElement.isRoot()) {
       throw new IllegalArgumentException("nonRootElement.isRoot(): " + nonRootElement);
     }
-    return this.of(Path.root().plus(nonRootElement)); // root().plus() is critical here
+    return this.of(Path.of(nonRootElement));
+  }
+
+  /**
+   * Returns a normalized version of the supplied {@link Path}.
+   *
+   * <p>The returned {@link Path} must not be {@code null}, must be
+   * {@linkplain Path#isAbsolute() absolute} and must have been
+   * {@linkplain #transliterate(Path) transliterated}.  An
+   * implementation that deviates from these requirements will cause
+   * undefined behavior.</p>
+   *
+   * <p>The default implementation of this method returns the
+   * equivalent of {@code this.transliterate(path.isAbsolute() ? path
+   * : this.absolutePath().plus(path))}.</p>
+   *
+   * <p>Implementations of this method must not call {@link
+   * #configuredFor(Path)} or an infinite loop may result.</p>
+   *
+   * @param path the {@link Path} to normalize; must not be {@code
+   * null}
+   *
+   * @return a normalized, {@linkplain #transliterate(Path)
+   * transliterated} {@link Path}
+   *
+   * @exception NullPointerException if {@code path} is {@code null}
+   *
+   * @nullability The default implementation of this method does not,
+   * and its (discouraged) overrides must not, return {@code null}.
+   *
+   * @threadsafety The default implementation of this method is, and
+   * its (discouraged) overrides must be, safe for concurrent use by
+   * multiple threads.
+   *
+   * @idempotency The default implementation of this method is, and
+   * its (discouraged) overrides must be, idempotent and
+   * deterministic.
+   *
+   * @see #transliterate(Path)
+   *
+   * @see #configuredFor(Path)
+   */
+  @OverridingDiscouraged
+  public default <U> Path<U> normalize(final Path<U> path) {
+    if (path.isAbsolute()) {
+      if (path.isTransliterated() || path.size() == 1) {
+        return path;
+      } else {
+        return this.transliterate(path);
+      }
+    } else {
+      return this.transliterate(this.absolutePath().plus(path));
+    }
+  }
+
+  /**
+   * Returns a {@link Configured} derived from this {@link Configured}
+   * that is suitable for a {@linkplain #normalize(Path) normalized
+   * version} of the supplied {@code path} for cases where during the
+   * execution of the {@link #of(Path)} method a {@link Configured}
+   * must be supplied to some other class.
+   *
+   * <p>The returned {@link Configured} must be one whose {@link
+   * #absolutePath()} method returns the {@linkplain Path#size()
+   * longest} {@link Path} that is a parent of the ({@linkplain
+   * #normalize(Path) normalized}) supplied {@code path}.  In many
+   * cases {@code this} will be returned.</p>
+   *
+   * @param path the {@link Path} in question; must not be {@code
+   * null}
+   *
+   * @return a {@link Configured} derived from this {@link Configured}
+   * that is suitable for a {@linkplain #normalize(Path) normalized
+   * version} of the supplied {@code path} for cases where during the
+   * execution of the {@link #of(Path)} method a {@link Configured}
+   * must be supplied to some other class; never {@code null}
+   *
+   * @exception NullPointerException if {@code path} is {@code null}
+   *
+   * @nullability The default implementation of this method does not,
+   * and its (discouraged) overrides must not, return {@code null}.
+   *
+   * @threadsafety The default implementation of this method is, and
+   * its (discouraged) overrides must be, safe for concurrent use by
+   * multiple threads.
+   *
+   * @idempotency The default implementation of this method is, and
+   * its (discouraged) overrides must be, idempotent and
+   * deterministic.
+   *
+   * @see #normalize(Path)
+   *
+   * @see #transliterate(Path)
+   *
+   * @see #root()
+   */
+  @OverridingDiscouraged
+  public default Configured<?> configuredFor(Path<?> path) {
+    path = this.normalize(path);
+    Configured<?> requestor = this;
+    final Path<?> requestorPath = requestor.absolutePath();
+    assert requestorPath.isAbsolute() : "!requestorPath.isAbsolute(): " + requestorPath;
+    if (!requestorPath.equals(path)) {
+      if (requestorPath.startsWith(path)) {
+        final int requestorPathSize = requestorPath.size();
+        final int pathSize = path.size();
+        assert requestorPathSize != pathSize;
+        if (requestorPathSize > pathSize) {
+          for (int i = 0; i < requestorPathSize - pathSize; i++) {
+            requestor = requestor.parent();
+          }
+          assert requestor.absolutePath().equals(path) : "!requestor.absolutePath().equals(path); requestor.absolutePath(): " + requestor.absolutePath() + "; path: " + path;
+        } else {
+          throw new AssertionError("requestorPath.size() < path.size(); requestorPath: " + requestorPath + "; path: " + path);
+        }
+      } else {
+        requestor = requestor.root();
+      }
+    }
+    return requestor;
   }
 
   /**
@@ -384,7 +522,8 @@ public interface Configured<T> extends OptionalSupplier<T> {
    * <li>It must return itself from its {@link #parent()}
    * implementation.</li>
    *
-   * <li>It must return itself from its {@link #get()} method.</li>
+   * <li>It must return itself from its {@link #get() get()}
+   * method.</li>
    *
    * <li>It must return {@code true} from its {@link #isRoot()}
    * implementation.</li>
@@ -412,7 +551,7 @@ public interface Configured<T> extends OptionalSupplier<T> {
    * #parent()} implementation.</li>
    *
    * <li>It must return a {@link Configured} implementation, normally
-   * itself, from its {@link #get()} method.</li>
+   * itself, from its {@link #get() get()} method.</li>
    *
    * </ul>
    *
@@ -427,10 +566,9 @@ public interface Configured<T> extends OptionalSupplier<T> {
   @EntryPoint
   @SuppressWarnings("static")
   public static Configured<?> of() {
-    return new Object() {
+    final class Bootstrap {
       private static final Configured<?> instance;
       static {
-
         final Configured<?> bootstrapConfigured =
           ServiceLoader.load(Configured.class, Configured.class.getClassLoader()).findFirst().orElseThrow();
 
@@ -447,7 +585,7 @@ public interface Configured<T> extends OptionalSupplier<T> {
         }
 
         instance = bootstrapConfigured
-          .<Configured<?>>of(new TypeToken<Configured<?>>() {}.type())
+          .<Configured<?>>of(new TypeToken<Configured<?>>() {})
           .orElse(bootstrapConfigured);
 
         if (!Path.root().equals(bootstrapConfigured.absolutePath())) {
@@ -458,7 +596,8 @@ public interface Configured<T> extends OptionalSupplier<T> {
           throw new IllegalStateException("instance.get(): " + instance.get());
         }
       }
-    }.instance;
+    };
+    return Bootstrap.instance;
   }
 
 }

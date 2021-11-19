@@ -29,18 +29,21 @@ public final class EnvironmentVariableProvider extends AbstractProvider<String> 
     super();
   }
 
-  public boolean isSelectable(final Configured<?> supplier, final Path absolutePath) {
+  @Override // AbstractProvider<String>
+  public boolean isSelectable(final Configured<?> supplier, final Path<?> absolutePath) {
     assert absolutePath.isAbsolute();
     return
       absolutePath.size() == 2
       && super.isSelectable(supplier, absolutePath) &&
       System.getenv(absolutePath.last().name()) != null;
   }
-  
-  public Value<?> get(final Configured<?> supplier, final Path absolutePath) {
+
+  @Override // AbstractProvider<String>
+  public <T> Value<T> get(final Configured<?> supplier, final Path<T> absolutePath) {
     assert absolutePath.isAbsolute();
     assert absolutePath.size() == 2;
-    return new Value<>(Qualifiers.of(), absolutePath, System.getenv(absolutePath.last().name()));
+    final Class<T> stringClass = absolutePath.typeErasure();
+    return new Value<>(Qualifiers.of(), absolutePath, stringClass.cast(System.getenv(absolutePath.last().name())));
   }
   
 }

@@ -61,7 +61,7 @@ final class TestPath {
 
   @Test
   final void testParseFoo() throws ClassNotFoundException {
-    assertEquals(Path.relative(Element.of("foo")), new Path.Parser(this.getClass().getClassLoader()).parse("foo"));
+    assertEquals(Path.of(Element.of("foo")), new Path.Parser(this.getClass().getClassLoader()).parse("foo"));
   }
 
   @Test

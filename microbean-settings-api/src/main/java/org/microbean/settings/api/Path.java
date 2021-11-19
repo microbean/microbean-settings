@@ -37,7 +37,7 @@ import org.microbean.development.annotation.Experimental;
 
 import org.microbean.type.Types;
 
-public final class Path {
+public final class Path<T> {
 
 
   /*
@@ -47,7 +47,7 @@ public final class Path {
 
   private static final StackWalker stackWalker = StackWalker.getInstance();
 
-  private static final Path ROOT = new Path(List.of(Element.root()), true);
+  private static final Path<Void> ROOT = new Path<>(List.of(Element.root()), true);
 
 
   /*
@@ -55,7 +55,7 @@ public final class Path {
    */
 
 
-  private final List<Element> elements;
+  private final List<Element<?>> elements;
 
   private final boolean transliterated;
 
@@ -64,17 +64,20 @@ public final class Path {
    * Constructors.
    */
 
-
-  private Path(final List<? extends Element> elements, final boolean transliterated) {
+  private Path(final Element<T> element) {
+    this(List.of(element), false);
+  }
+  
+  private Path(final List<? extends Element<?>> elements, final boolean transliterated) {
     super();
     final int size = elements.size();
     switch (size) {
     case 0:
       throw new IllegalArgumentException("elements.isEmpty()");
     default:
-      final List<Element> newList = new ArrayList<>(size);
+      final List<Element<?>> newList = new ArrayList<>(size);
       for (int i = 0; i < size; i++) {
-        final Element e = Objects.requireNonNull(elements.get(i));
+        final Element<?> e = Objects.requireNonNull(elements.get(i));
         if (i != 0 && (e.isRoot() || i + 1 >= size && e.type().isEmpty())) {
           // No element other than the first one can be root.
           // The last element must have a present Type.
@@ -98,19 +101,19 @@ public final class Path {
   }
 
   @Experimental
-  public final Path transliterate(final BiFunction<? super String, ? super Element, ? extends Element> f) {
+  public final Path<T> transliterate(final BiFunction<? super String, ? super Element<?>, ? extends Element<?>> f) {
     if (f == null) {
-      return new Path(this.elements, true);
+      return new Path<>(this.elements, true);
     } else if (this.transliterated) {
       return this;
     } else {
       final String userPackageName = stackWalker.walk(Path::findUserPackageName);
       final int size = this.size();
-      final List<Element> newElements = new ArrayList<>(size);
+      final List<Element<?>> newElements = new ArrayList<>(size);
       for (int i = 0; i < size; i++) {
         newElements.add(f.apply(userPackageName, this.get(i)));
       }
-      return new Path(newElements, true);
+      return new Path<>(newElements, true);
     }
   }
 
@@ -131,51 +134,79 @@ public final class Path {
     return this.elements.size();
   }
 
-  public final Path with(final Type type) {
+  public final <U> Path<U> with(final Class<U> type) {
+    if (type == this.type()) {
+      @SuppressWarnings("unchecked")
+      final Path<U> returnValue = (Path<U>)this;
+      return returnValue;
+    } else {
+      final List<Element<?>> newElements = new ArrayList<>(this.size());
+      newElements.addAll(this.elements.subList(0, this.size() - 1));
+      newElements.add(this.last().with(type));
+      return new Path<>(newElements, this.isTransliterated());
+    }
+  }
+
+  public final <U> Path<U> with(final TypeToken<U> type) {
+    if (type.type() == this.type()) {
+      @SuppressWarnings("unchecked")
+      final Path<U> returnValue = (Path<U>)this;
+      return returnValue;
+    } else {
+      final List<Element<?>> newElements = new ArrayList<>(this.size());
+      newElements.addAll(this.elements.subList(0, this.size() - 1));
+      newElements.add(this.last().with(type));
+      return new Path<>(newElements, this.isTransliterated());
+    }
+  }
+
+  public final Path<?> with(final Type type) {
     if (type == this.type()) {
       return this;
     } else {
-      final Element last = this.last().with(type);
-      final List<Element> newElements = new ArrayList<>(this.size());
+      final List<Element<?>> newElements = new ArrayList<>(this.size());
       newElements.addAll(this.elements.subList(0, this.size() - 1));
       newElements.add(this.last().with(type));
-      return new Path(newElements, this.isTransliterated());
+      return new Path<>(newElements, this.isTransliterated());
     }
   }
 
-  public final Path plus(final String name, final Type type) {
+  public final <U> Path<U> plus(final String name, final TypeToken<U> type) {
     return this.plus(Element.of(name, type));
   }
 
-  public final Path plus(final Element element) {
+  public final <U> Path<U> plus(final Element<U> element) {
     return this.plus(List.of(element));
   }
 
-  public final Path plus(final Path path) {
+  public final <U> Path<U> plus(final Path<U> path) {
     return this.plus(path.elements);
   }
 
-  public final Path plus(final List<? extends Element> elements) {
+  public final <U> Path<U> plus(final List<? extends Element<?>> elements) {
     if (elements.isEmpty()) {
-      return this;
+      @SuppressWarnings("unchecked")
+      final Path<U> returnValue = (Path<U>)this;
+      return returnValue;
     } else {
-      final List<Element> newElements = new ArrayList<>(this.size() + elements.size());
+      final List<Element<?>> newElements = new ArrayList<>(this.size() + elements.size());
       newElements.addAll(this.elements);
       newElements.addAll(elements);
-      return new Path(newElements, false);
+      return new Path<>(newElements, false);
     }
   }
 
-  public final Element get(final int index) {
+  public final Element<?> get(final int index) {
     return this.elements.get(index);
   }
 
-  public final Element first() {
+  public final Element<?> first() {
     return this.get(0);
   }
 
-  public final Element last() {
-    return this.get(this.size() - 1);
+  @SuppressWarnings("unchecked")
+  public final Element<T> last() {
+    return (Element<T>)this.get(this.size() - 1);
   }
 
   public final Type type() {
@@ -184,19 +215,20 @@ public final class Path {
     return type;
   }
 
-  public final Class<?> typeErasure() {
-    return Types.erase(this.type());
+  @SuppressWarnings("unchecked")
+  public final Class<T> typeErasure() {
+    return (Class<T>)Types.erase(this.type());
   }
 
   public final ClassLoader classLoader() {
     return this.typeErasure().getClassLoader();
   }
 
-  public final int indexOf(final Path other) {
+  public final int indexOf(final Path<?> other) {
     return other == this ? 0 : Collections.indexOfSubList(this.elements, other.elements);
   }
 
-  public final int indexOf(final Path path, final BiPredicate<? super Element, ? super Element> p) {
+  public final int indexOf(final Path<?> path, final BiPredicate<? super Element<?>, ? super Element<?>> p) {
     final int pathSize = path.size();
     final int sizeDiff = this.size() - pathSize;
     OUTER_LOOP:
@@ -211,11 +243,11 @@ public final class Path {
     return -1;
   }
 
-  public final int lastIndexOf(final Path other) {
+  public final int lastIndexOf(final Path<?> other) {
     return other == this ? 0 : Collections.lastIndexOfSubList(this.elements, other.elements);
   }
 
-  public final int lastIndexOf(final Path path, final BiPredicate<? super Element, ? super Element> p) {
+  public final int lastIndexOf(final Path<?> path, final BiPredicate<? super Element<?>, ? super Element<?>> p) {
     final int pathSize = path.size();
     final int sizeDiff = this.size() - pathSize;
     OUTER_LOOP:
@@ -230,7 +262,7 @@ public final class Path {
     return -1;
   }
 
-  public final boolean startsWith(final Path other) {
+  public final boolean startsWith(final Path<?> other) {
     if (other == this) {
       return true;
     } else if (other == null) {
@@ -240,11 +272,11 @@ public final class Path {
     }
   }
 
-  public final boolean startsWith(final Path other, final BiPredicate<? super Element, ? super Element> p) {
+  public final boolean startsWith(final Path<?> other, final BiPredicate<? super Element<?>, ? super Element<?>> p) {
     return this.indexOf(other, p) == 0;
   }
 
-  public final boolean endsWith(final Path other) {
+  public final boolean endsWith(final Path<?> other) {
     if (other == this) {
       return true;
     } else if (other == null) {
@@ -255,7 +287,7 @@ public final class Path {
     }
   }
 
-  public final boolean endsWith(final Path other, final BiPredicate<? super Element, ? super Element> p) {
+  public final boolean endsWith(final Path<?> other, final BiPredicate<? super Element<?>, ? super Element<?>> p) {
     final int lastIndex = this.lastIndexOf(other, p);
     return lastIndex >= 0 && lastIndex + other.size() == this.size();
   }
@@ -291,25 +323,35 @@ public final class Path {
    */
 
 
-  public static final Path root() {
+  public static final Path<?> root() {
     return ROOT;
   }
 
-  public static final Path relative(final Type type) {
-    return relative(Element.of("", type, (List<? extends Class<?>>)null, (List<? extends String>)null));
+  public static final <U> Path<U> of(final Class<U> type) {
+    
+    return of(Element.of("", type, (List<? extends Class<?>>)null, (List<? extends String>)null));
   }
 
-  public static final Path relative(final Element element) {
-    return of(List.of(element));
+  public static final <U> Path<U> of(final TypeToken<U> type) {
+    return of(Element.of("", type, (List<? extends Class<?>>)null, (List<? extends String>)null));
   }
 
-  public static final Path of(final List<? extends Element> elements) {
+  public static final Path<?> of(final Type type) {
+    return of(Element.of("", type, (List<? extends Class<?>>)null, (List<? extends String>)null));
+  }
+
+  @SuppressWarnings("unchecked")
+  public static final <U> Path<U> of(final Element<U> element) {
+    return element.isRoot() ? (Path<U>)root() : new Path<>(element);
+  }
+
+  public static final Path<?> of(final List<? extends Element<?>> elements) {
     if (elements.isEmpty()) {
       throw new IllegalArgumentException("elements.isEmpty()");
     } else if (elements.size() == 1 && elements.get(0).isRoot()) {
       return root();
     } else {
-      return new Path(elements, false);
+      return new Path<>(elements, false);
     }
   }
 
@@ -340,7 +382,7 @@ public final class Path {
    */
 
 
-  public static final class Element {
+  public static final class Element<T> {
 
 
     /*
@@ -348,7 +390,7 @@ public final class Path {
      */
 
 
-    private static final Element ROOT = new Element("", void.class, null, null, true);
+    private static final Element<Void> ROOT = new Element<>("", void.class, null, null, true);
 
 
     /*
@@ -441,11 +483,45 @@ public final class Path {
       return this.type;
     }
 
-    public final Element with(final Type type) {
+    @SuppressWarnings("unchecked")
+    public final Optional<Class<T>> typeErasure() {
+      return this.type.flatMap(t -> Optional.of((Class<T>)Types.erase(t)));
+    }
+
+    @SuppressWarnings("unchecked")
+    public final <U> Element<U> with(final Class<U> type) {
+      if (type == this.type().orElse(null)) {
+        @SuppressWarnings("unchecked")
+        final Element<U> returnValue = (Element<U>)this;
+        return returnValue;
+      } else if (type == void.class && this.name().isEmpty()) {
+        return (Element<U>)root();
+      } else {
+        return new Element<>(this.name(), type, this.parameters().orElse(null), this.arguments().orElse(null), false);
+      }
+    }
+
+    @SuppressWarnings("unchecked")
+    public final <U> Element<U> with(final TypeToken<U> type) {
+      final Type t = type.type();
+      if (t == this.type().orElse(null)) {
+        @SuppressWarnings("unchecked")
+        final Element<U> returnValue = (Element<U>)this;
+        return returnValue;
+      } else if (t == void.class && this.name().isEmpty()) {
+        return (Element<U>)root();
+      } else {
+        return new Element<>(this.name(), t, this.parameters().orElse(null), this.arguments().orElse(null), false);
+      }
+    }
+
+    public final Element<?> with(final Type type) {
       if (type == this.type().orElse(null)) {
         return this;
+      } else if (type == void.class && this.name().isEmpty()) {
+        return root();
       } else {
-        return new Element(this.name(), type, this.parameters().orElse(null), this.arguments().orElse(null), false);
+        return new Element<>(this.name(), type, this.parameters().orElse(null), this.arguments().orElse(null), false);
       }
     }
 
@@ -471,7 +547,7 @@ public final class Path {
       if (other == this) {
         return true;
       } else if (other != null && this.getClass() == other.getClass()) {
-        final Element her = (Element)other;
+        final Element<?> her = (Element<?>)other;
         return
           Objects.equals(this.name(), her.name()) &&
           Objects.equals(this.type(), her.type()) &&
@@ -511,35 +587,124 @@ public final class Path {
      */
 
 
-    public static final Element root() {
+    public static final Element<?> root() {
       return ROOT;
     }
 
-    public static final Element of(final String name,
-                                   final Type type,
-                                   final List<? extends Class<?>> parameters,
-                                   final List<? extends String> arguments) {
-      return new Element(name, type, parameters, arguments, false);
+    @SuppressWarnings("unchecked")
+    public static final <U> Element<U> of(final String name,
+                                          final Class<U> type,
+                                          final List<? extends Class<?>> parameters,
+                                          final List<? extends String> arguments) {
+      if (name.isEmpty() && type == void.class && parameters == null && arguments == null) {
+        return (Element<U>)root();
+      }
+      return new Element<>(name, type, parameters, arguments, false);
     }
 
-    public static final Element of(final String name) {
-      return new Element(name, null, null, null, false);
+    @SuppressWarnings("unchecked")
+    public static final <U> Element<U> of(final String name,
+                                          final TypeToken<U> type,
+                                          final List<? extends Class<?>> parameters,
+                                          final List<? extends String> arguments) {
+      final Type t = type.type();
+      if (name.isEmpty() && t == void.class && parameters == null && arguments == null) {
+        return (Element<U>)root();
+      }
+      return new Element<>(name, type.type(), parameters, arguments, false);
     }
 
-    public static final Element of(final String name,
-                                   final Type type) {
-      return new Element(name, type, null, null, false);
+    public static final Element<?> of(final String name,
+                                      final Type type,
+                                      final List<? extends Class<?>> parameters,
+                                      final List<? extends String> arguments) {
+      if (name.isEmpty() && type == void.class && parameters == null && arguments == null) {
+        return root();
+      }
+      return new Element<>(name, type, parameters, arguments, false);
     }
 
-    public static final Element of(final Type type) {
-      return new Element("", type, null, null, false);
+    @SuppressWarnings("unchecked")
+    public static final <U> Element<U> of(final String name,
+                                          final Class<U> type,
+                                          final Class<?> parameter,
+                                          final String argument) {
+      if (name.isEmpty() && type == void.class && parameter == null && argument == null) {
+        return (Element<U>)root();
+      }
+      return new Element<>(name, type, List.of(parameter), List.of(argument), false);
     }
 
-    public static final Element of(final String name,
-                                   final Type type,
-                                   final Class<?> parameter,
-                                   final String argument) {
-      return new Element(name, type, List.of(parameter), List.of(argument), false);
+    @SuppressWarnings("unchecked")
+    public static final <U> Element<U> of(final String name,
+                                          final TypeToken<U> type,
+                                          final Class<?> parameter,
+                                          final String argument) {
+      final Type t = type.type();
+      if (name.isEmpty() && t == void.class && parameter == null && argument == null) {
+        return (Element<U>)root();
+      }
+      return new Element<>(name, type.type(), List.of(parameter), List.of(argument), false);
+    }
+
+    public static final Element<?> of(final String name,
+                                      final Type type,
+                                      final Class<?> parameter,
+                                      final String argument) {
+      if (name.isEmpty() && type == void.class && parameter == null && argument == null) {
+        return root();
+      }
+      return new Element<>(name, type, List.of(parameter), List.of(argument), false);
+    }
+
+    public static final Element<?> of(final String name) {
+      return new Element<>(name, null, null, null, false);
+    }
+
+    @SuppressWarnings("unchecked")
+    public static final <U> Element<U> of(final String name, final Class<U> type) {
+      if (name.isEmpty() && type == void.class) {
+        return (Element<U>)root();
+      }
+      return new Element<>(name, type, null, null, false);
+    }
+
+    @SuppressWarnings("unchecked")
+    public static final <U> Element<U> of(final String name, final TypeToken<U> type) {
+      final Type t = type.type();
+      if (name.isEmpty() && t == void.class) {
+        return (Element<U>)root();
+      }
+      return new Element<>(name, t, null, null, false);
+    }
+
+    public static final Element<?> of(final String name, final Type type) {
+      if (name.isEmpty() && type == void.class) {
+        return root();
+      }
+      return new Element<>(name, type, null, null, false);
+    }
+
+    @SuppressWarnings("unchecked")
+    public static final <U> Element<U> of(final Class<U> type) {
+      if (type == void.class) {
+        return (Element<U>)root();
+      }
+      return new Element<>("", type, null, null, false);
+    }
+
+    @SuppressWarnings("unchecked")
+    public static final <U> Element<U> of(final TypeToken<U> type) {
+      final Type t = type.type();
+      if (t == void.class) {
+        return (Element<U>)root();
+      } else {
+        return new Element<>("", t, null, null, false);
+      }
+    }
+
+    public static final Element<?> of(final Type type) {
+      return type instanceof Class<?> c ? of(c) : new Element<>("", type, null, null, false);
     }
 
 
@@ -587,7 +752,7 @@ public final class Path {
        */
 
 
-      public final Element parse(final CharSequence s) throws ClassNotFoundException {
+      public final Element<?> parse(final CharSequence s) throws ClassNotFoundException {
         int state = NAME;
         final StringBuilder sb = new StringBuilder();
         String name = null;
@@ -761,7 +926,7 @@ public final class Path {
         if (name.isEmpty() && params == null && args == null && (type == null || type == void.class)) {
           return Element.root();
         } else {
-          return new Element(name, type, params, args, false);
+          return new Element<>(name, type, params, args, false);
         }
       }
 
@@ -832,11 +997,11 @@ public final class Path {
      */
 
 
-    public final Path parse(final CharSequence s) throws ClassNotFoundException {
+    public final Path<?> parse(final CharSequence s) throws ClassNotFoundException {
       if (s.isEmpty()) {
         throw new IllegalArgumentException("s.isEmpty()");
       } else {
-        final List<Element> elements = new ArrayList<>(11);
+        final List<Element<?>> elements = new ArrayList<>(11);
         final int length = s.length();
         int start = 0;
         for (int i = 0; i < length; i++) {
@@ -867,7 +1032,7 @@ public final class Path {
         if (elements.size() == 1 && elements.get(0).isRoot()) {
           return Path.root();
         } else {
-          return new Path(elements, false);
+          return new Path<>(elements, false);
         }
       }
     }

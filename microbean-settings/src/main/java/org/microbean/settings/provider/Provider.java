@@ -128,7 +128,7 @@ public interface Provider {
    * @idempotency This method is, and overrides of this method must
    * be, idempotent and deterministic.
    */
-  public default boolean isSelectable(final Configured<?> supplier, final Path absolutePath) {
+  public default boolean isSelectable(final Configured<?> supplier, final Path<?> absolutePath) {
     if (!absolutePath.isAbsolute()) {
       throw new IllegalArgumentException("absolutePath: " + absolutePath);
     }
@@ -148,7 +148,7 @@ public interface Provider {
    * it does not follow that it must return {@code null} forever
    * after, even when supplied with the same arguments.</p>
    *
-   * @param supplier the {@link Configured} seeking a {@link Value};
+   * @param requestor the {@link Configured} seeking a {@link Value};
    * must not be {@code null}
    *
    * @param absolutePath an {@linkplain Path#isAbsolute() absolute
@@ -159,7 +159,7 @@ public interface Provider {
    * of the supplied {@link Configured} and {@link Path}, or {@code
    * null} if there is no such {@link Value}
    *
-   * @exception NullPointerException if either {@code supplier} or
+   * @exception NullPointerException if either {@code requestor} or
    * {@code absolutePath} is {@code null}
    *
    * @exception IllegalArgumentException if {@code absolutePath}
@@ -174,6 +174,6 @@ public interface Provider {
    * @idempotency Implementations of this method must be idempotent
    * but are not assumed to be deterministic.
    */
-  public Value<?> get(final Configured<?> supplier, final Path absolutePath);
+  public <T> Value<T> get(final Configured<?> requestor, final Path<T> absolutePath);
 
 }

@@ -42,6 +42,7 @@ import org.microbean.settings.api.Path;
 import org.microbean.settings.api.Path.Element;
 import org.microbean.settings.api.Qualified;
 import org.microbean.settings.api.Qualifiers;
+import org.microbean.settings.api.TypeToken;
 
 import org.microbean.settings.provider.AmbiguityHandler;
 import org.microbean.settings.provider.AssignableType;
@@ -70,9 +71,9 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
 
 
   // Package-private for testing only.
-  final ConcurrentMap<Qualified<Path>, Settings<?>> settingsCache;
+  final ConcurrentMap<Qualified<Path<?>>, Settings<?>> settingsCache;
 
-  private final Path path;
+  private final Path<T> absolutePath;
 
   private final Configured<?> parent;
 
@@ -100,21 +101,20 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
    */
   @Deprecated // intended for use by ServiceLoader only
   public Settings() {
-    this(new ConcurrentHashMap<Qualified<Path>, Settings<?>>(),
+    this(new ConcurrentHashMap<Qualified<Path<?>>, Settings<?>>(),
          null, // providers
          null, // qualifiers
          null, // parent,
-         Path.root(),
+         null, // absolutePath
          null, // supplier
          null);
   }
 
-  @SuppressWarnings("unchecked")
-  private Settings(final ConcurrentMap<Qualified<Path>, Settings<?>> settingsCache,
+  private Settings(final ConcurrentMap<Qualified<Path<?>>, Settings<?>> settingsCache,
                    final Collection<? extends Provider> providers,
                    final Qualifiers qualifiers,
                    final Configured<?> parent, // if null, will end up being "this" if absolutePath is Path.root()
-                   final Path absolutePath,
+                   final Path<T> absolutePath,
                    final Supplier<T> supplier, // if null, will end up being () -> this if absolutePath is Path.root()
                    final AmbiguityHandler ambiguityHandler) {
     super();
@@ -122,12 +122,14 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
     if (parent == null) {
       // Bootstrap case, i.e. the zero-argument constructor called us.
       // Pay attention.
-      if (absolutePath.equals(Path.root())) {
-        this.path = Path.root();
+      if (absolutePath == null || absolutePath.equals(Path.root())) {
+        @SuppressWarnings("unchecked")
+        final Path<T> p = (Path<T>)Path.root();
+        this.absolutePath = p;
         this.parent = this; // NOTE
         this.supplier = supplier == null ? this::returnThis : supplier; // NOTE
         this.providers = List.copyOf(providers == null ? loadedProviders() : providers);
-        final Qualified<Path> qp = new Qualified<>(Qualifiers.of(), Path.root());
+        final Qualified<Path<?>> qp = new Qualified<>(Qualifiers.of(), Path.root());
         this.settingsCache.put(qp, this); // NOTE
         // While the following call is in effect, our
         // final-but-as-yet-uninitialized qualifiers field and our
@@ -151,7 +153,7 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
     } else if (!parent.absolutePath().isAbsolute()) {
       throw new IllegalArgumentException("!parent.absolutePath().isAbsolute(): " + parent.absolutePath());
     } else {
-      this.path = absolutePath;
+      this.absolutePath = absolutePath;
       this.parent = parent;
       this.supplier = Objects.requireNonNull(supplier, "supplier");
       this.providers = List.copyOf(providers);
@@ -225,8 +227,8 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
   }
 
   @Override // Configured
-  public final Path absolutePath() {
-    return this.path;
+  public final Path<T> absolutePath() {
+    return this.absolutePath;
   }
 
   @Override // Configured
@@ -234,40 +236,16 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
     return this.supplier.get();
   }
 
-  // TODO: we're laying groundwork to remove the requestor entirely
-  // from this.  That's the purpose of the if/then block at the top of
-  // the method.
   @Override // Configured
-  public final <U> Settings<U> of(Configured<?> requestor, Path path) {
-    if (path.isAbsolute()) {
-      if (path.size() == 1 && requestor != this) {
-        throw new IllegalArgumentException("path.isRoot(): " + path);
-      }
-      if (!path.isTransliterated()) {
-        path = this.transliterate(path);
-      }
-      final Path requestorPath = requestor.absolutePath();
-      assert requestorPath.isAbsolute() : "!requestorPath.isAbsolute(): " + requestorPath;      
-      if (requestorPath.startsWith(path)) {
-        if (requestorPath.size() == path.size()) {
-          assert requestorPath.equals(path) : "!requestorPath.equals(path); requestorPath: " + requestorPath + "; path: " + path;
-          // OK, no need to adjust requestor
-        } else {
-          assert requestorPath.size() > path.size() : "requestorPath.size() <= path.size(); requestorPath: " + requestorPath + "; path: " + path;
-          for (int i = 0; i < requestorPath.size() - path.size(); i++) {
-            requestor = requestor.parent();
-          }
-          assert requestor.absolutePath().equals(path) : "!requestor.absolutePath().equals(path); requestor.absolutePath(): " + requestor.absolutePath() + "; path: " + path;
-        }
-      } else {
-        requestor = requestor.root();
-      }
-    } else {
-      path = this.transliterate(this.absolutePath().plus(path));
+  public final <U> Settings<U> of(Path<U> path) {
+    path = this.normalize(path);
+    assert path.isAbsolute() : "!path.isAbsolute(): " + path;
+    if (path.isRoot()) {
+      throw new IllegalArgumentException("path.isRoot(): " + path);
     }
 
-    assert path.isAbsolute() : "!path.isAbsolute(): " + path;
-    
+    final Configured<?> requestor = this.configuredFor(path);
+
     // We deliberately do not use computeIfAbsent() because of()
     // operations can kick off other of() operations, and then you'd
     // have a cache mutating operation occuring within a cache
@@ -278,7 +256,7 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
     //
     // This obviously can result in unnecessary work, but most
     // configuration use cases will cause this work to happen anyway.
-    final Qualified<Path> qp = new Qualified<>(requestor.qualifiers(), path);
+    final Qualified<Path<?>> qp = new Qualified<>(requestor.qualifiers(), path);
     Settings<?> settings = this.settingsCache.get(qp);
     if (settings == null) {
       settings = this.settingsCache.putIfAbsent(qp, this.computeSettings(requestor, path));
@@ -295,11 +273,13 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
 
   @Experimental
   @Override
-  public final Path transliterate(final Path path) {
+  public final <U> Path<U> transliterate(final Path<U> path) {
     if (path.isTransliterated()) {
       return path;
-    } else if (path.type() == Path.class) {
-      final Element a = path.last();
+    }
+    final TypeToken<Path<U>> typeToken = new TypeToken<Path<U>>() {};
+    if (path.type() == typeToken.type()) {
+      final Element<U> a = path.last();
       if (a != null && a.name().equals("transliterate")) {
         final List<Class<?>> parameters = a.parameters().orElse(null);
         if (parameters.size() == 1 && parameters.get(0) == Path.class) {
@@ -309,15 +289,15 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
         }
       }
     }
-    return
-      this.<Path>of(Element.of("transliterate", // name
-                               Path.class, // type
-                               Path.class, // parameter
-                               path.toString())) // sole argument
-      .orElse(path);
+    final Configured<Path<U>> configured =
+      this.of(Element.<Path<U>>of("transliterate", // name
+                                  typeToken,
+                                  Path.class, // parameter
+                                  path.toString())); // sole argument
+    return configured.orElse(path);
   }
 
-  private final <U> Settings<U> computeSettings(final Configured<?> requestor, final Path absolutePath) {
+  private final <U> Settings<U> computeSettings(final Configured<?> requestor, final Path<U> absolutePath) {
     assert absolutePath.isAbsolute() : "absolutePath: " + absolutePath;
     final Value<U> value = this.value(requestor, absolutePath);
     final Supplier<U> supplier;
@@ -330,13 +310,13 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
       new Settings<>(this.settingsCache,
                      this.providers(),
                      requestor.qualifiers(),
-                     requestor, // parent (but really TODO: shouldn't it just be this, and shouldn't requestor go away entirely?)
+                     requestor,
                      absolutePath,
                      supplier,
                      this.ambiguityHandler());
   }
 
-  private final <U> Value<U> value(final Configured<?> requestor, final Path absolutePath) {
+  private final <U> Value<U> value(final Configured<?> requestor, final Path<U> absolutePath) {
     assert absolutePath.isAbsolute() : "absolutePath: " + absolutePath;
 
     final Collection<? extends Provider> providers = this.providers();
@@ -354,8 +334,7 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
         ambiguityHandler.providerRejected(requestor, absolutePath, provider);
         return null;
       } else {
-        @SuppressWarnings("unchecked")
-        final Value<U> value = (Value<U>)provider.get(requestor, absolutePath);
+        final Value<U> value = provider.get(requestor, absolutePath);
         if (value == null) {
           ambiguityHandler.providerRejected(requestor, absolutePath, provider);
         } else if (!isSelectable(requestor.qualifiers(), absolutePath, value.qualifiers(), value.path())) {
@@ -381,9 +360,7 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
         continue PROVIDER_LOOP;
       }
 
-      @SuppressWarnings("unchecked")
-      final Value<U> v = (Value<U>)provider.get(requestor, absolutePath);
-      Value<U> value = v;
+      Value<U> value = provider.get(requestor, absolutePath);
 
       if (value == null) {
         ambiguityHandler.providerRejected(requestor, absolutePath, provider);
@@ -479,7 +456,7 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
 
   protected final boolean isSelectable(final Provider provider,
                                        final Configured<?> supplier,
-                                       final Path absolutePath) {
+                                       final Path<?> absolutePath) {
     if (!absolutePath.isAbsolute()) {
       throw new IllegalArgumentException("absolutePath: " + absolutePath);
     }
@@ -531,7 +508,7 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
    * respectively.  Note that such an invocation is <em>not</em> made
    * by this method, but logically precedes it when this method is
    * called in the natural course of events by the {@link
-   * #of(Configured, Path)} method.</p>
+   * #of(Path)} method.</p>
    *
    * @param absoluteReferencePath the {@link Path} against which to
    * score the supplied {@code valuePath}; must not be {@code null};
@@ -550,7 +527,7 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
    * @exception IllegalArgumentException if certain preconditions have
    * been violated
    *
-   * @see #of(Configured, Path)
+   * @see #of(Path)
    *
    * @see #isSelectable(Path, Path)
    *
@@ -563,7 +540,7 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
    * property.
    */
   @SubordinateTo("#of(Configured, Path, Supplier)")
-  protected int score(final Path absoluteReferencePath, final Path valuePath) {
+  protected int score(final Path<?> absoluteReferencePath, final Path<?> valuePath) {
     if (!absoluteReferencePath.isAbsolute()) {
       throw new IllegalArgumentException("absoluteReferencePath: " + absoluteReferencePath);
     }
@@ -576,8 +553,8 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
     for (int valuePathIndex = 0; valuePathIndex < valuePath.size(); valuePathIndex++) {
       final int referencePathIndex = lastValuePathIndex + valuePathIndex;
 
-      final Element referenceElement = absoluteReferencePath.get(referencePathIndex);
-      final Element valueElement = valuePath.get(valuePathIndex);
+      final Element<?> referenceElement = absoluteReferencePath.get(referencePathIndex);
+      final Element<?> valueElement = valuePath.get(valuePathIndex);
       if (!referenceElement.name().equals(valueElement.name())) {
         return Integer.MIN_VALUE;
       }
@@ -661,9 +638,9 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
   }
 
   private static final boolean isSelectable(final Qualifiers referenceQualifiers,
-                                            final Path absoluteReferencePath,
+                                            final Path<?> absoluteReferencePath,
                                             final Qualifiers valueQualifiers,
-                                            final Path valuePath) {
+                                            final Path<?> valuePath) {
     return isSelectable(referenceQualifiers, valueQualifiers) && isSelectable(absoluteReferencePath, valuePath);
   }
 
@@ -722,8 +699,8 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
    * absoluteReferencePath} {@linkplain Path#isAbsolute() is not
    * absolute}
    */
-  protected static final boolean isSelectable(final Path absoluteReferencePath,
-                                              final Path valuePath) {
+  protected static final boolean isSelectable(final Path<?> absoluteReferencePath,
+                                              final Path<?> valuePath) {
     if (!absoluteReferencePath.isAbsolute()) {
       throw new IllegalArgumentException("absoluteReferencePath: " + absoluteReferencePath);
     }
@@ -733,7 +710,7 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
   private static final <T> T throwNoSuchElementException() {
     throw new NoSuchElementException();
   }
-  
+
   private static final void sink(final Object ignored) {
 
   }
@@ -778,7 +755,7 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
   // Matches element names (equality), parameter types
   // (isAssignableFrom) and Types (AssignableType.isAssignable()).
   // Argument values themselves are deliberately ignored.
-  private static final class ElementsMatchBiPredicate implements BiPredicate<Element, Element> {
+  private static final class ElementsMatchBiPredicate implements BiPredicate<Element<?>, Element<?>> {
 
     private static final ElementsMatchBiPredicate INSTANCE = new ElementsMatchBiPredicate();
 
@@ -786,8 +763,8 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
       super();
     }
 
-    @Override // BiPredicate<Element, Element>
-    public final boolean test(final Element e1, final Element e2) {
+    @Override // BiPredicate<Element<?>, Element<?>>
+    public final boolean test(final Element<?> e1, final Element<?> e2) {
       final String name1 = e1.name();
       final String name2 = e2.name();
       if (!name1.isEmpty() && !name2.isEmpty() && !name1.equals(name2)) {
