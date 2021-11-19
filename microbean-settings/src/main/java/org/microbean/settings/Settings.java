@@ -148,6 +148,8 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
       throw new IllegalArgumentException("absolutePath.equals(Path.root()): " + absolutePath);
     } else if (!absolutePath.isAbsolute()) {
       throw new IllegalArgumentException("!absolutePath.isAbsolute(): " + absolutePath);
+    } else if (!parent.absolutePath().isAbsolute()) {
+      throw new IllegalArgumentException("!parent.absolutePath().isAbsolute(): " + parent.absolutePath());
     } else {
       this.path = absolutePath;
       this.parent = parent;
@@ -223,7 +225,7 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
   }
 
   @Override // Configured
-  public final Path path() {
+  public final Path absolutePath() {
     return this.path;
   }
 
@@ -232,18 +234,40 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
     return this.supplier.get();
   }
 
+  // TODO: we're laying groundwork to remove the requestor entirely
+  // from this.  That's the purpose of the if/then block at the top of
+  // the method.
   @Override // Configured
-  public final <U> Settings<U> of(final Configured<?> requestor, Path absolutePath) {
-    if (absolutePath.isAbsolute()) {
-      if (absolutePath.size() == 1 && requestor != this) {
-        throw new IllegalArgumentException("absolutePath.isRoot(): " + absolutePath);
+  public final <U> Settings<U> of(Configured<?> requestor, Path path) {
+    if (path.isAbsolute()) {
+      if (path.size() == 1 && requestor != this) {
+        throw new IllegalArgumentException("path.isRoot(): " + path);
+      }
+      if (!path.isTransliterated()) {
+        path = this.transliterate(path);
+      }
+      final Path requestorPath = requestor.absolutePath();
+      assert requestorPath.isAbsolute() : "!requestorPath.isAbsolute(): " + requestorPath;      
+      if (requestorPath.startsWith(path)) {
+        if (requestorPath.size() == path.size()) {
+          assert requestorPath.equals(path) : "!requestorPath.equals(path); requestorPath: " + requestorPath + "; path: " + path;
+          // OK, no need to adjust requestor
+        } else {
+          assert requestorPath.size() > path.size() : "requestorPath.size() <= path.size(); requestorPath: " + requestorPath + "; path: " + path;
+          for (int i = 0; i < requestorPath.size() - path.size(); i++) {
+            requestor = requestor.parent();
+          }
+          assert requestor.absolutePath().equals(path) : "!requestor.absolutePath().equals(path); requestor.absolutePath(): " + requestor.absolutePath() + "; path: " + path;
+        }
+      } else {
+        requestor = requestor.root();
       }
     } else {
-      throw new IllegalArgumentException("!absolutePath.isAbsolute(): " + absolutePath);
+      path = this.transliterate(this.absolutePath().plus(path));
     }
-    if (!absolutePath.isTransliterated()) {
-      absolutePath = this.transliterate(absolutePath);
-    }
+
+    assert path.isAbsolute() : "!path.isAbsolute(): " + path;
+    
     // We deliberately do not use computeIfAbsent() because of()
     // operations can kick off other of() operations, and then you'd
     // have a cache mutating operation occuring within a cache
@@ -254,10 +278,10 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
     //
     // This obviously can result in unnecessary work, but most
     // configuration use cases will cause this work to happen anyway.
-    final Qualified<Path> qp = new Qualified<>(requestor.qualifiers(), absolutePath);
+    final Qualified<Path> qp = new Qualified<>(requestor.qualifiers(), path);
     Settings<?> settings = this.settingsCache.get(qp);
     if (settings == null) {
-      settings = this.settingsCache.putIfAbsent(qp, this.computeSettings(requestor, absolutePath));
+      settings = this.settingsCache.putIfAbsent(qp, this.computeSettings(requestor, path));
       if (settings == null) {
         settings = this.settingsCache.get(qp);
       }

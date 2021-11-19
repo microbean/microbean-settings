@@ -134,8 +134,8 @@ public class ProxyingProvider extends AbstractProvider<Object> {
   public final Value<?> get(final Configured<?> caller,
                             final Path absolutePath) {
     assert absolutePath.isAbsolute();
-    assert absolutePath.startsWith(caller.path());
-    assert !absolutePath.equals(caller.path());
+    assert absolutePath.startsWith(caller.absolutePath());
+    assert !absolutePath.equals(caller.absolutePath());
     return
       new Value<>(this.qualifiers(caller, absolutePath),
                   this.path(caller, absolutePath),

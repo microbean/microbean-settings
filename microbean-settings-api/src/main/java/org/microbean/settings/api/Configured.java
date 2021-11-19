@@ -122,7 +122,7 @@ public interface Configured<T> extends OptionalSupplier<T> {
    * @idempotency Implementations of this method must be idempotent
    * and deterministic.
    */
-  public Path path();
+  public Path absolutePath();
 
   /**
    * Returns a non-{@code null} {@link Configured} implementation,
@@ -252,7 +252,7 @@ public interface Configured<T> extends OptionalSupplier<T> {
   @Convenience
   @OverridingDiscouraged
   public default ClassLoader classLoader() {
-    return this.path().classLoader();
+    return this.absolutePath().classLoader();
   }
 
   @Convenience
@@ -296,7 +296,7 @@ public interface Configured<T> extends OptionalSupplier<T> {
     if (!relativePath.isRelative()) {
       throw new IllegalArgumentException("relativePath: " + relativePath);
     }
-    return this.of(this, this.path().plus(relativePath)); // NOTE
+    return this.of(this.root(), this.absolutePath().plus(relativePath)); // NOTE
   }
 
   @Convenience
@@ -435,8 +435,8 @@ public interface Configured<T> extends OptionalSupplier<T> {
       root = parent;
       parent = root.parent();
     }
-    assert root.path().equals(Path.root());
-    assert this != root ? !this.path().equals(Path.root()) : true;
+    assert root.absolutePath().equals(Path.root());
+    assert this != root ? !this.absolutePath().equals(Path.root()) : true;
     assert this.qualifiers().equals(root.qualifiers());
     return root;
   }
@@ -460,9 +460,9 @@ public interface Configured<T> extends OptionalSupplier<T> {
    *
    * <ul>
    *
-   * <li>It must return a {@link Path} from its {@link #path()}
-   * implementation that is equal to {@link Path#root()
-   * Path.root()}.</li>
+   * <li>It must return a {@link Path} from its {@link
+   * #absolutePath()} implementation that is equal to {@link
+   * Path#root() Path.root()}.</li>
    *
    * <li>It must return itself from its {@link #parent()}
    * implementation.</li>
@@ -487,9 +487,9 @@ public interface Configured<T> extends OptionalSupplier<T> {
    *
    * <ul>
    *
-   * <li>It must return a {@link Path} from its {@link #path()}
-   * implementation that is equal to {@link Path#root()
-   * Path.root()}.</li>
+   * <li>It must return a {@link Path} from its {@link
+   * #absolutePath()} implementation that is equal to {@link
+   * Path#root() Path.root()}.</li>
    *
    * <li>It must return the bootstrap instance from its {@link
    * #parent()} implementation.</li>
@@ -517,8 +517,8 @@ public interface Configured<T> extends OptionalSupplier<T> {
         final Configured<?> bootstrapConfigured =
           ServiceLoader.load(Configured.class, Configured.class.getClassLoader()).findFirst().orElseThrow();
 
-        if (!Path.root().equals(bootstrapConfigured.path())) {
-          throw new IllegalStateException("bootstrapConfigured.path(): " + bootstrapConfigured.path());
+        if (!Path.root().equals(bootstrapConfigured.absolutePath())) {
+          throw new IllegalStateException("bootstrapConfigured.absolutePath(): " + bootstrapConfigured.absolutePath());
         } else if (bootstrapConfigured.parent() != bootstrapConfigured) {
           throw new IllegalStateException("bootstrapConfigured.parent(): " + bootstrapConfigured.parent());
         } else if (bootstrapConfigured.get() != bootstrapConfigured) {
@@ -533,8 +533,8 @@ public interface Configured<T> extends OptionalSupplier<T> {
           .<Configured<?>>of(new TypeToken<Configured<?>>() {}.type())
           .orElse(bootstrapConfigured);
 
-        if (!Path.root().equals(bootstrapConfigured.path())) {
-          throw new IllegalStateException("instance.path(): " + instance.path());
+        if (!Path.root().equals(bootstrapConfigured.absolutePath())) {
+          throw new IllegalStateException("instance.absolutePath(): " + instance.absolutePath());
         } else if (instance.parent() != bootstrapConfigured) {
           throw new IllegalStateException("instance.parent(): " + instance.parent());
         } else if (!(instance.get() instanceof Configured)) {
