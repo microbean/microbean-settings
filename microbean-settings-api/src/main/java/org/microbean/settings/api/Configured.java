@@ -124,49 +124,6 @@ public interface Configured<T> extends OptionalSupplier<T> {
    */
   public Path absolutePath();
 
-  /**
-   * Returns a non-{@code null} {@link Configured} implementation,
-   * {@linkplain #parent() parented} by the supplied non-{@code null}
-   * {@link Configured}, whose {@link #get()} method will attempt to
-   * supply a (possibly {@code null} value suitable for the supplied
-   * non-{@code null} {@linkplain Path#isAbsolute() absolute
-   * <code>Path</code>}.
-   *
-   * <p>All other methods in this interface whose names start with
-   * {@code of} ultimately delegate to this one, unless an
-   * implementation overrides them, in which case the overall behavior
-   * of the implementation is undefined.</p>
-   *
-   * @param <U> the type of object the {@link Configured} can return
-   *
-   * @param requestor the non-{@code null} {@link Configured} that
-   * will {@linkplain #parent() parent} the returned {@link
-   * Configured}; must not be this {@link Configured}
-   *
-   * @param absolutePath the non-{@code null} {@linkplain
-   * Path#isAbsolute() absolute <code>Path</code>} for which a
-   * suitable {@link Configured} should be returned
-   *
-   * @return a non-{@code null} {@link Configured} implementation
-   *
-   * @exception NullPointerException if either {@code requestor} or
-   * {@code absolutePath} is {@code null}
-   *
-   * @exception IllegalArgumentException if {@code requestor} is this
-   * {@link Configured} or if {@code absolutePath} {@linkplain
-   * Path#isAbsolute() is not absolute}
-   *
-   * @nullability Implementations of this method must not return
-   * {@code null}.
-   *
-   * @threadsafety Implementations of this method must be safe for
-   * concurrent use by multiple threads.
-   *
-   * @idempotency Implementations of this method need not be
-   * deterministic but should be idempotent.
-   *
-   * @see Path
-   */
   public <U> Configured<U> of(final Configured<?> requestor, final Path absolutePath);
 
 
@@ -297,46 +254,6 @@ public interface Configured<T> extends OptionalSupplier<T> {
       throw new IllegalArgumentException("relativePath: " + relativePath);
     }
     return this.of(this.root(), this.absolutePath().plus(relativePath)); // NOTE
-  }
-
-  @Convenience
-  @OverridingDiscouraged
-  public default <U> Configured<U> of(final Configured<?> requestor,
-                                      final Class<? extends U> type) {
-    return this.of(requestor, Element.of(type));
-  }
-
-  @Convenience
-  @OverridingDiscouraged
-  public default <U> Configured<U> of(final Configured<?> requestor,
-                                      final Type type) {
-    return this.of(requestor, Element.of(type));
-  }
-
-  @Convenience
-  @OverridingDiscouraged
-  public default <U> Configured<U> of(final Configured<?> requestor,
-                                      final String element,
-                                      final Class<? extends U> type) {
-    return this.of(requestor, element.isEmpty() ? Element.of(type) : Element.of(element, type));
-  }
-
-  @Convenience
-  @OverridingDiscouraged
-  public default <U> Configured<U> of(final Configured<?> requestor,
-                                      final String element,
-                                      final Type type) {
-    return this.of(requestor, element.isEmpty() ? Element.of(type) : Element.of(element, type));
-  }
-
-  @Convenience
-  @OverridingDiscouraged
-  public default <U> Configured<U> of(final Configured<?> requestor,
-                                      final Element nonRootElement) {
-    if (nonRootElement.isRoot()) {
-      throw new IllegalArgumentException("nonRootElement.isRoot(): " + nonRootElement);
-    }
-    return this.of(requestor, Path.root().plus(nonRootElement)); // root().plus() is critical here
   }
 
   @Convenience
