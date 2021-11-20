@@ -75,16 +75,33 @@ public final class Value<T> implements Supplier<T> {
    */
 
 
-  public Value(final Qualifiers qualifiers, final Path<T> path, final T value) {
+  public Value(final Qualifiers qualifiers,
+               final Path<T> path,
+               final T value) {
+    // Because defaults are null, it actually doesn't matter what the
+    // trailing two booleans are for anything other than informational
+    // purposes.
     this(null, qualifiers, path, () -> value, true, true);
   }
 
-  public Value(final Qualifiers qualifiers, final Path<T> path, final Supplier<? extends T> supplier) {
+  public Value(final Qualifiers qualifiers,
+               final Path<T> path,
+               final Supplier<? extends T> supplier) {
+    // Because defaults are null, it actually doesn't matter what the
+    // trailing two booleans are for anything other than informational
+    // purposes.
     this(null, qualifiers, path, supplier, true, false);
   }
 
-  public Value(final Qualifiers qualifiers, final Path<T> path, final Supplier<? extends T> supplier, final boolean deterministic) {
-    this(null, qualifiers, path, supplier, true, deterministic);
+  public Value(final Qualifiers qualifiers,
+               final Path<T> path,
+               final Supplier<? extends T> supplier,
+               final boolean nullsPermitted,
+               final boolean deterministic) {
+    // Because defaults are null, it actually doesn't matter what the
+    // trailing two booleans are for anything other than informational
+    // purposes.
+    this(null, qualifiers, path, supplier, nullsPermitted, deterministic);
   }
 
   public Value(final Supplier<? extends T> defaults,
@@ -94,20 +111,16 @@ public final class Value<T> implements Supplier<T> {
     this(defaults, qualifiers, path, supplier, true, false);
   }
 
-  public Value(final Supplier<? extends T> defaults, final Value<T> source) {
+  public Value(final Supplier<? extends T> defaults,
+               final Value<T> source) {
     this(defaults, source.qualifiers(), source.path(), source, source.nullsPermitted(), source.deterministic());
   }
 
   public Value(final Value<T> source) {
+    // Because defaults are null, it actually doesn't matter what the
+    // trailing two booleans are for anything other than informational
+    // purposes.
     this(null, source.qualifiers(), source.path(), source, source.nullsPermitted(), source.deterministic());
-  }
-
-  public Value(final Supplier<? extends T> defaults,
-               final Qualifiers qualifiers,
-               final Path<T> path,
-               final Supplier<? extends T> supplier,
-               final boolean deterministic) {
-    this(defaults, qualifiers, path, supplier, true, deterministic);
   }
 
   /**
@@ -252,8 +265,8 @@ public final class Value<T> implements Supplier<T> {
   /**
    * Invokes the {@link Supplier#get() get()} method of the {@link
    * Supplier} supplied at {@linkplain #Value(Supplier, Qualifiers,
-   * Path, Supplier, boolean) construction time} and returns its
-   * value, which may be {@code null}.
+   * Path, Supplier, boolean, boolean) construction time} and returns
+   * its value, which may be {@code null}.
    *
    * <p>Note that a return value of {@code null} indicates the absence
    * of a value only if the {@link #nullsPermitted()} method returns
@@ -261,8 +274,8 @@ public final class Value<T> implements Supplier<T> {
    *
    * @return tbe return value of an invocation of the {@link
    * Supplier#get() get()} method of the {@link Supplier} supplied at
-   * {@linkplain #Value(Supplier, Qualifiers, Path, Supplier, boolean)
-   * construction time}, which may be {@code null}
+   * {@linkplain #Value(Supplier, Qualifiers, Path, Supplier, boolean,
+   * boolean) construction time}, which may be {@code null}
    *
    * @exception NoSuchElementException if this method should no longer
    * be invoked because there is no chance it will ever produce a
@@ -272,19 +285,20 @@ public final class Value<T> implements Supplier<T> {
    * be invoked because there is no chance it will ever produce a
    * suitable value again
    *
-   * @see #Value(Supplier, Qualifiers, Path, Supplier, boolean)
+   * @see #Value(Supplier, Qualifiers, Path, Supplier, boolean,
+   * boolean)
    *
    * @nullability This method may return {@code null}.
    *
    * @threadsafety This method is safe for concurrent use by multiple
    * threads, provided that the {@link Supplier} supplied at
-   * {@linkplain #Value(Supplier, Qualifiers, Path, Supplier, boolean)
-   * construction time} is also safe for concurrent use by multiple
-   * threads.
+   * {@linkplain #Value(Supplier, Qualifiers, Path, Supplier, boolean,
+   * boolean) construction time} is also safe for concurrent use by
+   * multiple threads.
    *
    * @idempotency This method is as idempotent and deterministic as
    * the {@link Supplier} supplied at {@linkplain #Value(Supplier,
-   * Qualifiers, Path, Supplier, boolean) construction time}.
+   * Qualifiers, Path, Supplier, boolean, boolean) construction time}.
    */
   @Override // Supplier<T>
   public final T get() {
@@ -313,13 +327,15 @@ public final class Value<T> implements Supplier<T> {
   /**
    * Returns {@code true} if and only if it is known that the {@link
    * Supplier} supplied at {@linkplain #Value(Supplier, Qualifiers,
-   * Path, Supplier, boolean) construction time} will return one and
-   * only one value from its {@link Supplier#get() get()} method.
+   * Path, Supplier, boolean, boolean) construction time} will return
+   * one and only one value from its {@link Supplier#get() get()}
+   * method.
    *
    * @return {@code true} if and only if it is known that the {@link
    * Supplier} supplied at {@linkplain #Value(Supplier, Qualifiers,
-   * Path, Supplier, boolean) construction time} will return one and
-   * only one value from its {@link Supplier#get() get()} method
+   * Path, Supplier, boolean, boolean) construction time} will return
+   * one and only one value from its {@link Supplier#get() get()}
+   * method
    */
   public final boolean deterministic() {
     return this.deterministic;
