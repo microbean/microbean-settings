@@ -99,11 +99,11 @@ public interface Provider {
    * upper bound} {@linkplain AssignableType#isAssignable(Type) is
    * assignable from} the supplied {@link Path}'s {@linkplain
    * Path#type() type}.  Overrides are strongly encouraged, but not
-   * required, to call {@code Provider.super.isSelectable(supplier,
+   * required, to call {@code Provider.super.isSelectable(requestor,
    * absolutePath)} from their implementation and to proceed only if
    * the call returns {@code true}.</p>
    *
-   * @param supplier the {@link Configured} that may request a value
+   * @param requestor the {@link Configured} that may request a value
    * if this method returns {@code true}; must not be {@code null}
    *
    * @param absolutePath an {@linkplain Path#isAbsolute() absolute
@@ -114,7 +114,7 @@ public interface Provider {
    * absolutely cannot provide values suitable for the supplied {@link
    * Configured} and {@link Path}; {@code true} otherwise
    *
-   * @exception NullPointerException if either {@code supplier} or
+   * @exception NullPointerException if either {@code requestor} or
    * {@code absolutePath} is {@code null}
    *
    * @exception IllegalArgumentException if {@code absolutePath}
@@ -128,7 +128,7 @@ public interface Provider {
    * @idempotency This method is, and overrides of this method must
    * be, idempotent and deterministic.
    */
-  public default boolean isSelectable(final Configured<?> supplier, final Path<?> absolutePath) {
+  public default boolean isSelectable(final Configured<?> requestor, final Path<?> absolutePath) {
     if (!absolutePath.isAbsolute()) {
       throw new IllegalArgumentException("absolutePath: " + absolutePath);
     }

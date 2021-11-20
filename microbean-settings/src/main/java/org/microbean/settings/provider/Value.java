@@ -25,15 +25,14 @@ import java.util.function.Supplier;
 
 import org.microbean.development.annotation.Convenience;
 
-import org.microbean.settings.api.OptionalSupplier;
 import org.microbean.settings.api.Path;
 import org.microbean.settings.api.Qualifiers;
 
 /**
- * An {@link OptionalSupplier} of a value that is additionally
- * qualified by a {@link Qualifiers} and a {@link Path} partially
- * identifying the kinds of {@link Qualifiers} and {@link Path}s for
- * which it might be suitable.
+ * A {@link Supplier} of a value that is additionally qualified by a
+ * {@link Qualifiers} and a {@link Path} partially identifying the
+ * kinds of {@link Qualifiers} and {@link Path}s for which it might be
+ * suitable.
  *
  * <p>{@link Value}s are typically returned by {@link Provider}
  * implementations.</p>
@@ -48,11 +47,11 @@ import org.microbean.settings.api.Qualifiers;
  * @author <a href="https://about.me/lairdnelson"
  * target="_parent">Laird Nelson</a>
  *
- * @see OptionalSupplier
+ * @see Supplier
  *
  * @see Provider
  */
-public final class Value<T> implements OptionalSupplier<T> {
+public final class Value<T> implements Supplier<T> {
 
 
   /*
@@ -287,7 +286,7 @@ public final class Value<T> implements OptionalSupplier<T> {
    * the {@link Supplier} supplied at {@linkplain #Value(Supplier,
    * Qualifiers, Path, Supplier, boolean) construction time}.
    */
-  @Override // OptionalSupplier<T>
+  @Override // Supplier<T>
   public final T get() {
     return this.supplier.get();
   }

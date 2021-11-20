@@ -22,20 +22,15 @@ import java.util.Collection;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.ServiceLoader;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-import java.util.function.BiConsumer;
 import java.util.function.BiPredicate;
-import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.function.Supplier;
 
 import org.microbean.development.annotation.Experimental;
-import org.microbean.development.annotation.SubordinateTo;
 
 import org.microbean.settings.api.Configured;
 import org.microbean.settings.api.Path;
@@ -49,11 +44,12 @@ import org.microbean.settings.provider.AssignableType;
 import org.microbean.settings.provider.Provider;
 import org.microbean.settings.provider.Value;
 
-import org.microbean.type.Types;
-
 /**
  * A subclassable default {@link Configured} implementation
  * that delegates its work to {@link Provider}s.
+ *
+ * @param <T> the type of configured objects this {@link Settings}
+ * supplies
  *
  * @author <a href="https://about.me/lairdnelson"
  * target="_parent">Laird Nelson</a>
@@ -168,6 +164,11 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
    */
 
 
+  /**
+   * Clears any caches used by this {@link Settings}.
+   *
+   * <p>This {@link Settings} remains valid to use.</p>
+   */
   @Experimental
   @Override
   public final void close() {
@@ -209,7 +210,7 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
     return ambiguityHandler == null ? NoOpAmbiguityHandler.INSTANCE : ambiguityHandler;
   }
 
-  @Override // Configured
+  @Override // Configured<T>
   public final Qualifiers qualifiers() {
     // NOTE: This null check is critical.  We check for null here
     // because during bootstrapping the qualifiers will not have been
@@ -220,31 +221,30 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
     return qualifiers == null ? Qualifiers.of() : qualifiers;
   }
 
-  @Override // Configured
-  @SuppressWarnings("unchecked")
-  public final <P> Configured<P> parent() {
-    return (Configured<P>)this.parent;
+  @Override // Configured<T>
+  public final Configured<?> parent() {
+    return this.parent;
   }
 
-  @Override // Configured
+  @Override // Configured<T>
   public final Path<T> absolutePath() {
     return this.absolutePath;
   }
 
-  @Override // Configured
+  @Override // Configured<T>
   public final T get() {
     return this.supplier.get();
   }
 
-  @Override // Configured
-  public final <U> Settings<U> of(Path<U> path) {
-    path = this.normalize(path);
-    assert path.isAbsolute() : "!path.isAbsolute(): " + path;
-    if (path.isRoot()) {
-      throw new IllegalArgumentException("path.isRoot(): " + path);
+  @Override // Configured<T>
+  public final <U> Settings<U> of(final Path<U> path) {
+    final Path<U> absolutePath = this.normalize(path);
+    assert absolutePath.isAbsolute() : "!normalize(path).isAbsolute(): " + absolutePath;
+    if (absolutePath.isRoot()) {
+      throw new IllegalArgumentException("normalize(path).isRoot(): " + absolutePath);
     }
 
-    final Configured<?> requestor = this.configuredFor(path);
+    final Configured<?> requestor = this.configuredFor(absolutePath);
 
     // We deliberately do not use computeIfAbsent() because of()
     // operations can kick off other of() operations, and then you'd
@@ -256,10 +256,10 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
     //
     // This obviously can result in unnecessary work, but most
     // configuration use cases will cause this work to happen anyway.
-    final Qualified<Path<?>> qp = new Qualified<>(requestor.qualifiers(), path);
+    final Qualified<Path<?>> qp = new Qualified<>(requestor.qualifiers(), absolutePath);
     Settings<?> settings = this.settingsCache.get(qp);
     if (settings == null) {
-      settings = this.settingsCache.putIfAbsent(qp, this.computeSettings(requestor, path));
+      settings = this.settingsCache.putIfAbsent(qp, this.computeSettings(requestor, absolutePath));
       if (settings == null) {
         settings = this.settingsCache.get(qp);
       }
@@ -271,187 +271,134 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
     return returnValue;
   }
 
-  @Experimental
-  @Override
-  public final <U> Path<U> transliterate(final Path<U> path) {
-    if (path.isTransliterated()) {
-      return path;
-    }
-    final TypeToken<Path<U>> typeToken = new TypeToken<Path<U>>() {};
-    if (path.type() == typeToken.type()) {
-      final Element<U> a = path.last();
-      if (a != null && a.name().equals("transliterate")) {
-        final List<Class<?>> parameters = a.parameters().orElse(null);
-        if (parameters.size() == 1 && parameters.get(0) == Path.class) {
-          // Are we in the middle of a transliteration request? Avoid
-          // the infinite loop.
-          return path;
-        }
-      }
-    }
-    final Configured<Path<U>> configured =
-      this.of(Element.<Path<U>>of("transliterate", // name
-                                  typeToken,
-                                  Path.class, // parameter
-                                  path.toString())); // sole argument
-    return configured.orElse(path);
-  }
-
   private final <U> Settings<U> computeSettings(final Configured<?> requestor, final Path<U> absolutePath) {
     assert absolutePath.isAbsolute() : "absolutePath: " + absolutePath;
-    final Value<U> value = this.value(requestor, absolutePath);
-    final Supplier<U> supplier;
-    if (value == null) {
-      supplier = Settings::throwNoSuchElementException;
-    } else {
-      supplier = value;
+    final Qualifiers qualifiers = requestor.qualifiers();
+    final AmbiguityHandler ambiguityHandler = requestor instanceof Settings<?> s ? s.ambiguityHandler() : this.ambiguityHandler();
+    Value<U> candidate = null;
+    final Collection<? extends Provider> providers = this.providers();
+    if (!providers.isEmpty()) {
+      Provider candidateProvider = null;
+      if (providers.size() == 1) {
+
+        candidateProvider = providers instanceof List<? extends Provider> list ? list.get(0) : providers.iterator().next();
+        if (candidateProvider == null || !this.isSelectable(candidateProvider, requestor, absolutePath)) {
+          ambiguityHandler.providerRejected(requestor, absolutePath, candidateProvider);
+        } else {
+          candidate = candidateProvider.get(requestor, absolutePath);
+          if (candidate == null) {
+            ambiguityHandler.providerRejected(requestor, absolutePath, candidateProvider);
+          } else if (!isSelectable(qualifiers, absolutePath, candidate.qualifiers(), candidate.path())) {
+            ambiguityHandler.valueRejected(requestor, absolutePath, candidateProvider, candidate);
+          }
+        }
+
+      } else {
+        int candidateQualifiersScore = Integer.MIN_VALUE;
+        int candidatePathScore = Integer.MIN_VALUE;
+
+        PROVIDER_LOOP:
+        for (final Provider provider : providers) {
+
+          if (provider == null || !this.isSelectable(provider, requestor, absolutePath)) {
+            ambiguityHandler.providerRejected(requestor, absolutePath, provider);
+            continue PROVIDER_LOOP;
+          }
+
+          Value<U> value = provider.get(requestor, absolutePath);
+
+          if (value == null) {
+            ambiguityHandler.providerRejected(requestor, absolutePath, provider);
+            continue PROVIDER_LOOP;
+          }
+
+          // NOTE: INFINITE LOOP POSSIBILITY; read carefully!
+          VALUE_EVALUATION_LOOP:
+          while (true) {
+
+            if (!isSelectable(qualifiers, absolutePath, value.qualifiers(), value.path())) {
+              ambiguityHandler.valueRejected(requestor, absolutePath, provider, value);
+              break VALUE_EVALUATION_LOOP;
+            }
+
+            if (candidate == null) {
+              candidate = value;
+              candidateProvider = provider;
+              candidateQualifiersScore = this.score(qualifiers, candidate.qualifiers());
+              candidatePathScore = this.score(absolutePath, candidate.path());
+              break VALUE_EVALUATION_LOOP;
+            }
+
+            // Let's score qualifiers first, not paths.  This is an
+            // arbitrary decision.
+            final int valueQualifiersScore = this.score(qualifiers, value.qualifiers());
+            if (valueQualifiersScore < candidateQualifiersScore) {
+              candidate = new Value<>(value, candidate);
+              break VALUE_EVALUATION_LOOP;
+            }
+
+            if (valueQualifiersScore > candidateQualifiersScore) {
+              candidate = new Value<>(candidate, value);
+              candidateProvider = provider;
+              candidateQualifiersScore = valueQualifiersScore;
+              // (No need to update candidatePathScore.)
+              break VALUE_EVALUATION_LOOP;
+            }
+
+            // Same qualifiers score; let's now do paths.
+            final int valuePathScore = this.score(absolutePath, value.path());
+
+            if (valuePathScore < candidatePathScore) {
+              candidate = new Value<>(value, candidate);
+              break VALUE_EVALUATION_LOOP;
+            }
+
+            if (valuePathScore > candidatePathScore) {
+              candidate = new Value<>(candidate, value);
+              candidateProvider = provider;
+              candidateQualifiersScore = valueQualifiersScore;
+              candidatePathScore = valuePathScore;
+              break VALUE_EVALUATION_LOOP;
+            }
+
+            final Value<U> disambiguatedValue =
+              ambiguityHandler.disambiguate(requestor, absolutePath, candidateProvider, candidate, provider, value);
+
+            if (disambiguatedValue == null) {
+              // Couldn't disambiguate.  Drop both values.
+              break VALUE_EVALUATION_LOOP;
+            }
+
+            if (disambiguatedValue.equals(candidate)) {
+              candidate = new Value<>(value, candidate);
+              break VALUE_EVALUATION_LOOP;
+            }
+
+            if (disambiguatedValue.equals(value)) {
+              candidate = new Value<>(candidate, disambiguatedValue);
+              candidateProvider = provider;
+              candidateQualifiersScore = valueQualifiersScore;
+              candidatePathScore = valuePathScore;
+              break VALUE_EVALUATION_LOOP;
+            }
+
+            // Disambiguation came up with an entirely different value, so
+            // run it back through the while loop.
+            value = disambiguatedValue;
+            continue VALUE_EVALUATION_LOOP;
+
+          }
+        }
+      }
     }
     return
       new Settings<>(this.settingsCache,
-                     this.providers(),
-                     requestor.qualifiers(),
-                     requestor,
+                     providers,
+                     qualifiers,
+                     requestor, // parent
                      absolutePath,
-                     supplier,
-                     this.ambiguityHandler());
-  }
-
-  private final <U> Value<U> value(final Configured<?> requestor, final Path<U> absolutePath) {
-    assert absolutePath.isAbsolute() : "absolutePath: " + absolutePath;
-
-    final Collection<? extends Provider> providers = this.providers();
-    if (providers.isEmpty()) {
-      return null;
-    }
-
-    final AmbiguityHandler ambiguityHandler = this.ambiguityHandler();
-
-    if (providers.size() == 1) {
-      final Provider provider = providers instanceof List<? extends Provider> list ? list.get(0) : providers.iterator().next();
-      if (provider == null) {
-        return null;
-      } else if (!this.isSelectable(provider, requestor, absolutePath)) {
-        ambiguityHandler.providerRejected(requestor, absolutePath, provider);
-        return null;
-      } else {
-        final Value<U> value = provider.get(requestor, absolutePath);
-        if (value == null) {
-          ambiguityHandler.providerRejected(requestor, absolutePath, provider);
-        } else if (!isSelectable(requestor.qualifiers(), absolutePath, value.qualifiers(), value.path())) {
-          ambiguityHandler.valueRejected(requestor, absolutePath, provider, value);
-        }
-        return value;
-      }
-    }
-
-    final Qualifiers qualifiers = requestor.qualifiers();
-
-    Value<U> candidate = null;
-    Provider candidateProvider = null;
-
-    int candidateQualifiersScore = Integer.MIN_VALUE;
-    int candidatePathScore = Integer.MIN_VALUE;
-
-    PROVIDER_LOOP:
-    for (final Provider provider : providers) {
-
-      if (provider == null || !this.isSelectable(provider, requestor, absolutePath)) {
-        ambiguityHandler.providerRejected(requestor, absolutePath, provider);
-        continue PROVIDER_LOOP;
-      }
-
-      Value<U> value = provider.get(requestor, absolutePath);
-
-      if (value == null) {
-        ambiguityHandler.providerRejected(requestor, absolutePath, provider);
-        continue PROVIDER_LOOP;
-      }
-
-      // NOTE: INFINITE LOOP POSSIBILITY; read carefully!
-      VALUE_EVALUATION_LOOP:
-      while (true) {
-
-        if (!isSelectable(qualifiers, absolutePath, value.qualifiers(), value.path())) {
-          ambiguityHandler.valueRejected(requestor, absolutePath, provider, value);
-          break VALUE_EVALUATION_LOOP;
-        }
-
-        if (candidate == null) {
-          candidate = value;
-          candidateProvider = provider;
-          candidateQualifiersScore = this.score(qualifiers, candidate.qualifiers());
-          candidatePathScore = this.score(absolutePath, candidate.path());
-          break VALUE_EVALUATION_LOOP;
-        }
-
-        // Let's do qualifiers first.  This is an arbitrary decision.
-        final int valueQualifiersScore = this.score(qualifiers, value.qualifiers());
-        if (valueQualifiersScore < candidateQualifiersScore) {
-          candidate = new Value<>(value, candidate);
-          break VALUE_EVALUATION_LOOP;
-        }
-
-        if (valueQualifiersScore > candidateQualifiersScore) {
-          candidate = new Value<>(candidate, value);
-          candidateProvider = provider;
-          candidateQualifiersScore = valueQualifiersScore;
-          // (No need to update candidatePathScore.)
-          break VALUE_EVALUATION_LOOP;
-        }
-
-        // Same qualifiers score; let's now do paths.
-        final int valuePathScore = this.score(absolutePath, value.path());
-
-        if (valuePathScore < candidatePathScore) {
-          candidate = new Value<>(value, candidate);
-          break VALUE_EVALUATION_LOOP;
-        }
-
-        if (valuePathScore > candidatePathScore) {
-          candidate = new Value<>(candidate, value);
-          candidateProvider = provider;
-          candidateQualifiersScore = valueQualifiersScore;
-          candidatePathScore = valuePathScore;
-          break VALUE_EVALUATION_LOOP;
-        }
-
-        final Value<U> disambiguatedValue =
-          ambiguityHandler.disambiguate(requestor, absolutePath, candidateProvider, candidate, provider, value);
-
-        if (disambiguatedValue == null) {
-          // Couldn't disambiguate.
-          //
-          // TODO: I'm not sure whether to null the candidate bits and
-          // potentially grab another less suitable one, keep the
-          // existing one even though it's ambiguous, or, if we keep
-          // it, to break or continue.  For now I'm going to keep it
-          // and continue; the caller can examine whatever ended up in
-          // the ambiguous values consumer and figure out what it
-          // wants to do.
-          break VALUE_EVALUATION_LOOP;
-        }
-
-        if (disambiguatedValue.equals(candidate)) {
-          candidate = new Value<>(value, candidate);
-          break VALUE_EVALUATION_LOOP;
-        }
-
-        if (disambiguatedValue.equals(value)) {
-          candidate = new Value<>(candidate, disambiguatedValue);
-          candidateProvider = provider;
-          candidateQualifiersScore = valueQualifiersScore;
-          candidatePathScore = valuePathScore;
-          break VALUE_EVALUATION_LOOP;
-        }
-
-        // Disambiguation came up with an entirely different value, so
-        // run it back through the while loop.
-        value = disambiguatedValue;
-        continue VALUE_EVALUATION_LOOP;
-
-      }
-    }
-    return candidate;
+                     candidate == null ? Settings::throwNoSuchElementException : candidate,
+                     ambiguityHandler);
   }
 
   protected final boolean isSelectable(final Provider provider,
@@ -465,7 +412,6 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
       provider.isSelectable(supplier, absolutePath);
   }
 
-  @SubordinateTo("#of(Configured, Path, Supplier)")
   protected int score(final Qualifiers referenceQualifiers, final Qualifiers valueQualifiers) {
     final int intersectionSize = referenceQualifiers.intersectionSize(valueQualifiers);
     if (intersectionSize > 0) {
@@ -480,7 +426,9 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
 
   /**
    * Returns a score indicating the relative specificity of {@code
-   * valuePath} with respect to {@code absoluteReferencePath}.
+   * valuePath} with respect to {@code absoluteReferencePath}, or
+   * {@link Integer#MIN_VALUE} if {@code valuePath} is wholly
+   * unsuitable for further consideration or processing.
    *
    * <p>This is <em>not</em> a comparison method.</p>
    *
@@ -494,9 +442,10 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
    * <li>{@code absoluteReferencePath} must be {@linkplain
    * Path#isAbsolute() absolute}
    *
-   * <li>{@code valuePath} must be selectable with respect to {@code
-   * absoluteReferencePath}, where the definition of selectability is
-   * described below</li>
+   * <li>{@code valuePath} must {@linkplain #isSelectable(Path, Path)
+   * be selectable with respect to
+   * <code>absoluteReferencePath</code>}, where the definition of
+   * selectability is described below</li>
    *
    * </ul>
    *
@@ -510,6 +459,12 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
    * called in the natural course of events by the {@link
    * #of(Path)} method.</p>
    *
+   * <p>If, during scoring, {@code valuePath} is found to be wholly
+   * unsuitable for further consideration or processing, {@link
+   * Integer#MIN_VALUE} will be returned to indicate this.  Overrides
+   * must follow suit or undefined behavior elsewhere in this class
+   * will result.</p>
+   *
    * @param absoluteReferencePath the {@link Path} against which to
    * score the supplied {@code valuePath}; must not be {@code null};
    * must adhere to the preconditions above
@@ -520,6 +475,9 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
    *
    * @return a relative score for {@code valuePath} with respect to
    * {@code absoluteReferencePath}; meaningless on its own
+   * <em>unless</em> it is {@link Integer#MIN_VALUE} in which case the
+   * supplied {@code valuePath} will be treated as wholly unsuitable
+   * for further consideration or processing
    *
    * @exception NullPointerException if either parameter is {@code
    * null}
@@ -539,7 +497,6 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
    * invoked with the same paths.  Overrides must preserve this
    * property.
    */
-  @SubordinateTo("#of(Configured, Path, Supplier)")
   protected int score(final Path<?> absoluteReferencePath, final Path<?> valuePath) {
     if (!absoluteReferencePath.isAbsolute()) {
       throw new IllegalArgumentException("absoluteReferencePath: " + absoluteReferencePath);
@@ -623,6 +580,7 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
   private final <X> X returnThis() {
     return (X)this;
   }
+
 
   /*
    * Static methods.
@@ -709,14 +667,6 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
 
   private static final <T> T throwNoSuchElementException() {
     throw new NoSuchElementException();
-  }
-
-  private static final void sink(final Object ignored) {
-
-  }
-
-  private static final Consumer<Object> generateSink() {
-    return Settings::sink;
   }
 
 

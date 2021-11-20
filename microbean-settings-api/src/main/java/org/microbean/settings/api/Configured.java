@@ -18,6 +18,7 @@ package org.microbean.settings.api;
 
 import java.lang.reflect.Type;
 
+import java.util.List;
 import java.util.ServiceLoader;
 
 import java.util.function.Supplier;
@@ -89,8 +90,6 @@ public interface Configured<T> extends OptionalSupplier<T> {
    * <p>Implementations of this method must not return {@code
    * null}.</p>
    *
-   * @param <P> the type of object that the parent can return
-   *
    * @return the non-{@code null} {@link Configured} serving as the
    * parent of this {@link Configured}; may be this {@link Configured}
    * itself
@@ -105,7 +104,7 @@ public interface Configured<T> extends OptionalSupplier<T> {
    * and deterministic.
    */
   // Note that the root will have itself as its parent.
-  public <P> Configured<P> parent();
+  public Configured<?> parent();
 
   /**
    * Returns the {@linkplain Path#isAbsolute() absolute} {@link Path}
@@ -215,19 +214,20 @@ public interface Configured<T> extends OptionalSupplier<T> {
    * <p>Behavior resulting from any other usage of an implementation
    * of this method is undefined.</p>
    *
-   * <p>The default implementation of this method simply returns the
-   * supplied {@link Path}.  Implementations of the {@link Configured}
-   * interface are strongly encouraged to actually perform path
-   * transliteration.</p>
+   * <p>The default implementation of this method uses the
+   * configuration system itself to find a transliterated {@link Path}
+   * corresponding to the supplied {@link Path}, returning the
+   * supplied {@code path} itself if no transliteration can take
+   * place.</p>
    *
-   * <p>Implementations of this method <strong>must not call {@link
+   * <p>Overrides of this method <strong>must not call {@link
    * #normalize(Path)}</strong> or an infinite loop may result.</p>
    *
-   * <p>Implementations of this method <strong>must not call {@link
+   * <p>Overrides of this method <strong>must not call {@link
    * #configuredFor(Path)}</strong> or an infinite loop may
    * result.</p>
    *
-   * <p>Implementations of this method <strong>must not call {@link
+   * <p>Overrides of this method <strong>must not call {@link
    * #of(Path)} with the supplied {@code path}</strong> or an infinite
    * loop may result.</p>
    *
@@ -238,7 +238,8 @@ public interface Configured<T> extends OptionalSupplier<T> {
    * @param path an {@linkplain Path#isAbsolute() absolute
    * <code>Path</code>}; must not be null
    *
-   * @return the transliterated {@link Path}; never {@code null}
+   * @return the transliterated {@link Path}; never {@code null};
+   * possibly the supplied {@code path} itself
    *
    * @exception NullPointerException if {@code path} is {@code null}
    *
@@ -266,12 +267,29 @@ public interface Configured<T> extends OptionalSupplier<T> {
    *
    * @see #of(Path)
    */
-  @OverridingEncouraged
+  @OverridingDiscouraged
   public default <U> Path<U> transliterate(final Path<U> path) {
-    if (!path.isAbsolute()) {
-      throw new IllegalArgumentException("!path.isAbsolute(): " + path);
+    if (path.isTransliterated()) {
+      return path;
     }
-    return path;
+    final TypeToken<Path<U>> typeToken = new TypeToken<Path<U>>() {};
+    if (path.type().equals(typeToken.type())) {
+      final Element<U> e = path.last();
+      if (e.name().equals("transliterate")) {
+        final List<Class<?>> parameters = e.parameters().orElse(null);
+        if (parameters.size() == 1 && parameters.get(0) == Path.class) {
+          // Are we in the middle of a transliteration request? Avoid
+          // the infinite loop.
+          return path;
+        }
+      }
+    }
+    final Configured<Path<U>> configured =
+      this.of(Element.of("transliterate", // name
+                         typeToken, // type
+                         Path.class, // parameter
+                         path.toString())); // sole argument
+    return configured.orElse(path);
   }
 
   @Convenience
@@ -566,12 +584,11 @@ public interface Configured<T> extends OptionalSupplier<T> {
   @EntryPoint
   @SuppressWarnings("static")
   public static Configured<?> of() {
-    final class Bootstrap {
-      private static final Configured<?> instance;
+    final class RootConfigured {
+      private static final Configured<?> INSTANCE;
       static {
         final Configured<?> bootstrapConfigured =
           ServiceLoader.load(Configured.class, Configured.class.getClassLoader()).findFirst().orElseThrow();
-
         if (!Path.root().equals(bootstrapConfigured.absolutePath())) {
           throw new IllegalStateException("bootstrapConfigured.absolutePath(): " + bootstrapConfigured.absolutePath());
         } else if (bootstrapConfigured.parent() != bootstrapConfigured) {
@@ -583,21 +600,17 @@ public interface Configured<T> extends OptionalSupplier<T> {
         } else if (bootstrapConfigured.root() != bootstrapConfigured) {
           throw new IllegalStateException("bootstrapConfigured.root(): " + bootstrapConfigured.root());
         }
-
-        instance = bootstrapConfigured
-          .<Configured<?>>of(new TypeToken<Configured<?>>() {})
-          .orElse(bootstrapConfigured);
-
-        if (!Path.root().equals(bootstrapConfigured.absolutePath())) {
-          throw new IllegalStateException("instance.absolutePath(): " + instance.absolutePath());
-        } else if (instance.parent() != bootstrapConfigured) {
-          throw new IllegalStateException("instance.parent(): " + instance.parent());
-        } else if (!(instance.get() instanceof Configured)) {
-          throw new IllegalStateException("instance.get(): " + instance.get());
+        INSTANCE = bootstrapConfigured.of(new TypeToken<Configured<?>>() {}).orElse(bootstrapConfigured);
+        if (!Path.root().equals(INSTANCE.absolutePath())) {
+          throw new IllegalStateException("INSTANCE.absolutePath(): " + INSTANCE.absolutePath());
+        } else if (INSTANCE.parent() != bootstrapConfigured) {
+          throw new IllegalStateException("INSTANCE.parent(): " + INSTANCE.parent());
+        } else if (!(INSTANCE.get() instanceof Configured)) {
+          throw new IllegalStateException("INSTANCE.get(): " + INSTANCE.get());
         }
       }
     };
-    return Bootstrap.instance;
+    return RootConfigured.INSTANCE;
   }
 
 }
