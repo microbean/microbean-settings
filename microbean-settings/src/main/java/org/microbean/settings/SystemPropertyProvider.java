@@ -22,6 +22,7 @@ import java.util.function.Supplier;
 
 import org.microbean.settings.api.Configured;
 import org.microbean.settings.api.Path;
+import org.microbean.settings.api.Path.Element;
 import org.microbean.settings.api.Qualifiers;
 
 import org.microbean.settings.provider.AbstractProvider;
@@ -83,57 +84,17 @@ public final class SystemPropertyProvider extends AbstractProvider<Object> {
 
 
   /**
-   * Returns {@code true} if {@link
-   * AbstractProvider#isSelectable(Configured, Path)} returns {@code
-   * true} and the supplied {@link Path} {@linkplain Path#isAbsolute()
-   * is absolute} and the supplied {@link Path} has a {@linkplain
-   * Path#size() size} of {@code 2} and the {@linkplain
-   * Path.Element#name() name} of the {@linkplain Path#last() last
-   * element} of the supplied {@link Path} is not {@linkplain
-   * String#isEmpty() empty}.
-   *
-   * @param supplier the {@link Configured} seeking a {@link Value};
-   * must not be {@code null}
-   *
-   * @param absolutePath an {@linkplain Path#isAbsolute() absolute
-   * <code>Path</code>} for which a {@link Value} is being sought;
-   * must not be {@code null}
-   *
-   * @return {@code true} if the supplied {@link Path} meets the
-   * conditions described above; {@code false} otherwise
-   *
-   * @exception NullPointerException if an argument for either
-   * parameter is {@code null}
-   *
-   * @threadsafety This method is, and its overrides must be, safe for
-   * concurrent use by multiple threads.
-   *
-   * @idempotency This method is, and its overrides must be,
-   * idempotent and deterministic.
-   */
-  @Override // AbstractProvider<Object>
-  public boolean isSelectable(final Configured<?> supplier, final Path<?> absolutePath) {
-    return
-      super.isSelectable(supplier, absolutePath) &&
-      absolutePath.isAbsolute() &&
-      absolutePath.size() == 2 &&
-      !absolutePath.last().name().isEmpty();
-  }
-
-  /**
    * Returns a {@link Value} suitable for the System property
    * represented by the supplied {@link Path}.
    *
    * <p>This method never returns {@code null}.  Its overrides may if
    * they wish.</p>
    *
-   * <p>See the documentation for the {@link #isSelectable(Configured,
-   * Path)} method for how the supplied {@link Path} is interpreted.
-   * Briefly, the {@linkplain Path.Element#name() name} of the
-   * {@linkplain Path#last() last element} of the supplied {@link
-   * Path} is taken to be the name of the System property value to
-   * retrieve.  If the return value of the supplied {@link Path}'s
-   * {@link Path#typeErasure() typeErasure()} method {@linkplain
+   * <p>The {@linkplain Path.Element#name() name} of the {@linkplain
+   * Path#last() last element} of the supplied {@link Path} is taken
+   * to be the name of the System property value to retrieve.  If the
+   * return value of the supplied {@link Path}'s {@link
+   * Path#typeErasure() typeErasure()} method {@linkplain
    * Class#isAssignableFrom(Class) is assignable from} {@link String
    * String.class}, then calls will be made by the returned {@link
    * Value}'s {@link Value#get() get()} method to {@link
@@ -157,15 +118,17 @@ public final class SystemPropertyProvider extends AbstractProvider<Object> {
    * get()} method in such a case.  Overrides are strongly encouraged
    * to abide by these conditions.</p>
    *
-   * @param supplier the {@link Configured} seeking a {@link Value};
+   * @param requestor the {@link Configured} seeking a {@link Value};
    * must not be {@code null}
    *
    * @param absolutePath an {@linkplain Path#isAbsolute() absolute
    * <code>Path</code>} for which a {@link Value} is being sought;
    * must not be {@code null}
    *
-   * @return a {@link Value} suitable for the System property
-   * represented by the supplied {@link Path}
+   * @return a {@link Value} suitable for the System property whose
+   * name is represented by the supplied {@link Path}'s {@linkplain
+   * Path#last() last <code>Element</code>}'s {@linkplain
+   * Path.Element#name() name}
    *
    * @exception NullPointerException if an argument for either
    * parameter is {@code null}
@@ -182,21 +145,31 @@ public final class SystemPropertyProvider extends AbstractProvider<Object> {
    * <em>not</em> guaranteed to be idempotent or deterministic.
    */
   @Override // AbstractProvider<Object>
-  public <T> Value<T> get(final Configured<?> supplier, final Path<T> absolutePath) {
-    final Class<T> pathTypeErasure = absolutePath.typeErasure();
-    final Supplier<T> s;
-    if (pathTypeErasure.isAssignableFrom(String.class)) {
-      s = () -> pathTypeErasure.cast(getCharSequenceAssignableSystemProperty(absolutePath.last().name(), pathTypeErasure));
-    } else {
-      s = () -> pathTypeErasure.cast(getSystemProperty(absolutePath.last().name(), pathTypeErasure));
+  public <T> Value<T> get(final Configured<?> requestor, final Path<T> absolutePath) {
+    assert absolutePath.isAbsolute();
+    assert absolutePath.startsWith(requestor.absolutePath());
+    assert !absolutePath.equals(requestor.absolutePath());
+    if (absolutePath.size() == 2) {
+      final Element<T> last = absolutePath.last();
+      final String name = last.name();
+      if (!name.isEmpty()) {
+        final Class<T> pathTypeErasure = absolutePath.typeErasure();
+        final Supplier<T> s;
+        if (pathTypeErasure.isAssignableFrom(String.class)) {
+          s = () -> getCharSequenceAssignableSystemProperty(name, pathTypeErasure);
+        } else {
+          s = () -> getSystemProperty(name, pathTypeErasure);
+        }
+        return
+          new Value<>(null, // no defaults
+                      Qualifiers.of(),
+                      Path.of(last),
+                      s,
+                      false, // nulls are not legal values
+                      false); // not deterministic
+      }
     }
-    return
-      new Value<>(null, // no defaults
-                  Qualifiers.of(),
-                  Path.of(absolutePath.last()),
-                  s,
-                  false, // nulls are not legal values
-                  false); // not deterministic
+    return null;
   }
 
   private static final <T> T getCharSequenceAssignableSystemProperty(final String propertyName, final Class<T> typeErasure) {
@@ -219,3 +192,4 @@ public final class SystemPropertyProvider extends AbstractProvider<Object> {
   }
 
 }
+

@@ -408,8 +408,7 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
       throw new IllegalArgumentException("absolutePath: " + absolutePath);
     }
     return
-      AssignableType.of(provider.upperBound()).isAssignable(absolutePath.type()) &&
-      provider.isSelectable(supplier, absolutePath);
+      AssignableType.of(provider.upperBound()).isAssignable(absolutePath.type());
   }
 
   protected int score(final Qualifiers referenceQualifiers, final Qualifiers valueQualifiers) {

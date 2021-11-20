@@ -19,6 +19,8 @@ package org.microbean.settings;
 import java.util.Collection;
 import java.util.List;
 
+import java.util.function.Supplier;
+
 import org.junit.jupiter.api.Test;
 
 import org.microbean.settings.api.Configured;
@@ -95,37 +97,32 @@ final class TestProxyingProvider {
     }
 
     @Override
-    public final boolean isSelectable(final Configured<?> supplier,
-                                      final Path<?> path) {
-      if (super.isSelectable(supplier, path)) {
-        assertSame(Wheel.class, path.type());
-        final Element<?> e = path.last();
-        final List<String> arguments = e.arguments().orElse(null);
-        return "wheel".equals(e.name()) && arguments != null && !arguments.isEmpty() && "LR".equals(arguments.get(0));
-      } else {
-        return false;
+    public final <T> Value<T> get(final Configured<?> requestor, final Path<T> path) {
+      final Element<T> last = path.last();
+      final List<String> arguments = last.arguments().orElse(null);
+      if ("wheel".equals(last.name()) && arguments != null && !arguments.isEmpty() && "LR".equals(arguments.get(0))) {
+        final Class<T> wheelClass = path.typeErasure();
+        assertSame(Wheel.class, wheelClass);
+        assertEquals(List.of(String.class), last.parameters().orElseThrow());
+        @SuppressWarnings("unchecked")
+        final Value<T> returnValue =
+          new Value<T>(null, // no defaults
+                       Qualifiers.of(),
+                       Path.of(Element.of("wheel",
+                                          wheelClass,
+                                          List.of(String.class),
+                                          List.of("LR"))),
+                       (Supplier<T>)() -> (T)new Wheel() {
+                           @Override
+                           public final int getDiameterInInches() {
+                             return 24;
+                           }
+                         },
+                       false, // nulls not permitted
+                       true); // deterministic
+        return returnValue;
       }
-    }
-
-    @Override
-    public final <T> Value<T> get(final Configured<?> supplier, final Path<T> path) {
-      assertSame(Wheel.class, path.typeErasure());
-      final Class<T> wheelClass = path.typeErasure();
-      final Element<T> e = path.last();
-      assertEquals("wheel", e.name());
-      assertEquals(List.of(String.class), e.parameters().orElseThrow());
-      assertEquals("LR", e.arguments().orElseThrow().get(0));
-      return new Value<>(Qualifiers.of(),
-                         Path.of(Element.of("wheel",
-                                            wheelClass,
-                                            List.of(String.class),
-                                            List.of("LR"))),
-                         wheelClass.cast(new Wheel() {
-                             @Override
-                               public final int getDiameterInInches() {
-                               return 24;
-                             }
-                           }));
+      return null;
     }
 
   }

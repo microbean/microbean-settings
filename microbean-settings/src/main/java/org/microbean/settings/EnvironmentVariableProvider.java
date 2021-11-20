@@ -16,6 +16,8 @@
  */
 package org.microbean.settings;
 
+import java.util.function.Supplier;
+
 import org.microbean.settings.api.Configured;
 import org.microbean.settings.api.Path;
 import org.microbean.settings.api.Qualifiers;
@@ -30,20 +32,44 @@ public final class EnvironmentVariableProvider extends AbstractProvider<String> 
   }
 
   @Override // AbstractProvider<String>
-  public boolean isSelectable(final Configured<?> supplier, final Path<?> absolutePath) {
+  public <T> Value<T> get(final Configured<?> requestor, final Path<T> absolutePath) {
     assert absolutePath.isAbsolute();
-    return
-      absolutePath.size() == 2
-      && super.isSelectable(supplier, absolutePath) &&
-      System.getenv(absolutePath.last().name()) != null;
-  }
+    assert absolutePath.startsWith(requestor.absolutePath());
+    assert !absolutePath.equals(requestor.absolutePath());
 
-  @Override // AbstractProvider<String>
-  public <T> Value<T> get(final Configured<?> supplier, final Path<T> absolutePath) {
-    assert absolutePath.isAbsolute();
-    assert absolutePath.size() == 2;
-    final Class<T> stringClass = absolutePath.typeErasure();
-    return new Value<>(Qualifiers.of(), absolutePath, stringClass.cast(System.getenv(absolutePath.last().name())));
+    // On Unix systems, there is absolutely no question that the
+    // environment is entirely immutable, even when probed via
+    // System#getenv(String).  See
+    // https://github.com/openjdk/jdk/blob/dfacda488bfbe2e11e8d607a6d08527710286982/src/java.base/unix/classes/java/lang/ProcessEnvironment.java#L67-L91.
+    //
+    // Things are ever so slightly more murky in Windows land.  As of
+    // JDK 17, the environment there is also entirely immutable:
+    // https://github.com/openjdk/jdk/blob/dfacda488bfbe2e11e8d607a6d08527710286982/src/java.base/windows/classes/java/lang/ProcessEnvironment.java#L257-L258
+    // but the class is not as "immutable looking" as the Unix one and
+    // it seems to be designed for updating in some cases.
+    // Nevertheless, for the System#getenv(String) case, the
+    // environment is immutable.
+    //
+    // TL;DR: System.getenv("foo") will always return a value for
+    // "foo" if ever there was one, and will always return null if
+    // there wasn't.
+
+    if (absolutePath.size() == 2) {
+      final String name = absolutePath.last().name();
+      final String value = System.getenv(name);
+      if (value != null) {
+        @SuppressWarnings("unchecked")
+        final Value<T> returnValue =
+          new Value<>(null, // no defaults
+                      Qualifiers.of(),
+                      absolutePath,
+                      (Supplier<T>)() -> (T)value,
+                      false, // nulls are not permitted
+                      true); // deterministic
+        return returnValue;
+      }
+    }
+    return null;
   }
   
 }

@@ -37,13 +37,29 @@ public class SystemPropertiesQualifiersProvider extends AbstractProvider<Qualifi
   }
 
   @Override // AbstractProvider<Qualifiers>
-  public <T> Value<T> get(final Configured<?> requestor, final Path<T> path) {
+  public <T> Value<T> get(final Configured<?> requestor, final Path<T> absolutePath) {
+    assert absolutePath.isAbsolute();
+    assert absolutePath.startsWith(requestor.absolutePath());
+    assert !absolutePath.equals(requestor.absolutePath());
+    
+    @SuppressWarnings("unchecked")
+    final Value<T> value =
+      new Value<>(null, // no defaults
+                  Qualifiers.of(),
+                  Path.of(absolutePath.last()),
+                  (Supplier<T>)() -> (T)qualifiers(requestor),
+                  false, // nulls are not legal values
+                  false); // not deterministic
+    return value;
+  }
+
+  private static final Qualifiers qualifiers(final Configured<?> requestor) {
     // Use the configuration system to find a String under the path
     // :void/qualifierPrefix:java.lang.String.
     final String prefix = requestor.of("qualifierPrefix", String.class).orElse("qualifier.");
     final int prefixLength = prefix.length();
-    final Properties systemProperties = System.getProperties();
     final SortedMap<String, String> map = new TreeMap<>();
+    final Properties systemProperties = System.getProperties();
     for (final String propertyName : systemProperties.stringPropertyNames()) {
       if (propertyName.startsWith(prefix) && propertyName.length() > prefixLength) {
         final String qualifierValue = systemProperties.getProperty(propertyName);
@@ -52,8 +68,7 @@ public class SystemPropertiesQualifiersProvider extends AbstractProvider<Qualifi
         }
       }
     }
-    final Class<T> qualifiersClass = path.typeErasure();
-    return new Value<>(Qualifiers.of(), Path.of(qualifiersClass), qualifiersClass.cast(Qualifiers.of(map)));
+    return Qualifiers.of(map);
   }
 
 }
