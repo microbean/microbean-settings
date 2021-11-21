@@ -309,6 +309,10 @@ public final class Value<T> implements Supplier<T> {
    * Returns {@code true} if and only if {@code null} returned from
    * the {@link #get()} method is a permitted value.
    *
+   * <p>If there were no defaults supplied at {@linkplain
+   * #Value(Supplier, Qualifiers, Path, Supplier, boolean, boolean)
+   * construction time}, then this method is informational only.</p>
+   *
    * @return {@code true} if and only if {@code null} returned from
    * the {@link #get()} method is a permitted value
    *
@@ -331,11 +335,20 @@ public final class Value<T> implements Supplier<T> {
    * one and only one value from its {@link Supplier#get() get()}
    * method.
    *
+   * <p>If there were no defaults supplied at {@linkplain
+   * #Value(Supplier, Qualifiers, Path, Supplier, boolean, boolean)
+   * construction time}, then this method is informational only.</p>
+   *
    * @return {@code true} if and only if it is known that the {@link
    * Supplier} supplied at {@linkplain #Value(Supplier, Qualifiers,
    * Path, Supplier, boolean, boolean) construction time} will return
    * one and only one value from its {@link Supplier#get() get()}
    * method
+   *
+   * @threadsafety This method is safe for concurrent use by multiple
+   * threads.
+   *
+   * @idempotency This method is idempotent and deterministic.
    */
   public final boolean deterministic() {
     return this.deterministic;
@@ -367,7 +380,33 @@ public final class Value<T> implements Supplier<T> {
     return this.path().type();
   }
 
-  @Override
+  /**
+   * Returns the result of invoking {@link Path#typeErasure()} on the
+   * return value of this {@link Value}'s {@link #path()} method.
+   *
+   * <p>This method never returns {@code null}.</p>
+   *
+   * @return the result of invoking {@link Path#typeErasure()} on the
+   * return value of this {@link Value}'s {@link #path()} method;
+   * never {@code null}
+   *
+   * @nullability This method never returns {@code null}.
+   *
+   * @idempotency This method is idempotent and and deterministic.
+   *
+   * @threadsafety This method is safe for concurrent use by
+   * multiple threads.
+   *
+   * @see #path()
+   *
+   * @see Path#typeErasure()
+   */
+  @Convenience
+  public final Class<T> typeErasure() {
+    return this.path().typeErasure();
+  }
+
+  @Override // Object
   public final int hashCode() {
     int hashCode = 17;
     Object v = this.qualifiers();
@@ -387,7 +426,7 @@ public final class Value<T> implements Supplier<T> {
     return hashCode;
   }
 
-  @Override
+  @Override // Object
   public final boolean equals(final Object other) {
     if (other == this) {
       return true;

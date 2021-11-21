@@ -16,8 +16,11 @@
  */
 package org.microbean.settings;
 
+import java.lang.annotation.Annotation;
+
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.lang.reflect.Proxy;
 import java.lang.reflect.Type;
 
@@ -42,10 +45,23 @@ import org.microbean.settings.api.Path.Element;
 import org.microbean.settings.api.Qualifiers;
 
 import org.microbean.settings.provider.AbstractProvider;
+import org.microbean.settings.provider.AssignableType;
 import org.microbean.settings.provider.Value;
 
 import org.microbean.type.Types;
 
+/**
+ * An {@link AbstractProvider} that is capable of {@linkplain Proxy
+ * proxying} {@linkplain #isProxiable(Configured, Path) certain}
+ * interfaces and supplying them as configured objects.
+ *
+ * @author <a href="https://about.me/lairdnelson"
+ * target="_parent">Laird Nelson</a>
+ *
+ * @see #get(Configured, Path)
+ *
+ * @see #isProxiable(Configured, Path)
+ */
 public class ProxyingProvider extends AbstractProvider<Object> {
 
 
@@ -62,6 +78,13 @@ public class ProxyingProvider extends AbstractProvider<Object> {
    */
 
 
+  /**
+   * Creates a new {@link ProxyingProvider}.
+   *
+   * @deprecated This constructor should be invoked by subclasses and
+   * {@link java.util.ServiceLoader} instances only.
+   */
+  @Deprecated // intended for use by subclasses and java.util.ServiceLoader only
   public ProxyingProvider() {
     super();
     this.proxies = new ConcurrentHashMap<>();
@@ -78,6 +101,7 @@ public class ProxyingProvider extends AbstractProvider<Object> {
     assert absolutePath.isAbsolute();
     assert absolutePath.startsWith(requestor.absolutePath());
     assert !absolutePath.equals(requestor.absolutePath());
+
     if (this.isProxiable(requestor, absolutePath)) {
       @SuppressWarnings("unchecked")
       final Value<T> returnValue =
@@ -99,44 +123,127 @@ public class ProxyingProvider extends AbstractProvider<Object> {
     }
   }
 
-  protected boolean isProxiable(final Configured<?> requestor,
-                                final Path<?> absolutePath) {
-    if (absolutePath.type() instanceof Class<?> c && c.isInterface() && !c.isHidden() && !c.isSealed()) {
-      final Method[] methods = c.getMethods();
-      switch (methods.length) {
-      case 0:
-        return false;
-      default:
-        int getterCount = 0;
-        int defaultCount = 0;
-        for (final Method m : methods) {
-          if (m.isDefault()) {
-            ++defaultCount;
-          } else {
-            final Type returnType = m.getReturnType();
-            if (returnType != void.class && returnType != Void.class) {
-              switch (m.getParameterCount()) {
-              case 0:
-                ++getterCount;
-                break;
-              case 1:
-                if (!this.isIndexLike(m.getParameterTypes()[0])) {
+  /**
+   * Returns {@code true} if the {@linkplain Path#type() type
+   * identified by the supplied <code>absolutePath</code>} can be
+   * proxied.
+   *
+   * <p>A type can be proxied by this {@link ProxyingProvider} if its
+   * {@linkplain Path#typeErasure() type erasure}:</p>
+   *
+   * <ul>
+   *
+   * <li>is an {@linkplain Class#isInterface() interface}</li>
+   *
+   * <li>is {@linkplain Class#isHidden() not hidden}</li>
+   *
+   * <li>is {@linkplain Class#isSealed() not sealed}</li>
+   *
+   * </ul>
+   *
+   * <p>In addition, the default implementation of this method rules
+   * out interfaces that declare or inherit {@code public} instance
+   * methods with either exactly one parameter that does not pass the
+   * test codified by the {@link #isIndexLike(Class)} method or more
+   * than one parameter.</p>
+   *
+   * @param requestor the {@link Configured} seeking a configured
+   * object; must not be {@code null}; ignored by the default
+   * implementation of this method
+   *
+   * @param absolutePath the {@link Path} {@linkplain
+   * Path#typeErasure() identifying the interface to be proxied}; must
+   * not be {@code null}; must be {@linkplain Path#isAbsolute()
+   * absolute}
+   *
+   * @return {@code true} if the {@linkplain Path#type() type
+   * identified by the supplied <code>absolutePath</code>} can be
+   * proxied; {@code false} otherwise
+   *
+   * @exception NullPointerException if either argument is {@code
+   * null}
+   *
+   * @exception IllegalArgumentException if {@code absolutePath} is
+   * not {@linkplain Path#isAbsolute() absolute}
+   *
+   * @threadsafety This method is, and its overrides must be, safe for
+   * concurrent use by multiple threads.
+   *
+   * @idempotency This method is, and its overrides must be,
+   * idempotent and deterministic.
+   *
+   * @see #isIndexLike(Class)
+   */
+  protected boolean isProxiable(final Configured<?> requestor, final Path<?> absolutePath) {
+    final Class<?> c = absolutePath.typeErasure();
+    if (c.isInterface() &&
+        !c.isHidden() &&
+        !c.isSealed()) {
+      final org.microbean.settings.provider.Proxy proxyAnnotation = c.getAnnotation(org.microbean.settings.provider.Proxy.class);
+      if (proxyAnnotation == null || proxyAnnotation.value()) {
+
+        final Method[] methods = c.getMethods();
+        switch (methods.length) {
+        case 0:
+          return false;
+        default:
+          int getterCount = 0;
+          int defaultCount = 0;
+          for (final Method m : methods) {
+            if (m.isDefault()) {
+              ++defaultCount;
+            } else if (!Modifier.isStatic(m.getModifiers())) {
+              final Type returnType = m.getReturnType();
+              if (returnType != void.class && returnType != Void.class) {
+                switch (m.getParameterCount()) {
+                case 0:
+                  ++getterCount;
+                  break;
+                case 1:
+                  if (!this.isIndexLike(m.getParameterTypes()[0])) {
+                    return false;
+                  }
+                  ++getterCount;
+                  break;
+                default:
                   return false;
                 }
-                ++getterCount;
-                break;
-              default:
-                return false;
               }
             }
           }
+          return getterCount > 0 || defaultCount > 0;
         }
-        return getterCount > 0 || defaultCount > 0;
+
       }
     }
     return false;
   }
 
+  /**
+   * Returns {@code true} if the supplied {@link Class} representing a
+   * method parameter is <em>index-like</em>, i.e. if it is something
+   * typically used as an index into a larger collection or map.
+   *
+   * <p>The default implementation of this method returns {@code true}
+   * if {@code parameterType} represents either an {@code int}, an
+   * {@link Integer}, or a {@link CharSequence}.</p>
+   *
+   * <p>This method is called by the default implementation of the
+   * {@link #isProxiable(Configured, Path)} method.</p>
+   *
+   * @param parameterType the method parameter type to test; may be
+   * {@code null} in which case {@code false} will be returned
+   *
+   * @return {@code true} if the supplied {@link Class} representing a
+   * method parameter is <em>index-like</em>, i.e. if it is something
+   * typically used as an index into a larger collection or map
+   *
+   * @threadsafety This method is, and its overrides must be, safe for
+   * concurrent use by multiple threads.
+   *
+   * @idempotency This method is, and its overrides must be,
+   * idempotent and deterministic.
+   */
   protected boolean isIndexLike(final Class<?> parameterType) {
     return
       parameterType == int.class ||
@@ -145,17 +252,14 @@ public class ProxyingProvider extends AbstractProvider<Object> {
   }
 
   protected Qualifiers qualifiers(final Configured<?> requestor, final Path<?> absolutePath) {
-    assert absolutePath.isAbsolute();
     return Qualifiers.of();
   }
 
   protected <T> Path<T> path(final Configured<?> requestor, final Path<T> absolutePath) {
-    assert absolutePath.isAbsolute();
     return Path.of(absolutePath.typeErasure());
   }
 
   protected Object newProxyInstance(final Configured<?> requestor, final Path<?> absolutePath, final Class<?> interfaceToProxy) {
-    assert absolutePath.isAbsolute();
     return
       Proxy.newProxyInstance(interfaceToProxy.getClassLoader(),
                              new Class<?>[] { interfaceToProxy },
@@ -292,6 +396,39 @@ public class ProxyingProvider extends AbstractProvider<Object> {
 
   private static final class Handler implements InvocationHandler {
 
+    /**
+     * A {@link Configured} whose {@link Configured#of(Path)} method
+     * will eventually be called by the {@link #invoke(Object, Method,
+     * Object[])} method.
+     *
+     * <p>Note that this {@link Configured}'s {@link
+     * Configured#absolutePath()} method will return a {@link Path}
+     * that <em>does not identify</em> the actual interface being
+     * proxied, much less the {@link Method} being handled by this
+     * {@link Handler}.  The {@link #absolutePath} field, instead,
+     * contains the {@link Path} identifying the proxied interface
+     * (and it will {@linkplain Path#startsWith(Path) start with} the
+     * return value of {@link #requestor requestor.absolutePath()}).
+     * During execution of the {@link #invoke(Object, Method,
+     * Object[])} method, the contents of the {@link #absolutePath}
+     * field will be appended with a relative {@link Path}
+     * corresponding to the {@link Method} being handled, and
+     * <em>that</em> resulting absolute {@link Path} will be supplied
+     * to the {@link Configured#of(Path)} method.  Note further that
+     * the {@link Configured#of(Path)} method will internally adjust
+     * the <em>actual</em> {@link Configured} used (see {@link
+     * Configured#configuredFor(Path)}).</p>
+     *
+     * <p>All of this to say: this {@link Configured} is just a handle
+     * of sorts to the proper {@link Configured} that will eventually
+     * be used to locate the configured object corresponding to the
+     * return value of the {@link Method} being handled, and serves no
+     * other purpose.</p>
+     *
+     * @see #absolutePath
+     *
+     * @see #invoke(Object, Method, Object[])
+     */
     private final Configured<?> requestor;
 
     private final Path<?> absolutePath;
@@ -302,9 +439,18 @@ public class ProxyingProvider extends AbstractProvider<Object> {
                     final Path<?> absolutePath,
                     final BiFunction<? super Method, ? super Object[], ? extends Path<?>> pathFunction) {
       super();
-      this.requestor = Objects.requireNonNull(requestor, "requestor");
-      this.absolutePath = Objects.requireNonNull(absolutePath, "absolutePath");
+      if (!absolutePath.isAbsolute()) {
+        throw new IllegalArgumentException("!absolutePath.isAbsolute(): " + absolutePath);
+      } else if (!absolutePath.startsWith(requestor.absolutePath())) {
+        throw new IllegalArgumentException("!absolutePath.startsWith(requestor.absolutePath()); absolutePath: " + absolutePath +
+                                           "; requestor.absolutePath(): " + requestor.absolutePath());
+      } else if (absolutePath.equals(requestor.absolutePath())) {
+        throw new IllegalArgumentException("absolutePath.equals(requestor.absolutePath()): " + absolutePath);
+      }
+      this.requestor = requestor;
+      this.absolutePath = absolutePath;
       this.pathFunction = Objects.requireNonNull(pathFunction, "pathFunction");
+
     }
 
     @Override // InvocationHandler
@@ -323,8 +469,8 @@ public class ProxyingProvider extends AbstractProvider<Object> {
           return defaultValue(proxy, m, args);
         } else {
           final Path<?> path = this.pathFunction.apply(m, args);
-          assert path.type() == returnType;
-          assert !path.isAbsolute();
+          assert path.type() == returnType : "path.type() != returnType: " + path.type() + " != " + returnType;
+          assert !path.isAbsolute() : "path.isAbsolute(): " + path;
           @SuppressWarnings("unchecked")
           final OptionalSupplier<Object> s = (OptionalSupplier<Object>)this.requestor.of(this.absolutePath.plus(path));
           return s.orElseGet(() -> defaultValue(proxy, m, args));
@@ -352,4 +498,5 @@ public class ProxyingProvider extends AbstractProvider<Object> {
     }
 
   }
+
 }

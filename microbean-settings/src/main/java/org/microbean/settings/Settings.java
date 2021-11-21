@@ -45,8 +45,9 @@ import org.microbean.settings.provider.Provider;
 import org.microbean.settings.provider.Value;
 
 /**
- * A subclassable default {@link Configured} implementation
- * that delegates its work to {@link Provider}s.
+ * A subclassable default {@link Configured} implementation that
+ * delegates its work to {@link Provider}s and an {@link
+ * #ambiguityHandler() AmbiguityHandler}.
  *
  * @param <T> the type of configured objects this {@link Settings}
  * supplies
@@ -71,7 +72,7 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
 
   private final Path<T> absolutePath;
 
-  private final Configured<?> parent;
+  private final Settings<?> parent;
 
   private final Supplier<T> supplier;
 
@@ -90,28 +91,28 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
   /**
    * Creates a new {@link Settings}.
    *
+   * @see Configured#of()
+   *
    * @deprecated This constructor should be invoked by subclasses and
    * {@link ServiceLoader java.util.ServiceLoader} instances only.
-   *
-   * @see Configured#of()
    */
-  @Deprecated // intended for use by ServiceLoader only
+  @Deprecated // intended for use by subclasses and java.util.ServiceLoader only
   public Settings() {
     this(new ConcurrentHashMap<Qualified<Path<?>>, Settings<?>>(),
          null, // providers
-         null, // qualifiers
+         null, // Qualifiers
          null, // parent,
          null, // absolutePath
-         null, // supplier
-         null);
+         null, // Supplier
+         null); // AmbiguityHandler
   }
 
   private Settings(final ConcurrentMap<Qualified<Path<?>>, Settings<?>> settingsCache,
                    final Collection<? extends Provider> providers,
                    final Qualifiers qualifiers,
-                   final Configured<?> parent, // if null, will end up being "this" if absolutePath is Path.root()
+                   final Settings<?> parent, // if null, will end up being "this" if absolutePath is null or Path.root()
                    final Path<T> absolutePath,
-                   final Supplier<T> supplier, // if null, will end up being () -> this if absolutePath is Path.root()
+                   final Supplier<T> supplier, // if null, will end up being () -> this if absolutePath is null or Path.root()
                    final AmbiguityHandler ambiguityHandler) {
     super();
     this.settingsCache = Objects.requireNonNull(settingsCache, "settingsCache");
@@ -168,6 +169,12 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
    * Clears any caches used by this {@link Settings}.
    *
    * <p>This {@link Settings} remains valid to use.</p>
+   *
+   * @threadsafety This method is safe for concurrent use by multiple
+   * threads.
+   *
+   * @idempotency This method is deterministic but not idempotent
+   * unless the caches are already cleared.
    */
   @Experimental
   @Override
@@ -199,6 +206,24 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
     return this.providers;
   }
 
+  /**
+   * Returns the {@link AmbiguityHandler} associated with this {@link
+   * Settings}.
+   *
+   * <p>This method never returns {@code null}.</p>
+   *
+   * @return the {@link AmbiguityHandler} associated with this {@link
+   * Settings}; never {@code null}
+   *
+   * @nullability This method never returns {@code null}
+   *
+   * @threadsafety This method is safe for concurrent use by multiple
+   * threads.
+   *
+   * @idempotency This method is idempotent and deterministic.
+   *
+   * @see AmbiguityHandler
+   */
   public final AmbiguityHandler ambiguityHandler() {
     // NOTE: This null check is critical.  We check for null here
     // because during bootstrapping the AmbiguityHandler will not have
@@ -210,6 +235,22 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
     return ambiguityHandler == null ? NoOpAmbiguityHandler.INSTANCE : ambiguityHandler;
   }
 
+  /**
+   * Returns the {@link Qualifiers} with which this {@link Settings}
+   * is associated.
+   *
+   * <p>This method never returns {@code null}.</p>
+   *
+   * @return the {@link Qualifiers} with which this {@link Settings}
+   * is associated
+   *
+   * @nullability This method never returns {@code null}.
+   *
+   * @threadsafety This method is safe for concurrent use by multiple
+   * threads.
+   *
+   * @idempotency This method is idempotent and deterministic.
+   */
   @Override // Configured<T>
   public final Qualifiers qualifiers() {
     // NOTE: This null check is critical.  We check for null here
@@ -221,8 +262,29 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
     return qualifiers == null ? Qualifiers.of() : qualifiers;
   }
 
+  /**
+   * Returns the {@link Settings} serving as the parent of this
+   * {@link Settings}.
+   *
+   * <p>The "root" {@link Settings} returns itself from its {@link
+   * #parent()} implementation.</p>
+   *
+   * <p>This method never returns {@code null}.</p>
+   *
+   * @return the non-{@code null} {@link Settings} serving as the
+   * parent of this {@link Settings}; may be this {@link Settings}
+   * itself
+   *
+   * @nullability This method never returns {@code null}.
+   *
+   * @threadsafety This method is safe for concurrent use by multiple
+   * threads.
+   *
+   * @idempotency This method is idempotent and deterministic.
+   */
+  // Note that the root will have itself as its parent.
   @Override // Configured<T>
-  public final Configured<?> parent() {
+  public final Settings<?> parent() {
     return this.parent;
   }
 
@@ -237,6 +299,11 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
   }
 
   @Override // Configured<T>
+  public final Settings<?> configuredFor(Path<?> path) {
+    return (Settings<?>)Configured.super.configuredFor(path);
+  }
+
+  @Override // Configured<T>
   public final <U> Settings<U> of(final Path<U> path) {
     final Path<U> absolutePath = this.normalize(path);
     assert absolutePath.isAbsolute() : "!normalize(path).isAbsolute(): " + absolutePath;
@@ -244,7 +311,7 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
       throw new IllegalArgumentException("normalize(path).isRoot(): " + absolutePath);
     }
 
-    final Configured<?> requestor = this.configuredFor(absolutePath);
+    final Settings<?> requestor = this.configuredFor(absolutePath);
 
     // We deliberately do not use computeIfAbsent() because of()
     // operations can kick off other of() operations, and then you'd
@@ -271,10 +338,10 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
     return returnValue;
   }
 
-  private final <U> Settings<U> computeSettings(final Configured<?> requestor, final Path<U> absolutePath) {
+  private final <U> Settings<U> computeSettings(final Settings<?> requestor, final Path<U> absolutePath) {
     assert absolutePath.isAbsolute() : "absolutePath: " + absolutePath;
     final Qualifiers qualifiers = requestor.qualifiers();
-    final AmbiguityHandler ambiguityHandler = requestor instanceof Settings<?> s ? s.ambiguityHandler() : this.ambiguityHandler();
+    final AmbiguityHandler ambiguityHandler = requestor.ambiguityHandler();
     Value<U> candidate = null;
     final Collection<? extends Provider> providers = this.providers();
     if (!providers.isEmpty()) {
@@ -282,7 +349,7 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
       if (providers.size() == 1) {
 
         candidateProvider = providers instanceof List<? extends Provider> list ? list.get(0) : providers.iterator().next();
-        if (candidateProvider == null || !this.isSelectable(candidateProvider, requestor, absolutePath)) {
+        if (candidateProvider == null || !isSelectable(candidateProvider, absolutePath)) {
           ambiguityHandler.providerRejected(requestor, absolutePath, candidateProvider);
         } else {
           candidate = candidateProvider.get(requestor, absolutePath);
@@ -300,7 +367,7 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
         PROVIDER_LOOP:
         for (final Provider provider : providers) {
 
-          if (provider == null || !this.isSelectable(provider, requestor, absolutePath)) {
+          if (provider == null || !isSelectable(provider, absolutePath)) {
             ambiguityHandler.providerRejected(requestor, absolutePath, provider);
             continue PROVIDER_LOOP;
           }
@@ -324,14 +391,14 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
             if (candidate == null) {
               candidate = value;
               candidateProvider = provider;
-              candidateQualifiersScore = this.score(qualifiers, candidate.qualifiers());
-              candidatePathScore = this.score(absolutePath, candidate.path());
+              candidateQualifiersScore = ambiguityHandler.score(qualifiers, candidate.qualifiers());
+              candidatePathScore = ambiguityHandler.score(absolutePath, candidate.path());
               break VALUE_EVALUATION_LOOP;
             }
 
-            // Let's score qualifiers first, not paths.  This is an
+            // Let's score Qualifiers first, not paths.  This is an
             // arbitrary decision.
-            final int valueQualifiersScore = this.score(qualifiers, value.qualifiers());
+            final int valueQualifiersScore = ambiguityHandler.score(qualifiers, value.qualifiers());
             if (valueQualifiersScore < candidateQualifiersScore) {
               candidate = new Value<>(value, candidate);
               break VALUE_EVALUATION_LOOP;
@@ -345,8 +412,8 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
               break VALUE_EVALUATION_LOOP;
             }
 
-            // Same qualifiers score; let's now do paths.
-            final int valuePathScore = this.score(absolutePath, value.path());
+            // The Qualifiers scores were equal.  Let's do paths.
+            final int valuePathScore = ambiguityHandler.score(absolutePath, value.path());
 
             if (valuePathScore < candidatePathScore) {
               candidate = new Value<>(value, candidate);
@@ -401,180 +468,6 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
                      ambiguityHandler);
   }
 
-  protected final boolean isSelectable(final Provider provider,
-                                       final Configured<?> supplier,
-                                       final Path<?> absolutePath) {
-    if (!absolutePath.isAbsolute()) {
-      throw new IllegalArgumentException("absolutePath: " + absolutePath);
-    }
-    return
-      AssignableType.of(provider.upperBound()).isAssignable(absolutePath.type());
-  }
-
-  protected int score(final Qualifiers referenceQualifiers, final Qualifiers valueQualifiers) {
-    final int intersectionSize = referenceQualifiers.intersectionSize(valueQualifiers);
-    if (intersectionSize > 0) {
-      return
-        intersectionSize == valueQualifiers.size() ?
-        intersectionSize :
-        intersectionSize - referenceQualifiers.symmetricDifferenceSize(valueQualifiers);
-    } else {
-      return -(referenceQualifiers.size() + valueQualifiers.size());
-    }
-  }
-
-  /**
-   * Returns a score indicating the relative specificity of {@code
-   * valuePath} with respect to {@code absoluteReferencePath}, or
-   * {@link Integer#MIN_VALUE} if {@code valuePath} is wholly
-   * unsuitable for further consideration or processing.
-   *
-   * <p>This is <em>not</em> a comparison method.</p>
-   *
-   * <p>The following preconditions must hold or undefined behavior
-   * will result:</p>
-   *
-   * <ul>
-   *
-   * <li>Neither parameter's value may be {@code null}.</li>
-   *
-   * <li>{@code absoluteReferencePath} must be {@linkplain
-   * Path#isAbsolute() absolute}
-   *
-   * <li>{@code valuePath} must {@linkplain #isSelectable(Path, Path)
-   * be selectable with respect to
-   * <code>absoluteReferencePath</code>}, where the definition of
-   * selectability is described below</li>
-   *
-   * </ul>
-   *
-   * <p>For {@code valuePath} to "be selectable" with respect to
-   * {@code absoluteReferencePath} for the purposes of this method and
-   * for no other purpose, a hypothetical invocation of {@link
-   * #isSelectable(Path, Path)} must return {@code true} when supplied
-   * with {@code absoluteReferencePath} and {@code valuePath}
-   * respectively.  Note that such an invocation is <em>not</em> made
-   * by this method, but logically precedes it when this method is
-   * called in the natural course of events by the {@link
-   * #of(Path)} method.</p>
-   *
-   * <p>If, during scoring, {@code valuePath} is found to be wholly
-   * unsuitable for further consideration or processing, {@link
-   * Integer#MIN_VALUE} will be returned to indicate this.  Overrides
-   * must follow suit or undefined behavior elsewhere in this class
-   * will result.</p>
-   *
-   * @param absoluteReferencePath the {@link Path} against which to
-   * score the supplied {@code valuePath}; must not be {@code null};
-   * must adhere to the preconditions above
-   *
-   * @param valuePath the {@link Path} to score against the supplied
-   * {@code absoluteReferencePath}; must not be {@code null}; must
-   * adhere to the preconditions above
-   *
-   * @return a relative score for {@code valuePath} with respect to
-   * {@code absoluteReferencePath}; meaningless on its own
-   * <em>unless</em> it is {@link Integer#MIN_VALUE} in which case the
-   * supplied {@code valuePath} will be treated as wholly unsuitable
-   * for further consideration or processing
-   *
-   * @exception NullPointerException if either parameter is {@code
-   * null}
-   *
-   * @exception IllegalArgumentException if certain preconditions have
-   * been violated
-   *
-   * @see #of(Path)
-   *
-   * @see #isSelectable(Path, Path)
-   *
-   * @threadsafety This method is and its overrides must be safe for
-   * concurrent use by multiple threads.
-   *
-   * @idempotency This method is idempotent and deterministic.
-   * Specifically, the same score is returned whenever this method is
-   * invoked with the same paths.  Overrides must preserve this
-   * property.
-   */
-  protected int score(final Path<?> absoluteReferencePath, final Path<?> valuePath) {
-    if (!absoluteReferencePath.isAbsolute()) {
-      throw new IllegalArgumentException("absoluteReferencePath: " + absoluteReferencePath);
-    }
-
-    final int lastValuePathIndex = absoluteReferencePath.lastIndexOf(valuePath, ElementsMatchBiPredicate.INSTANCE);
-    assert lastValuePathIndex >= 0 : "absoluteReferencePath: " + absoluteReferencePath + "; valuePath: " + valuePath;
-    assert lastValuePathIndex + valuePath.size() == absoluteReferencePath.size() : "absoluteReferencePath: " + absoluteReferencePath + "; valuePath: " + valuePath;
-
-    int score = valuePath.size();
-    for (int valuePathIndex = 0; valuePathIndex < valuePath.size(); valuePathIndex++) {
-      final int referencePathIndex = lastValuePathIndex + valuePathIndex;
-
-      final Element<?> referenceElement = absoluteReferencePath.get(referencePathIndex);
-      final Element<?> valueElement = valuePath.get(valuePathIndex);
-      if (!referenceElement.name().equals(valueElement.name())) {
-        return Integer.MIN_VALUE;
-      }
-
-      final Type referenceType = referenceElement.type().orElse(null);
-      final Type valueType = valueElement.type().orElse(null);
-      if (referenceType == null) {
-        if (valueType != null) {
-          return Integer.MIN_VALUE;
-        }
-      } else if (valueType == null) {
-        return Integer.MIN_VALUE;
-      } else if (referenceType.equals(valueType)) {
-        ++score;
-      } else if (!AssignableType.of(referenceType).isAssignable(valueType)) {
-        return Integer.MIN_VALUE;
-      }
-
-      final List<Class<?>> referenceParameters = referenceElement.parameters().orElse(null);
-      final List<Class<?>> valueParameters = valueElement.parameters().orElse(null);
-      if (referenceParameters == null) {
-        if (valueParameters != null) {
-          return Integer.MIN_VALUE;
-        }
-      } else if (valueParameters == null || referenceParameters.size() != valueParameters.size()) {
-        return Integer.MIN_VALUE;
-      }
-
-      final List<String> referenceArguments = referenceElement.arguments().orElse(null);
-      final List<String> valueArguments = valueElement.arguments().orElse(null);
-      if (referenceArguments == null) {
-        if (valueArguments != null) {
-          return Integer.MIN_VALUE;
-        }
-      } else if (valueArguments == null) {
-        // The value is indifferent with respect to arguments. It
-        // *could* be suitable but not *as* suitable as one that
-        // matched.  Don't adjust the score.
-      } else {
-        final int referenceArgsSize = referenceArguments.size();
-        final int valueArgsSize = valueArguments.size();
-        if (referenceArgsSize < valueArgsSize) {
-          // The value path is unsuitable because it provided too
-          // many arguments.
-          return Integer.MIN_VALUE;
-        } else if (referenceArguments.equals(valueArguments)) {
-          score += referenceArgsSize;
-        } else if (referenceArgsSize == valueArgsSize) {
-          // Same sizes, but different arguments.  The value is not suitable.
-          return Integer.MIN_VALUE;
-        } else if (valueArgsSize == 0) {
-          // The value is indifferent with respect to arguments. It
-          // *could* be suitable but not *as* suitable as one that
-          // matched.  Don't adjust the score.
-        } else {
-          // The reference element had, say, two arguments, and the
-          // value had, say, one.  We treat this as a mismatch.
-          return Integer.MIN_VALUE;
-        }
-      }
-    }
-    return score;
-  }
-
   @SuppressWarnings("unchecked")
   private final <X> X returnThis() {
     return (X)this;
@@ -585,6 +478,14 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
    * Static methods.
    */
 
+  
+  private static final boolean isSelectable(final Provider provider, final Path<?> absolutePath) {
+    if (!absolutePath.isAbsolute()) {
+      throw new IllegalArgumentException("absolutePath: " + absolutePath);
+    }
+    return
+      AssignableType.of(provider.upperBound()).isAssignable(absolutePath.type());
+  }
 
   static final Collection<Provider> loadedProviders() {
     return Loaded.providers;
@@ -601,8 +502,7 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
     return isSelectable(referenceQualifiers, valueQualifiers) && isSelectable(absoluteReferencePath, valuePath);
   }
 
-  protected static final boolean isSelectable(final Qualifiers referenceQualifiers,
-                                              final Qualifiers valueQualifiers) {
+  private static final boolean isSelectable(final Qualifiers referenceQualifiers, final Qualifiers valueQualifiers) {
     return referenceQualifiers.isEmpty() || valueQualifiers.isEmpty() || referenceQualifiers.intersectionSize(valueQualifiers) > 0;
   }
 
@@ -656,8 +556,7 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
    * absoluteReferencePath} {@linkplain Path#isAbsolute() is not
    * absolute}
    */
-  protected static final boolean isSelectable(final Path<?> absoluteReferencePath,
-                                              final Path<?> valuePath) {
+  private static final boolean isSelectable(final Path<?> absoluteReferencePath, final Path<?> valuePath) {
     if (!absoluteReferencePath.isAbsolute()) {
       throw new IllegalArgumentException("absoluteReferencePath: " + absoluteReferencePath);
     }

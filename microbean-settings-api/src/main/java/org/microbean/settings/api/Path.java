@@ -33,10 +33,23 @@ import java.util.function.BiPredicate;
 import java.util.stream.Stream;
 
 import org.microbean.development.annotation.Convenience;
+import org.microbean.development.annotation.EntryPoint;
 import org.microbean.development.annotation.Experimental;
 
 import org.microbean.type.Types;
 
+/**
+ * A chain of {@link Path.Element}s representing part of a request for
+ * a {@link Configured} to supply a configured object.
+ *
+ * @param <T> the type of the last {@link Path.Element} in this {@link
+ * Path}
+ *
+ * @author <a href="https://about.me/lairdnelson"
+ * target="_parent">Laird Nelson</a>
+ *
+ * @see #of(Path.Element)
+ */
 public final class Path<T> {
 
 
@@ -64,10 +77,11 @@ public final class Path<T> {
    * Constructors.
    */
 
+
   private Path(final Element<T> element) {
     this(List.of(element), false);
   }
-  
+
   private Path(final List<? extends Element<?>> elements, final boolean transliterated) {
     super();
     final int size = elements.size();
@@ -117,23 +131,107 @@ public final class Path<T> {
     }
   }
 
+  /**
+   * Returns {@code true} if this {@link Path} {@linkplain
+   * #isAbsolute() is absolute} and {@linkplain #size() has a size} of
+   * {@code 1}.
+   *
+   * @return {@code true} if this {@link Path} {@linkplain
+   * #isAbsolute() is absolute} and {@linkplain #size() has a size} of
+   * {@code 1}; {@code false} otherwise
+   *
+   * @threadsafety This method is safe for concurrent use by multiple
+   * threads.
+   *
+   * @idempotency This method is idempotent and deterministic.
+   */
   public final boolean isRoot() {
     return this.isAbsolute() && this.size() == 1;
   }
 
+  /**
+   * Returns {@code true} if this {@link Path}'s {@linkplain #first()
+   * first element} returns {@code true} from its {@link
+   * Path.Element#isRoot() isRoot()} method, indicating that this
+   * {@link Path} is rooted and therefore absolute.
+   *
+   * @return {@code true} if this {@link Path}'s {@linkplain #first()
+   * first element} returns {@code true} from its {@link
+   * Path.Element#isRoot() isRoot()} method; {@code false} otherwise
+   *
+   * @threadsafety This method is safe for concurrent use by multiple
+   * threads.
+   *
+   * @idempotency This method is idempotent and deterministic.
+   */
   public final boolean isAbsolute() {
     return this.first().isRoot();
   }
 
+  /**
+   * Returns {@code true} if this {@link Path} {@linkplain
+   * #isAbsolute() is not absolute}.
+   *
+   * @return {@code true} if this {@link Path} {@linkplain
+   * #isAbsolute() is not absolute}; {@code false} otherwise
+   *
+   * @threadsafety This method is safe for concurrent use by multiple
+   * threads.
+   *
+   * @idempotency This method is idempotent and deterministic.
+   *
+   * @see #isAbsolute()
+   */
   @Convenience
   public final boolean isRelative() {
     return !this.isAbsolute();
   }
 
+  /**
+   * Returns the size of this {@link Path} (the count of its
+   * {@linkplain Path.Element elements}).
+   *
+   * <p>This method always returns an {@code int} that is {@code 1} or
+   * greater.</p>
+   *
+   * @return the size of this {@link Path}; always {@code 1} or
+   * greater
+   *
+   * @threadsafety This method is safe for concurrent use by multiple
+   * threads.
+   *
+   * @idempotency This method is idempotent and deterministic.
+   */
   public final int size() {
     return this.elements.size();
   }
 
+  /**
+   * Returns a {@link Path} whose {@linkplain #last() last element}
+   * {@linkplain Path.Element#type() has a <code>Type</code>} equal to
+   * the supplied {@code type} but is in all other ways equal to this
+   * {@link Path}.
+   *
+   * <p>If the supplied {@code type} is already that of the existing
+   * {@linkplain #last() last element} of this {@link Path}, then this
+   * {@link Path} is returned unchanged.</p>
+   *
+   * @param type the new {@link Class}; must not be {@code null}
+   *
+   * @return a {@link Path} whose {@linkplain #last() last element}
+   * {@linkplain Path.Element#type() has a <code>Type</code>} equal to
+   * the supplied {@code type} but is in all other ways equal to this
+   * {@link Path}; never {@code null}
+   *
+   * @exception NullPointerException if {@code type} is {@code null}
+   *
+   * @nullability This method never returns {@code null}.
+   *
+   * @threadsafety This method is safe for concurrent use by multiple
+   * threads.
+   *
+   * @idempotency This method is idempotent and deterministic.
+   */
   public final <U> Path<U> with(final Class<U> type) {
     if (type == this.type()) {
       @SuppressWarnings("unchecked")
@@ -147,6 +245,32 @@ public final class Path<T> {
     }
   }
 
+  /**
+   * Returns a {@link Path} whose {@linkplain #last() last element}
+   * {@linkplain Path.Element#type() has a <code>Type</code>} equal to
+   * the supplied {@code type} but is in all other ways equal to this
+   * {@link Path}.
+   *
+   * <p>If the supplied {@code type} is already that of the existing
+   * {@linkplain #last() last element} of this {@link Path}, then this
+   * {@link Path} is returned unchanged.</p>
+   *
+   * @param type the new {@link TypeToken}; must not be {@code null}
+   *
+   * @return a {@link Path} whose {@linkplain #last() last element}
+   * {@linkplain Path.Element#type() has a <code>Type</code>} equal to
+   * the supplied {@code type} but is in all other ways equal to this
+   * {@link Path}; never {@code null}
+   *
+   * @exception NullPointerException if {@code type} is {@code null}
+   *
+   * @nullability This method never returns {@code null}.
+   *
+   * @threadsafety This method is safe for concurrent use by multiple
+   * threads.
+   *
+   * @idempotency This method is idempotent and deterministic.
+   */
   public final <U> Path<U> with(final TypeToken<U> type) {
     if (type.type() == this.type()) {
       @SuppressWarnings("unchecked")
@@ -160,6 +284,32 @@ public final class Path<T> {
     }
   }
 
+  /**
+   * Returns a {@link Path} whose {@linkplain #last() last element}
+   * {@linkplain Path.Element#type() has a <code>Type</code>} equal to
+   * the supplied {@code type} but is in all other ways equal to this
+   * {@link Path}.
+   *
+   * <p>If the supplied {@code type} is already that of the existing
+   * {@linkplain #last() last element} of this {@link Path}, then this
+   * {@link Path} is returned unchanged.</p>
+   *
+   * @param type the new {@link Type}; must not be {@code null}
+   *
+   * @return a {@link Path} whose {@linkplain #last() last element}
+   * {@linkplain Path.Element#type() has a <code>Type</code>} equal to
+   * the supplied {@code type} but is in all other ways equal to this
+   * {@link Path}; never {@code null}
+   *
+   * @exception NullPointerException if {@code type} is {@code null}
+   *
+   * @nullability This method never returns {@code null}.
+   *
+   * @threadsafety This method is safe for concurrent use by multiple
+   * threads.
+   *
+   * @idempotency This method is idempotent and deterministic.
+   */
   public final Path<?> with(final Type type) {
     if (type == this.type()) {
       return this;
@@ -171,23 +321,161 @@ public final class Path<T> {
     }
   }
 
+  /**
+   * Returns a new {@link Path} consisting of all the {@linkplain
+   * Path.Element elements} of this {@link Path} in order plus an
+   * {@linkplain Path.Element element} {@linkplain
+   * Path.Element#of(String, Type) formed} from the supplied
+   * arguments.
+   *
+   * @param name the {@linkplain Path.Element#name() name} for the new
+   * trailing {@link Path.Element}; must not be {@code null}
+   *
+   * @param type the {@linkplain Path.Element#type() type} for the new
+   * trailing {@link Path.Element}; must not be {@code null}
+   *
+   * @return the new {@link Path}; never {@code null}
+   *
+   * @exception NullPointerException if any argument is {@code null}
+   *
+   * @nullability This method never returns {@code null}.
+   *
+   * @threadsafety This method is safe for concurrent use by multiple
+   * threads.
+   *
+   * @idempotency This method is idempotent and deterministic.
+   *
+   * @see #plus(Path.Element)
+   */
+  @Convenience
+  public final <U> Path<U> plus(final String name, final Class<U> type) {
+    return this.plus(Element.of(name, type));
+  }
+
+  /**
+   * Returns a new {@link Path} consisting of all the {@linkplain
+   * Path.Element elements} of this {@link Path} in order plus an
+   * {@linkplain Path.Element element} {@linkplain
+   * Path.Element#of(String, Type) formed} from the supplied
+   * arguments.
+   *
+   * @param name the {@linkplain Path.Element#name() name} for the new
+   * trailing {@link Path.Element}; must not be {@code null}
+   *
+   * @param type the {@linkplain Path.Element#type() type} for the new
+   * trailing {@link Path.Element}; must not be {@code null}
+   *
+   * @return the new {@link Path}; never {@code null}
+   *
+   * @exception NullPointerException if any argument is {@code null}
+   *
+   * @nullability This method never returns {@code null}.
+   *
+   * @threadsafety This method is safe for concurrent use by multiple
+   * threads.
+   *
+   * @idempotency This method is idempotent and deterministic.
+   *
+   * @see #plus(Path.Element)
+   */
+  @Convenience
   public final <U> Path<U> plus(final String name, final TypeToken<U> type) {
     return this.plus(Element.of(name, type));
   }
 
+  /**
+   * Returns a new {@link Path} consisting of all the {@linkplain
+   * Path.Element elements} of this {@link Path} in order plus an
+   * {@linkplain Path.Element element} {@linkplain
+   * Path.Element#of(String, Type) formed} from the supplied
+   * arguments.
+   *
+   * @param name the {@linkplain Path.Element#name() name} for the new
+   * trailing {@link Path.Element}; must not be {@code null}
+   *
+   * @param type the {@linkplain Path.Element#type() type} for the new
+   * trailing {@link Path.Element}; must not be {@code null}
+   *
+   * @return the new {@link Path}; never {@code null}
+   *
+   * @exception NullPointerException if any argument is {@code null}
+   *
+   * @nullability This method never returns {@code null}.
+   *
+   * @threadsafety This method is safe for concurrent use by multiple
+   * threads.
+   *
+   * @idempotency This method is idempotent and deterministic.
+   *
+   * @see #plus(Path.Element)
+   */
+  @Convenience
+  public final Path<?> plus(final String name, final Type type) {
+    return this.plus(Element.of(name, type));
+  }
+
+  /**
+   * Returns a new {@link Path} consisting of all the {@linkplain
+   * Path.Element elements} of this {@link Path} in order plus the
+   * supplied {@link Path.Element}.
+   *
+   * @param element the last {@link Path.Element} of the new {@link
+   * Path}; must not be {@code null}
+   *
+   * @return the new {@link Path}; never {@code null}
+   *
+   * @exception NullPointerException if {@code element} is {@code
+   * null}
+   *
+   * @exception IllegalArgumentException if {@code element}'s
+   * {@linkplain Path.Element#type() type is empty}, or if its {@link
+   * Path.Element#isRoot() isRoot()} method returns {@code true}
+   *
+   * @nullability This method never returns {@code null}.
+   *
+   * @threadsafety This method is safe for concurrent use by multiple
+   * threads.
+   *
+   * @idempotency This method is idempotent and deterministic.
+   */
+  @SuppressWarnings("unchecked")
   public final <U> Path<U> plus(final Element<U> element) {
-    return this.plus(List.of(element));
+    return (Path<U>)this.plus(List.of(element));
   }
 
+  /**
+   * Returns a new {@link Path} consisting of all the {@linkplain
+   * Path.Element elements} of this {@link Path} in order plus the
+   * {@linkplain Path.Element elements} of the supplied {@code path}
+   * in order.
+   *
+   * @param path the {@link Path} to append to this one; must not be
+   * {@code null} and must return {@code false} from its {@link
+   * #isAbsolute()} method
+   *
+   * @return the new {@link Path}; never {@code null}
+   *
+   * @exception NullPointerException if {@code element} is {@code
+   * null}
+   *
+   * @exception IllegalArgumentException if {@code path}'s {@link
+   * #isAbsolute()} method returns {@code true}
+   *
+   * @nullability This method never returns {@code null}.
+   *
+   * @threadsafety This method is safe for concurrent use by multiple
+   * threads.
+   *
+   * @idempotency This method is idempotent and deterministic.
+   */
+  @SuppressWarnings("unchecked")
   public final <U> Path<U> plus(final Path<U> path) {
-    return this.plus(path.elements);
+    return (Path<U>)this.plus(path.elements);
   }
 
-  public final <U> Path<U> plus(final List<? extends Element<?>> elements) {
+  public final Path<?> plus(final List<? extends Element<?>> elements) {
     if (elements.isEmpty()) {
-      @SuppressWarnings("unchecked")
-      final Path<U> returnValue = (Path<U>)this;
-      return returnValue;
+      return this;
     } else {
       final List<Element<?>> newElements = new ArrayList<>(this.size() + elements.size());
       newElements.addAll(this.elements);
@@ -200,19 +488,59 @@ public final class Path<T> {
     return this.elements.get(index);
   }
 
+  /**
+   * Returns the first {@link Path.Element} in this {@link Path}.
+   *
+   * @return the first {@link Path.Element} in this {@link Path};
+   * never {@code null}
+   *
+   * @nullability This method never returns {@code null}.
+   *
+   * @threadsafety This method is safe for concurrent use by multiple
+   * threads.
+   *
+   * @idempotency This method is idempotent and deterministic.
+   */
   public final Element<?> first() {
     return this.get(0);
   }
 
+  /**
+   * Returns the last {@link Path.Element} in this {@link Path}.
+   *
+   * @return the last {@link Path.Element} in this {@link Path};
+   * never {@code null}
+   *
+   * @nullability This method never returns {@code null}.
+   *
+   * @threadsafety This method is safe for concurrent use by multiple
+   * threads.
+   *
+   * @idempotency This method is idempotent and deterministic.
+   */
   @SuppressWarnings("unchecked")
   public final Element<T> last() {
     return (Element<T>)this.get(this.size() - 1);
   }
 
+  /**
+   * Returns the {@link Type} of this {@link Path}, which is exactly
+   * the {@link Path.Element#type() Type} of this {@link Path}'s
+   * {@linkplain #last() last element}.
+   *
+   * @return the {@link Type} of this {@link Path}, which is exactly
+   * the {@link Path.Element#type() Type} of this {@link Path}'s
+   * {@linkplain #last() last element}; never {@code null}
+   *
+   * @nullability This method never returns {@code null}.
+   *
+   * @threadsafety This method is safe for concurrent use by multiple
+   * threads.
+   *
+   * @idempotency This method is idempotent and deterministic.
+   */
   public final Type type() {
-    final Type type = this.last().type().orElse(null);
-    assert type != null : "Untyped final Element: " + this.last();
-    return type;
+    return this.last().type().orElseThrow(AssertionError::new);
   }
 
   @SuppressWarnings("unchecked")
@@ -328,7 +656,7 @@ public final class Path<T> {
   }
 
   public static final <U> Path<U> of(final Class<U> type) {
-    
+
     return of(Element.of("", type, (List<? extends Class<?>>)null, (List<? extends String>)null));
   }
 
@@ -340,6 +668,7 @@ public final class Path<T> {
     return of(Element.of("", type, (List<? extends Class<?>>)null, (List<? extends String>)null));
   }
 
+  @EntryPoint
   @SuppressWarnings("unchecked")
   public static final <U> Path<U> of(final Element<U> element) {
     return element.isRoot() ? (Path<U>)root() : new Path<>(element);

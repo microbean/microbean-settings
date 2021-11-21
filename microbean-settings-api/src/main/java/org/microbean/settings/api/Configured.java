@@ -306,26 +306,26 @@ public interface Configured<T> extends OptionalSupplier<T> {
 
   @Convenience
   @OverridingDiscouraged
+  public default Configured<?> of(final Type type) {
+    return this.of(Element.of(type));
+  }
+  
+  @Convenience
+  @OverridingDiscouraged
   public default <U> Configured<U> of(final String element, final Class<U> type) {
-    final Element<U> e;
-    if (element.isEmpty()) {
-      e = Element.of(type);
-    } else {
-      e = Element.of(element, type);
-    }
-    return this.of(e);
+    return this.of(Element.of(element, type));
   }
 
   @Convenience
   @OverridingDiscouraged
   public default <U> Configured<U> of(final String element, final TypeToken<U> type) {
-    final Element<U> e;
-    if (element.isEmpty()) {
-      e = Element.of(type);
-    } else {
-      e = Element.of(element, type);
-    }
-    return this.of(e);
+    return this.of(Element.of(element, type));
+  }
+
+  @Convenience
+  @OverridingDiscouraged
+  public default Configured<?> of(final String element, final Type type) {
+    return this.of(Element.of(element, type));
   }
   
   @Convenience
