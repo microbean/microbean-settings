@@ -48,7 +48,7 @@ public interface AmbiguityHandler {
    * <p>The default implementation of this method does nothing.</p>
    *
    * @param rejector the {@link Configured} that rejected the {@link
-   * Provider}; must not be @{code null}
+   * Provider}; must not be {@code null}
    *
    * @param absolutePath the {@linkplain Path#isAbsolute() absolute
    * <code>Path</code>} for which a configured object is being sought;
@@ -72,7 +72,7 @@ public interface AmbiguityHandler {
    * <p>The default implementation of this method does nothing.</p>
    *
    * @param rejector the {@link Configured} that rejected the {@link
-   * Provider}; must not be @{code null}
+   * Provider}; must not be {@code null}
    *
    * @param absolutePath the {@linkplain Path#isAbsolute() absolute
    * <code>Path</code>} for which a configured object is being sought;
@@ -89,6 +89,42 @@ public interface AmbiguityHandler {
 
   }
 
+  /**
+   * Returns a score indicating the relative specificity of {@code
+   * valueQualifiers} with respect to {@code referencdQualifiers}, or
+   * {@link Integer#MIN_VALUE} if {@code valueQualifiers} is wholly
+   * unsuitable for further consideration or processing.
+   *
+   * <p>This is <em>not</em> a comparison method.</p>
+   *
+   * @param referenceQualifiers the {@link Qualifiers} against which
+   * to score the supplied {@code valueQualifiers}; must not be {@code
+   * null}
+   *
+   * @param valueQualifiers the {@link Qualifiers} to score against
+   * the supplied {@code referenceQualifiers}; must not be {@code
+   * null}
+   *
+   * @return a relative score for {@code valueQualifiers} with respect
+   * to {@code referenceQualifiers}; meaningless on its own
+   * <em>unless</em> it is {@link Integer#MIN_VALUE} in which case the
+   * supplied {@code valueQualifiers} will be treated as wholly
+   * unsuitable for further consideration or processing
+   *
+   @exception NullPointerException if either parameter is {@code
+   * null}
+   *
+   * @see Configured#of(Path)
+   *
+   * @threadsafety The default implementation of this method is, and
+   * its overrides must be, safe for concurrent use by multiple
+   * threads.
+   *
+   * @idempotency The default implementation of this method is, and
+   * its overrides must be, idempotent and deterministic.
+   * Specifically, the same score is and must be returned whenever
+   * this method is invoked with the same arguments.
+   */
   public default int score(final Qualifiers referenceQualifiers, final Qualifiers valueQualifiers) {
     final int intersectionSize = referenceQualifiers.intersectionSize(valueQualifiers);
     if (intersectionSize > 0) {
@@ -134,7 +170,7 @@ public interface AmbiguityHandler {
    * <blockquote><pre>absoluteReferencePath.endsWith(valuePath, {@link
    * ElementsMatchBiPredicate#INSTANCE
    * ElementsMatchBiPredicate.INSTANCE});</pre></blockquote>
-   * 
+   *
    * <p>Note that such an invocation is <em>not</em> made by the
    * default implementation of this method, but logically precedes it
    * when this method is called in the natural course of events by the
@@ -310,14 +346,57 @@ public interface AmbiguityHandler {
     return null;
   }
 
+
+  /*
+   * Inner and nested classes.
+   */
+
+
+  /**
+   * A {@link BiPredicate} that compares two {@link Path.Element}s to
+   * see if they match.
+   *
+   * @author <a href="https://about.me/lairdnelson"
+   * target="_parent">Laird Nelson</a>
+   *
+   * @see AmbiguityHandler#score(Path, Path)
+   */
   @Experimental
   public static final class ElementsMatchBiPredicate implements BiPredicate<Element<?>, Element<?>> {
 
+
+    /*
+     * Static fields.
+     */
+
+
+    /**
+     * The sole instance of this class.
+     *
+     * <p>This field is never {@code null}.</p>
+     *
+     * @nullability This field is never {@code null}.
+     *
+     * @threadsafety Accessing this field does not require any
+     * synchronization.
+     */
     public static final ElementsMatchBiPredicate INSTANCE = new ElementsMatchBiPredicate();
+
+
+    /*
+     * Constructors.
+     */
+
 
     private ElementsMatchBiPredicate() {
       super();
     }
+
+
+    /*
+     * Instance methods.
+     */
+
 
     @Override // BiPredicate<Element<?>, Element<?>>
     public final boolean test(final Element<?> e1, final Element<?> e2) {
