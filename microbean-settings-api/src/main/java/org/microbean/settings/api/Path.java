@@ -22,6 +22,7 @@ import java.lang.reflect.Type;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -35,6 +36,8 @@ import java.util.stream.Stream;
 import org.microbean.development.annotation.Convenience;
 import org.microbean.development.annotation.EntryPoint;
 import org.microbean.development.annotation.Experimental;
+
+import org.microbean.settings.api.Path.Element;
 
 import org.microbean.type.Types;
 
@@ -50,7 +53,7 @@ import org.microbean.type.Types;
  *
  * @see #of(Path.Element)
  */
-public final class Path<T> {
+public final class Path<T> implements Iterable<Element<?>> {
 
 
   /*
@@ -109,6 +112,25 @@ public final class Path<T> {
    * Instance methods.
    */
 
+
+  /**
+   * Returns an {@link Iterator} over the {@link Path.Element}s in
+   * this {@link Path}.
+   *
+   * @return an {@link Iterator} over the {@link Path.Element}s in
+   * this {@link Path}; never {@code null}
+   *
+   * @nullability This method never returns {@code null}.
+   *
+   * @threadsafety This method is safe for concurrent use by multiple
+   * threads.
+   *
+   * @idempotency This method is idempotent and deterministic.
+   */
+  @Override // Iterable<Path.Element>
+  public final Iterator<Element<?>> iterator() {
+    return this.elements.iterator();
+  }
 
   public final boolean isTransliterated() {
     return this.transliterated;
@@ -437,6 +459,8 @@ public final class Path<T> {
    * threads.
    *
    * @idempotency This method is idempotent and deterministic.
+   *
+   * @see #plus(List)
    */
   @SuppressWarnings("unchecked")
   public final <U> Path<U> plus(final Element<U> element) {
@@ -467,12 +491,34 @@ public final class Path<T> {
    * threads.
    *
    * @idempotency This method is idempotent and deterministic.
+   *
+   * @see #plus(List)
    */
   @SuppressWarnings("unchecked")
   public final <U> Path<U> plus(final Path<U> path) {
     return (Path<U>)this.plus(path.elements);
   }
 
+  /**
+   * Returns a (normally) new {@link Path} consisting of all the
+   * {@linkplain Path.Element elements} of this {@link Path} in order
+   * plus the supplied {@linkplain Path.Element elements} in order.
+   *
+   * @param elements the {@linkplain Path.Element elements} to append;
+   * must not be {@code null}; may be {@linkplain List#isEmpty()
+   * empty} in which case this {@link Path} will be returned
+   *
+   * @return a {@link Path} representing this {@link Path} plus all of
+   * the supplied {@linkplain Path.Element elements} in order; never
+   * {@code null}
+   *
+   * @nullability This method never returns {@code null}.
+   *
+   * @threadsafety This method is safe for concurrent use by multiple
+   * threads.
+   *
+   * @idempotency This method is idempotent and deterministic.
+   */
   public final Path<?> plus(final List<? extends Element<?>> elements) {
     if (elements.isEmpty()) {
       return this;
@@ -484,6 +530,26 @@ public final class Path<T> {
     }
   }
 
+  /**
+   * Returns the {@link Path.Element} found at the supplied zero-based
+   * index, or {@code null} if no such {@linkplain Path.Element
+   * element} exists.
+   *
+   * @param index the index of the {@link Path.Element} to return;
+   * must be {@code 0} or greater and less than this {@link Path}'s
+   * {@linkplain #size() size}
+   *
+   * @return the {@link Path.Element} found at the supplied zero-based
+   * index, or {@code null} if no such {@linkplain Path.Element}
+   * exists
+   *
+   * @nullability This method may return {@code null}.
+   *
+   * @threadsafety This method is safe for concurrent use by multiple
+   * threads.
+   *
+   * @idempotency This method is idempotent and deterministic.
+   */
   public final Element<?> get(final int index) {
     return this.elements.get(index);
   }
@@ -711,6 +777,16 @@ public final class Path<T> {
    */
 
 
+  /**
+   * A node in a {@link Path}.
+   *
+   * @author <a href="https://about.me/lairdnelson"
+   * target="_parent">Laird Nelson</a>
+   *
+   * @see name()
+   *
+   * @see type()
+   */
   public static final class Element<T> {
 
 
@@ -788,7 +864,7 @@ public final class Path<T> {
      *
      * <p><strong>Note:</strong> if the resulting {@link String}
      * {@linkplain String#isEmpty() is empty}, then during any matching
-     * operations the name may be considered to match all possible
+     * operations the name will be considered to match all possible
      * names.</p>
      *
      * <p>This method never returns {@code null}.</p>
@@ -858,6 +934,43 @@ public final class Path<T> {
       return this.parameters;
     }
 
+    /**
+     * Returns a non-{@code null} but possibly {@linkplain
+     * Optional#isEmpty() empty} {@link Optional} containing a {@link
+     * List} of {@link String} representations of argument values
+     * supplied for their corresponding {@linkplain #parameters()
+     * parameters}.
+     *
+     * <p>The {@link List}, if any, contained by the returned {@link
+     * Optional} is <a
+     * href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html#unmodifiable">unmodifiable</a>.</p>
+     *
+     * <p>The {@link List}, if any, contained by the returned {@link
+     * Optional} will have a {@linkplain List#size() size} less than
+     * or equal to that of the {@link List} contained by the {@link
+     * Optional} returned by the {@link #parameters()} method.</p>
+     *
+     * <p><strong>Design note:</strong> Arguments are {@link
+     * String}-typed rather than typed with their corresponding
+     * parameter types because {@link Path.Element} instances must be
+     * wholly immutable.  In practice, since arguments and parameters
+     * in a {@link Path.Element} are used for informational purposes
+     * during configured object selection, typing all arguments as
+     * {@link String}s is adequate.</p>
+     *
+     * @return a non-{@code null} but possibly {@linkplain
+     * Optional#isEmpty() empty} {@link Optional} containing a {@link
+     * List} of {@link String} representations of argument values
+     * supplied for their corresponding {@linkplain #parameters()
+     * parameters}
+     *
+     * @nullability This method never returns {@code null}.
+     *
+     * @threadsafety This method is safe for concurrent use by
+     * multiple threads.
+     *
+     * @idempotency This method is idempotent and deterministic.
+     */
     public final Optional<List<String>> arguments() {
       return this.arguments;
     }

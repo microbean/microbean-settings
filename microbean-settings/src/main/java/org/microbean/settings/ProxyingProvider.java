@@ -106,7 +106,7 @@ public class ProxyingProvider extends AbstractProvider<Object> {
       @SuppressWarnings("unchecked")
       final Value<T> returnValue =
         new Value<>(null, // no defaults
-                    this.qualifiers(requestor, absolutePath),
+                    Qualifiers.of(),
                     this.path(requestor, absolutePath),
                     (Supplier<T>)() -> (T)this.proxies.computeIfAbsent(absolutePath,
                                                                        p -> {
@@ -219,6 +219,10 @@ public class ProxyingProvider extends AbstractProvider<Object> {
     return false;
   }
 
+  protected <T> Path<T> path(final Configured<?> requestor, final Path<T> absolutePath) {
+    return Path.of(absolutePath.typeErasure());
+  }
+  
   /**
    * Returns {@code true} if the supplied {@link Class} representing a
    * method parameter is <em>index-like</em>, i.e. if it is something
@@ -249,14 +253,6 @@ public class ProxyingProvider extends AbstractProvider<Object> {
       parameterType == int.class ||
       parameterType == Integer.class ||
       CharSequence.class.isAssignableFrom(parameterType);
-  }
-
-  protected Qualifiers qualifiers(final Configured<?> requestor, final Path<?> absolutePath) {
-    return Qualifiers.of();
-  }
-
-  protected <T> Path<T> path(final Configured<?> requestor, final Path<T> absolutePath) {
-    return Path.of(absolutePath.typeErasure());
   }
 
   protected Object newProxyInstance(final Configured<?> requestor, final Path<?> absolutePath, final Class<?> interfaceToProxy) {

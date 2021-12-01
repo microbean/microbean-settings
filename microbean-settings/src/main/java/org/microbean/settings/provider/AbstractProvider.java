@@ -19,7 +19,10 @@ package org.microbean.settings.provider;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 
-import org.microbean.settings.provider.Provider;
+import org.microbean.settings.api.Configured;
+import org.microbean.settings.api.Path;
+import org.microbean.settings.api.Qualifiers;
+import org.microbean.settings.api.TypeToken.ActualTypeArgumentExtractor;
 
 /**
  * A skeletal {@link Provider} implementation.
@@ -42,17 +45,8 @@ public abstract class AbstractProvider<T> implements Provider {
    */
 
 
-  private static final ClassValue<Type> type = new ClassValue<>() {
-      @Override
-      protected final Type computeValue(final Class<?> c) {
-        if (c != AbstractProvider.class && AbstractProvider.class.isAssignableFrom(c)) {
-          return ((ParameterizedType)c.getGenericSuperclass()).getActualTypeArguments()[0];
-        } else {
-          return null;
-        }
-      }
-    };
-
+  private static final ActualTypeArgumentExtractor actualTypeArgumentExtractor = new ActualTypeArgumentExtractor(AbstractProvider.class, 0);
+  
 
   /*
    * Constructors.
@@ -71,8 +65,8 @@ public abstract class AbstractProvider<T> implements Provider {
    * possible {@linkplain Value values} {@linkplain #get(Configured,
    * Path) supplied} by this {@link AbstractProvider}.
    *
-   * <p>The value returned is harvested from the sole type parameter
-   * of {@link AbstractProvider}.</p>
+   * <p>The value returned is harvested from the sole type argument
+   * supplied to {@link AbstractProvider} by a concrete subclass.</p>
    *
    * @return the value of the sole type parameter of the {@link
    * AbstractProvider} class; never {@code null}
@@ -83,10 +77,12 @@ public abstract class AbstractProvider<T> implements Provider {
    *
    * @threadsafety This method is safe for concurrent use by multiple
    * threads.
+   *
+   * @see ActualTypeArgumentExtractor
    */
   @Override // Provider
   public final Type upperBound() {
-    return type.get(this.getClass());
+    return actualTypeArgumentExtractor.get(this.getClass());
   }
 
 }

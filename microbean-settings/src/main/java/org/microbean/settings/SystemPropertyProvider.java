@@ -163,7 +163,7 @@ public final class SystemPropertyProvider extends AbstractProvider<Object> {
         return
           new Value<>(null, // no defaults
                       Qualifiers.of(),
-                      Path.of(last),
+                      Path.of(absolutePath.last()),
                       s,
                       false, // nulls are not legal values
                       false); // not deterministic
