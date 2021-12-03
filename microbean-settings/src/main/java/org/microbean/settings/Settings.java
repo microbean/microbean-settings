@@ -91,7 +91,7 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
   /**
    * Creates a new {@link Settings}.
    *
-   * @see Configured#of()
+   * @see Configured#configured()
    *
    * @deprecated This constructor should be invoked by subclasses and
    * {@link ServiceLoader java.util.ServiceLoader} instances only.

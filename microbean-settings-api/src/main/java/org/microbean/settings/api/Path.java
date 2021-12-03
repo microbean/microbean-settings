@@ -750,6 +750,35 @@ public final class Path<T> implements Iterable<Element<?>> {
     }
   }
 
+  @SuppressWarnings("unchecked")
+  public static final <U> Path<U> of(final List<? extends String> names, final TypeToken<U> type) {
+    final List<Element<?>> elements = new ArrayList<>(names.size() + 1);
+    for (final String name : names) {
+      elements.add(Element.of(name));
+    }
+    elements.add(Element.of(type));
+    return (Path<U>)Path.of(elements);
+  }
+
+  @SuppressWarnings("unchecked")
+  public static final <U> Path<U> of(final List<? extends String> names, final Class<U> type) {
+    final List<Element<?>> elements = new ArrayList<>(names.size() + 1);
+    for (final String name : names) {
+      elements.add(Element.of(name));
+    }
+    elements.add(Element.of(type));
+    return (Path<U>)Path.of(elements);
+  }
+
+  public static final Path<?> of(final List<? extends String> names, final Type type) {
+    final List<Element<?>> elements = new ArrayList<>(names.size() + 1);
+    for (final String name : names) {
+      elements.add(Element.of(name));
+    }
+    elements.add(Element.of(type));
+    return Path.of(elements);
+  }
+
   private static final String findUserPackageName(final Stream<StackFrame> stream) {
     final String className = stream.sequential()
       .dropWhile(f -> f.getClassName().startsWith(Path.class.getPackageName()))

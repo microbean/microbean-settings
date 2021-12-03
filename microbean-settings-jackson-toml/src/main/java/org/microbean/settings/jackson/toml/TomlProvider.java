@@ -16,6 +16,9 @@
  */
 package org.microbean.settings.jackson.toml;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import com.fasterxml.jackson.dataformat.toml.TomlMapper;
 
 import org.microbean.settings.jackson.InputStreamJacksonProvider;
@@ -23,11 +26,17 @@ import org.microbean.settings.jackson.InputStreamJacksonProvider;
 public class TomlProvider extends InputStreamJacksonProvider<Object> {
 
   public TomlProvider() {
-    super(TomlMapper::new, "application.toml");
+    super(mapper(), "application.toml");
   }
 
   public TomlProvider(final String resourceName) {
-    super(TomlMapper::new, resourceName);
+    super(mapper(), resourceName);
+  }
+
+  private static final ObjectMapper mapper() {
+    final TomlMapper mapper = new TomlMapper();
+    // mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    return mapper;
   }
 
 }

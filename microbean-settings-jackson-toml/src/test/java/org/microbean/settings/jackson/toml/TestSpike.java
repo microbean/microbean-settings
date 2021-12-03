@@ -16,9 +16,12 @@
  */
 package org.microbean.settings.jackson.toml;
 
+import java.util.List;
+
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import org.junit.jupiter.api.Test;
@@ -30,6 +33,8 @@ import org.microbean.settings.api.Qualifiers;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
+import static org.microbean.settings.api.Configured.configured;
+
 final class TestSpike {
 
   private TestSpike() {
@@ -38,9 +43,22 @@ final class TestSpike {
 
   @Test
   final void testSpike() {
-    final Frobnicator f = Configured.of().of(Frobnicator.class).orElse(null);
+
+    // This treats the whole application.toml as a Frobnicator,
+    // ignoring unknown properties.  I'm not sure this is a great use
+    // case but it's at least possible.
+    final Frobnicator f = configured().of(Frobnicator.class).orElse(null);
     assertNotNull(f);
     assertEquals(37, f.getFrobnicationInterval());
+
+    // This extracts an object out of application.toml named "gorp",
+    // also ignoring unknown properties.
+    final Blatz b = configured().of("gorp", Blatz.class).orElse(null);
+    assertNotNull(b);
+    assertEquals("foo", b.getBlatz());
+
+    // This goes after a single string.
+    final String blatz = configured().of(List.of("gorp", "blatz"), String.class).orElse(null);
   }
 
   @JsonAutoDetect(creatorVisibility = Visibility.NONE,
@@ -48,6 +66,29 @@ final class TestSpike {
                   getterVisibility = Visibility.NONE,
                   isGetterVisibility = Visibility.NONE,
                   setterVisibility = Visibility.NONE)
+  public static final class Blatz {
+
+    private final String blatz;
+
+    @JsonCreator
+    public Blatz(@JsonProperty(value = "blatz", required = true) final String blatz) {
+      super();
+      this.blatz = blatz;
+    }
+
+    @JsonProperty(value = "blatz")
+    public final String getBlatz() {
+      return this.blatz;
+    }
+    
+  }
+
+  @JsonAutoDetect(creatorVisibility = Visibility.NONE,
+                  fieldVisibility = Visibility.NONE,
+                  getterVisibility = Visibility.NONE,
+                  isGetterVisibility = Visibility.NONE,
+                  setterVisibility = Visibility.NONE)
+  @JsonIgnoreProperties(ignoreUnknown = true)
   public static final class Frobnicator {
 
     private final int frobnicationInterval;

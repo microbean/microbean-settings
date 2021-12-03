@@ -36,6 +36,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import static org.microbean.settings.api.Configured.configured;
+
 final class TestProxyingProvider {
 
   private TestProxyingProvider() {
@@ -44,8 +46,7 @@ final class TestProxyingProvider {
 
   @Test
   final void explore() {
-    // final Configured<Car> carCs = Configured.of().plus(Car.class);
-    final Configured<Car> carCs = Configured.of().of(Car.class);
+    final Configured<Car> carCs = configured().of(Car.class);
     final Car car = carCs.get();
     assertNotNull(car);
     assertSame(car, carCs.get());

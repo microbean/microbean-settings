@@ -36,6 +36,8 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.ObjectCodec;
 import com.fasterxml.jackson.core.TreeNode;
 
+import com.fasterxml.jackson.databind.DeserializationConfig;
+import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.microbean.development.annotation.Convenience;
@@ -57,14 +59,11 @@ public class InputStreamJacksonProvider<T> extends JacksonProvider<T> {
 
   private InputStreamJacksonProvider() {
     super();
-    this.objectCodecFunction = InputStreamJacksonProvider::returnNull;
-    this.inputStreamFunction = InputStreamJacksonProvider::returnNull;
-    this.inputStreamReadConsumer = InputStreamJacksonProvider::closeInputStream;
+    throw new UnsupportedOperationException();
   }
 
-  public InputStreamJacksonProvider(final Supplier<? extends ObjectMapper> mapperSupplier,
-                                    final String resourceName) {
-    this(objectCodecFunction(mapperSupplier),
+  public InputStreamJacksonProvider(final ObjectMapper objectMapper, final String resourceName) {
+    this(objectCodecFunction(objectMapper),
          (c, p) -> inputStream(p.classLoader(), resourceName),
          InputStreamJacksonProvider::closeInputStream);
   }
@@ -85,18 +84,17 @@ public class InputStreamJacksonProvider<T> extends JacksonProvider<T> {
 
   @Override // JacksonProvider<T>
   protected <T> TreeNode rootNode(final Configured<?> requestor, final Path<T> absolutePath, final ObjectCodec reader) {
-    TreeNode rootNode = null;
+    TreeNode returnValue = null;
     if (reader != null) {
       InputStream is = null;
       RuntimeException runtimeException = null;
       JsonParser parser = null;
       try {
-        // is = this.inputStream(requestor, absolutePath);
         is = this.inputStreamFunction.apply(requestor, absolutePath);
         if (is != null) {
           parser = reader.getFactory().createParser(is);
           parser.setCodec(reader);
-          rootNode = parser.readValueAsTree();
+          returnValue = parser.readValueAsTree();
         }
       } catch (final IOException ioException) {
         runtimeException = new UncheckedIOException(ioException.getMessage(), ioException);
@@ -138,7 +136,7 @@ public class InputStreamJacksonProvider<T> extends JacksonProvider<T> {
         }
       }
     }
-    return rootNode;
+    return returnValue;
   }
 
   @Convenience
@@ -173,14 +171,15 @@ public class InputStreamJacksonProvider<T> extends JacksonProvider<T> {
     }
   }
 
-  private static final BiFunction<? super Configured<?>, ? super Path<?>, ? extends ObjectCodec> objectCodecFunction(final Supplier<? extends ObjectMapper> s) {
-    final CachingSupplier<? extends ObjectMapper> cs;
-    if (s instanceof CachingSupplier) {
-      cs = (CachingSupplier<? extends ObjectMapper>)s;
+  private static final BiFunction<? super Configured<?>, ? super Path<?>, ? extends ObjectCodec> objectCodecFunction(final ObjectMapper mapper) {
+    if (mapper == null) {
+      return InputStreamJacksonProvider::returnNull;
     } else {
-      cs = new CachingSupplier<>(Objects.requireNonNull(s, "s"));
+      return (c, p) -> {
+        final JavaType javaType = mapper.constructType(p.type());
+        return mapper.canDeserialize(javaType) ? mapper.readerFor(javaType) : null;
+      };
     }
-    return (c, p) -> cs.get().readerFor(p.typeErasure());
   }
   
   private static final <T> T returnNull(final Object ignored, final Object alsoIgnored) {

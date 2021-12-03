@@ -24,6 +24,8 @@ import java.lang.reflect.Type;
 import java.util.Iterator;
 import java.util.List;
 
+import java.util.function.Supplier;
+
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -195,22 +197,22 @@ public abstract class JacksonProvider<T> extends AbstractProvider<T> {
         assert !node.isContainerNode();
       }
     }
-    final Element<T> last = absolutePath.last();
-    final T value;
-    T tempValue = null;
-    final JsonParser parser = node.traverse(reader);
     try {
-      tempValue = parser.readValueAs(new TypeReference<T>() {
-          // This is a slight abuse of the TypeReference class, but
-          // the getType() method is not final and it is public, so
-          // this seems to be at least possible using a public API. It
-          // also avoids type loss we'd otherwise incur (if we used
-          // readValueAs(Class), for example).
-          @Override
-          public final Type getType() {
-            return last.type().orElseThrow();
-          }
-        });
+      return
+        this.value(requestor,
+                   absolutePath,
+                   node.traverse(reader).readValueAs(new TypeReference<>() {
+                       // This is a slight abuse of the TypeReference
+                       // class, but the getType() method is not final
+                       // and it is public, so this seems to be at
+                       // least possible using a public API. It also
+                       // avoids type loss we'd otherwise incur (if we
+                       // used readValueAs(Class), for example).
+                       @Override
+                       public final Type getType() {
+                         return absolutePath.type();
+                       }
+                     }));
     } catch (final JsonProcessingException jpe) {
       if (logger.isLoggable(Level.FINE)) {
         logger.logp(Level.FINE, this.getClass().getName(), "get", jpe.getMessage(), jpe);
@@ -218,17 +220,19 @@ public abstract class JacksonProvider<T> extends AbstractProvider<T> {
       return null;
     } catch (final IOException ioException) {
       throw new UncheckedIOException(ioException.getMessage(), ioException);
-    } finally {
-      value = tempValue;
-      tempValue = null;
     }
-    return
-      new Value<>(null, // no defaults
-                  Qualifiers.of(),
-                  Path.of(last),
-                  () -> value,
-                  false, // nulls are not legal values
-                  true); // deterministic
+  }
+
+  @SuppressWarnings("unchecked")
+  protected <T> Value<T> value(final Configured<?> requestor,
+                               final Path<T> absolutePath,
+                               final T value) {
+    return new Value<>(null,
+                       Qualifiers.of(),
+                       (Path<T>)Path.of(absolutePath.type()),
+                       () -> value,
+                       false,
+                       true);
   }
 
   /**

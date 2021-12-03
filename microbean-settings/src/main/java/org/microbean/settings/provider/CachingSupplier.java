@@ -66,7 +66,7 @@ public final class CachingSupplier<T> implements Supplier<T> {
    * AtomicReference#updateAndGet(java.util.function.UnaryOperator)
    */
   public CachingSupplier() {
-    this((Supplier<? extends T>)null);
+    this(CachingSupplier::returnNull);
   }
 
   /**
@@ -85,7 +85,7 @@ public final class CachingSupplier<T> implements Supplier<T> {
   public CachingSupplier(final T value) {
     super();
     this.ref = new AtomicReference<>(Optional.ofNullable(value));
-    this.delegate = null;
+    this.delegate = CachingSupplier::returnNull;
   }
 
   /**

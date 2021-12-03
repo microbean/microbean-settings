@@ -28,6 +28,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
+import static org.microbean.settings.api.Configured.configured;
+
 final class TestProvider {
 
   private TestProvider() {
@@ -36,8 +38,7 @@ final class TestProvider {
 
   @Test
   final void testJavaHome() {
-    // assertEquals(System.getProperty("java.home"), Configured.of().plus("java.home", String.class).get());
-    assertEquals(System.getProperty("java.home"), Configured.of().of("java.home", String.class).get());
+    assertEquals(System.getProperty("java.home"), configured().of("java.home", String.class).get());
   }
 
   @Test

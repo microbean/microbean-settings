@@ -45,7 +45,7 @@ import org.microbean.settings.api.Path.Element;
  * @author <a href="https://about.me/lairdnelson"
  * target="_parent">Laird Nelson</a>
  *
- * @see #of()
+ * @see #configured()
  *
  * @see OptionalSupplier#get()
  *
@@ -132,7 +132,7 @@ public interface Configured<T> extends OptionalSupplier<T> {
    * Returns a {@link Configured} that can supply configured objects
    * that are suitable for the supplied {@code path}.
    *
-   * <p>After {@linkplain #of() bootstrapping}, this method serves as
+   * <p>After {@linkplain #configured() bootstrapping}, this method serves as
    * the main entry point into this framework.</p>
    *
    * <p>Implementations of this method must obtain a normalized {@link
@@ -309,7 +309,7 @@ public interface Configured<T> extends OptionalSupplier<T> {
   public default Configured<?> of(final Type type) {
     return this.of(Element.of(type));
   }
-  
+
   @Convenience
   @OverridingDiscouraged
   public default <U> Configured<U> of(final String element, final Class<U> type) {
@@ -327,7 +327,25 @@ public interface Configured<T> extends OptionalSupplier<T> {
   public default Configured<?> of(final String element, final Type type) {
     return this.of(Element.of(element, type));
   }
-  
+
+  @Convenience
+  @OverridingDiscouraged
+  public default <U> Configured<U> of(final List<? extends String> names, final Class<U> type) {
+    return this.of(Path.of(names, type));
+  }
+
+  @Convenience
+  @OverridingDiscouraged
+  public default <U> Configured<U> of(final List<? extends String> names, final TypeToken<U> type) {
+    return this.of(Path.of(names, type));
+  }
+
+  @Convenience
+  @OverridingDiscouraged
+  public default Configured<?> of(final List<? extends String> names, final Type type) {
+    return this.of(Path.of(names, type));
+  }
+
   @Convenience
   @OverridingDiscouraged
   public default <U> Configured<U> of(final Element<U> nonRootElement) {
@@ -583,7 +601,7 @@ public interface Configured<T> extends OptionalSupplier<T> {
    */
   @EntryPoint
   @SuppressWarnings("static")
-  public static Configured<?> of() {
+  public static Configured<?> configured() {
     final class RootConfigured {
       private static final Configured<?> INSTANCE;
       static {
