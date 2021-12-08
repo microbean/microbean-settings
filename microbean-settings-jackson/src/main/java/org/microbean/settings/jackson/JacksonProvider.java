@@ -153,9 +153,7 @@ public abstract class JacksonProvider<T> extends AbstractProvider<T> {
     elementIterator.next(); // skip the root element; we know size() > 1
     while (elementIterator.hasNext()) {
       final Element<?> element = elementIterator.next();
-      // frob:Blatz
       if (elementIterator.hasNext()) {
-        // There are more elements.
         if (node.isArray()) {
           final List<String> arguments = element.arguments().orElse(null);
           if (arguments != null && arguments.size() == 1) {
@@ -243,6 +241,8 @@ public abstract class JacksonProvider<T> extends AbstractProvider<T> {
    * <p>This method is called by the {@link #get(Configured, Path)}
    * method in the normal course of events.</p>
    *
+   * @param <T> the type of the supplied {@link Path}
+   *
    * @param requestor the {@link Configured} seeking a {@link Value};
    * must not be {@code null}
    *
@@ -273,6 +273,8 @@ public abstract class JacksonProvider<T> extends AbstractProvider<T> {
    * Path)} method if the {@link #objectCodec(Configured, Path)}
    * method returns {@code null}.  Otherwise, it will be called
    * immediately afterwards on the same thread.</p>
+   *
+   * @param <T> the type of the supplied {@link Path}
    *
    * @param requestor the {@link Configured} seeking a {@link Value};
    * must not be {@code null}

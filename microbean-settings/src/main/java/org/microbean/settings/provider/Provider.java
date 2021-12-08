@@ -101,6 +101,8 @@ public interface Provider {
    *
    * </ul>
    *
+   * @param <T> the type the supplied {@link Path} is typed with
+   *
    * @param requestor the {@link Configured} seeking a {@link Value};
    * must not be {@code null}
    *

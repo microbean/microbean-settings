@@ -39,6 +39,8 @@ public @interface Proxy {
 
   /**
    * Whether the annotated element may be proxied or not.
+   *
+   * @return {@code true} if the annotated element may be proxied
    */
   boolean value() default true;
   

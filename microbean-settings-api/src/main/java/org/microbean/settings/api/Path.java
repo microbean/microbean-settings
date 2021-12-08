@@ -238,6 +238,8 @@ public final class Path<T> implements Iterable<Element<?>> {
    * {@linkplain #last() last element} of this {@link Path}, then this
    * {@link Path} is returned unchanged.</p>
    *
+   * @param <U> the type for the new {@link Path}
+   *
    * @param type the new {@link Class}; must not be {@code null}
    *
    * @return a {@link Path} whose {@linkplain #last() last element}
@@ -276,6 +278,8 @@ public final class Path<T> implements Iterable<Element<?>> {
    * <p>If the supplied {@code type} is already that of the existing
    * {@linkplain #last() last element} of this {@link Path}, then this
    * {@link Path} is returned unchanged.</p>
+   *
+   * @param <U> the type of the new {@link Path}
    *
    * @param type the new {@link TypeToken}; must not be {@code null}
    *
@@ -353,6 +357,8 @@ public final class Path<T> implements Iterable<Element<?>> {
    * @param name the {@linkplain Path.Element#name() name} for the new
    * trailing {@link Path.Element}; must not be {@code null}
    *
+   * @param <U> the type of the new {@link Path}
+   *
    * @param type the {@linkplain Path.Element#type() type} for the new
    * trailing {@link Path.Element}; must not be {@code null}
    *
@@ -383,6 +389,8 @@ public final class Path<T> implements Iterable<Element<?>> {
    *
    * @param name the {@linkplain Path.Element#name() name} for the new
    * trailing {@link Path.Element}; must not be {@code null}
+   *
+   * @param <U> the type of the new {@link Path}
    *
    * @param type the {@linkplain Path.Element#type() type} for the new
    * trailing {@link Path.Element}; must not be {@code null}
@@ -441,6 +449,8 @@ public final class Path<T> implements Iterable<Element<?>> {
    * Path.Element elements} of this {@link Path} in order plus the
    * supplied {@link Path.Element}.
    *
+   * @param <U> the type of the new {@link Path}
+   *
    * @param element the last {@link Path.Element} of the new {@link
    * Path}; must not be {@code null}
    *
@@ -472,6 +482,8 @@ public final class Path<T> implements Iterable<Element<?>> {
    * Path.Element elements} of this {@link Path} in order plus the
    * {@linkplain Path.Element elements} of the supplied {@code path}
    * in order.
+   *
+   * @param <U> the type of the new {@link Path}
    *
    * @param path the {@link Path} to append to this one; must not be
    * {@code null} and must return {@code false} from its {@link

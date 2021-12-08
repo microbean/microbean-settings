@@ -62,8 +62,8 @@ public class InputStreamJacksonProvider<T> extends JacksonProvider<T> {
     throw new UnsupportedOperationException();
   }
 
-  public InputStreamJacksonProvider(final ObjectMapper objectMapper, final String resourceName) {
-    this(objectCodecFunction(objectMapper),
+  public InputStreamJacksonProvider(final Supplier<? extends ObjectMapper> mapperSupplier, final String resourceName) {
+    this(objectCodecFunction(mapperSupplier),
          (c, p) -> inputStream(p.classLoader(), resourceName),
          InputStreamJacksonProvider::closeInputStream);
   }
@@ -161,7 +161,7 @@ public class InputStreamJacksonProvider<T> extends JacksonProvider<T> {
     return returnValue;
   }
 
-  private static final void closeInputStream(final InputStream is) {
+  protected static final void closeInputStream(final InputStream is) {
     if (is != null) {
       try {
         is.close();
@@ -171,11 +171,17 @@ public class InputStreamJacksonProvider<T> extends JacksonProvider<T> {
     }
   }
 
-  private static final BiFunction<? super Configured<?>, ? super Path<?>, ? extends ObjectCodec> objectCodecFunction(final ObjectMapper mapper) {
-    if (mapper == null) {
+  private static final <T extends ObjectMapper> BiFunction<? super Configured<?>, ? super Path<?>, ? extends ObjectCodec> objectCodecFunction(final Supplier<T> mapperSupplier) {
+    if (mapperSupplier == null) {
       return InputStreamJacksonProvider::returnNull;
     } else {
       return (c, p) -> {
+        // Note that otherwise potential infinite loops are handled in
+        // the Settings class.
+        final ObjectMapper mapper = c.of(ObjectMapper.class).orElseGet(mapperSupplier);
+        if (mapper == null) {
+          return null;
+        }
         final JavaType javaType = mapper.constructType(p.type());
         return mapper.canDeserialize(javaType) ? mapper.readerFor(javaType) : null;
       };

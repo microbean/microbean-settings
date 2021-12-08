@@ -18,10 +18,17 @@ package org.microbean.settings;
 
 import java.lang.reflect.Type;
 
+import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Deque;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
+import java.util.Queue;
 import java.util.ServiceLoader;
 
 import java.util.concurrent.ConcurrentHashMap;
@@ -29,6 +36,8 @@ import java.util.concurrent.ConcurrentMap;
 
 import java.util.function.BiPredicate;
 import java.util.function.Supplier;
+
+import java.util.stream.Stream;
 
 import org.microbean.development.annotation.Experimental;
 
@@ -60,6 +69,9 @@ import org.microbean.settings.provider.Value;
  * @see Provider
  */
 public class Settings<T> implements AutoCloseable, Configured<T> {
+
+
+  private static final ThreadLocal<Map<Path<?>, Deque<Provider>>> currentProviderStacks = ThreadLocal.withInitial(() -> new HashMap<>(7));
 
 
   /*
@@ -177,7 +189,7 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
    * unless the caches are already cleared.
    */
   @Experimental
-  @Override
+  @Override // AutoCloseable
   public final void close() {
     this.settingsCache.clear();
   }
@@ -304,15 +316,38 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
   }
 
   @Override // Configured<T>
+  public final <U> Path<U> transliterate(final Path<U> path) {
+    if (path.isTransliterated()) {
+      return path;
+    }
+    final TypeToken<Path<U>> typeToken = new TypeToken<Path<U>>() {};
+    final Element<U> last = path.last();
+    if (last.type().orElseThrow().equals(typeToken.type()) &&
+        last.name().equals("transliterate")) {
+      final List<Class<?>> parameters = last.parameters().orElseThrow();
+      if (parameters.size() == 1 && parameters.get(0) == Path.class) {
+        // Are we in the middle of a transliteration request? Avoid
+        // the infinite loop.
+        return path;
+      }
+    }
+    final Path<Path<U>> transliterationRequestPath =
+      this.absolutePath().plus(Path.of(Element.of("transliterate", // name
+                                                  typeToken, // type
+                                                  Path.class, // parameter
+                                                  path.toString()))); // sole argument
+    final Configured<Path<U>> configured = this.of(transliterationRequestPath);
+    return configured.orElse(path);
+  }
+
+  @Override // Configured<T>
   public final <U> Settings<U> of(final Path<U> path) {
     final Path<U> absolutePath = this.normalize(path);
     assert absolutePath.isAbsolute() : "!normalize(path).isAbsolute(): " + absolutePath;
     if (absolutePath.isRoot()) {
       throw new IllegalArgumentException("normalize(path).isRoot(): " + absolutePath);
     }
-
     final Settings<?> requestor = this.configuredFor(absolutePath);
-
     // We deliberately do not use computeIfAbsent() because of()
     // operations can kick off other of() operations, and then you'd
     // have a cache mutating operation occuring within a cache
@@ -339,40 +374,67 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
   }
 
   private final <U> Settings<U> computeSettings(final Settings<?> requestor, final Path<U> absolutePath) {
-    assert absolutePath.isAbsolute() : "absolutePath: " + absolutePath;
     final Qualifiers qualifiers = requestor.qualifiers();
     final AmbiguityHandler ambiguityHandler = requestor.ambiguityHandler();
     Value<U> candidate = null;
     final Collection<? extends Provider> providers = this.providers();
     if (!providers.isEmpty()) {
+      final Map<Path<?>, Deque<Provider>> map = currentProviderStacks.get();
       Provider candidateProvider = null;
       if (providers.size() == 1) {
-
         candidateProvider = providers instanceof List<? extends Provider> list ? list.get(0) : providers.iterator().next();
-        if (candidateProvider == null || !isSelectable(candidateProvider, absolutePath)) {
+        if (candidateProvider == null) {
+          ambiguityHandler.providerRejected(requestor, absolutePath, candidateProvider);
+        } else if (candidateProvider == peek(map, absolutePath)) {
+          // Behave the same as the null case immediately prior, but
+          // there's no need to notify the ambiguityHandler.
+        } else if (!isSelectable(candidateProvider, absolutePath)) {
           ambiguityHandler.providerRejected(requestor, absolutePath, candidateProvider);
         } else {
-          candidate = candidateProvider.get(requestor, absolutePath);
+          push(map, absolutePath, candidateProvider);
+          try {
+            candidate = candidateProvider.get(requestor, absolutePath);
+          } finally {
+            final Provider popped = pop(map, absolutePath);
+            assert popped == candidateProvider;
+          }
           if (candidate == null) {
             ambiguityHandler.providerRejected(requestor, absolutePath, candidateProvider);
           } else if (!isSelectable(qualifiers, absolutePath, candidate.qualifiers(), candidate.path())) {
             ambiguityHandler.valueRejected(requestor, absolutePath, candidateProvider, candidate);
           }
         }
-
       } else {
         int candidateQualifiersScore = Integer.MIN_VALUE;
         int candidatePathScore = Integer.MIN_VALUE;
-
         PROVIDER_LOOP:
         for (final Provider provider : providers) {
 
-          if (provider == null || !isSelectable(provider, absolutePath)) {
+          if (provider == null) {
             ambiguityHandler.providerRejected(requestor, absolutePath, provider);
             continue PROVIDER_LOOP;
           }
 
-          Value<U> value = provider.get(requestor, absolutePath);
+          if (provider == peek(map, absolutePath)) {
+            // Behave the same as the null case immediately prior, but
+            // there's no need to notify the ambiguityHandler.
+            continue PROVIDER_LOOP;
+          }
+
+          if (!isSelectable(provider, absolutePath)) {
+            ambiguityHandler.providerRejected(requestor, absolutePath, provider);
+            continue PROVIDER_LOOP;
+          }
+
+          Value<U> value;
+
+          push(map, absolutePath, provider);
+          try {
+            value = provider.get(requestor, absolutePath);
+          } finally {
+            final Provider popped = pop(map, absolutePath);
+            assert popped == provider;
+          }
 
           if (value == null) {
             ambiguityHandler.providerRejected(requestor, absolutePath, provider);
@@ -478,13 +540,23 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
    * Static methods.
    */
 
-  
+
+  private static final Provider peek(final Map<?, ? extends Deque<Provider>> map, final Path<?> absolutePath) {
+    final Queue<? extends Provider> q = map.get(absolutePath);
+    return q == null ? null : q.peek();
+  }
+
+  private static final void push(final Map<Path<?>, Deque<Provider>> map, final Path<?> absolutePath, final Provider provider) {
+    map.computeIfAbsent(absolutePath, ap -> new ArrayDeque<>(5)).push(provider);
+  }
+
+  private static final Provider pop(final Map<?, ? extends Deque<Provider>> map, final Path<?> absolutePath) {
+    final Deque<Provider> dq = map.get(absolutePath);
+    return dq == null ? null : dq.pop();
+  }
+
   private static final boolean isSelectable(final Provider provider, final Path<?> absolutePath) {
-    if (!absolutePath.isAbsolute()) {
-      throw new IllegalArgumentException("absolutePath: " + absolutePath);
-    }
-    return
-      AssignableType.of(provider.upperBound()).isAssignable(absolutePath.type());
+    return AssignableType.of(provider.upperBound()).isAssignable(absolutePath.type());
   }
 
   static final Collection<Provider> loadedProviders() {

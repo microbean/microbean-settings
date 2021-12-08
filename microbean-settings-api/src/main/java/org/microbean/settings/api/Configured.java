@@ -154,6 +154,9 @@ public interface Configured<T> extends OptionalSupplier<T> {
    * UnsupportedOperationException} from its {@link Configured#get()
    * get()} method.</p>
    *
+   * @param <U> the type of the supplied {@link Path} and the type of
+   * the returned {@link Configured}
+   *
    * @param path the {@link Path} for which a {@link Configured}
    * should be returned; must not be {@code null}
    *
@@ -235,6 +238,8 @@ public interface Configured<T> extends OptionalSupplier<T> {
    * Path#transliterate(java.util.function.BiFunction)} particularly
    * useful in implementing this method.</p>
    *
+   * @param <U> the type of the supplied and returned {@link Path}s
+   *
    * @param path an {@linkplain Path#isAbsolute() absolute
    * <code>Path</code>}; must not be null
    *
@@ -274,9 +279,9 @@ public interface Configured<T> extends OptionalSupplier<T> {
     }
     final TypeToken<Path<U>> typeToken = new TypeToken<Path<U>>() {};
     if (path.type().equals(typeToken.type())) {
-      final Element<U> e = path.last();
-      if (e.name().equals("transliterate")) {
-        final List<Class<?>> parameters = e.parameters().orElse(null);
+      final Element<U> last = path.last();
+      if (last.name().equals("transliterate")) {
+        final List<Class<?>> parameters = last.parameters().orElseThrow();
         if (parameters.size() == 1 && parameters.get(0) == Path.class) {
           // Are we in the middle of a transliteration request? Avoid
           // the infinite loop.
@@ -370,6 +375,8 @@ public interface Configured<T> extends OptionalSupplier<T> {
    *
    * <p>Implementations of this method must not call {@link
    * #configuredFor(Path)} or an infinite loop may result.</p>
+   *
+   * @param <U> the type of the supplied and returned {@link Path}s
    *
    * @param path the {@link Path} to normalize; must not be {@code
    * null}
