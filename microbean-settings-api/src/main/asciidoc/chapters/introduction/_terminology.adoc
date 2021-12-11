@@ -1,49 +1,87 @@
 [#terminology]
 === Terminology
 
+Unless otherwise noted, all terminology defined in this specification
+is only for the purposes of this specification and none other.
+
+image::ConfigurationOntology.png[]
+
 [[application]]Application:: A Java program. The term _application_ is
 also sometimes used adjectivally to distinguish application concerns
-from component concerns.
+from <<component,component>> concerns.
 
-[[component]]Component:: A Java library that is not runnable via a
-`main()` method. Applications are assembled from components by someone
-playing the <<application_assembler>> role.
+[[component]]Component:: A Java class that does not declare, and hence
+is not runnable via, a `static` `main` method, or a notional
+collection of such classes, or a physical collection of such classes,
+or a physical packaging of a collection of such
+classes. <<application,Applications>> are assembled from components by
+someone playing the <<application_assembler>> role.
 
 [[configuration]]Configuration:: An externalized portion of
-application state, or a snapshot of such state, that when imported
-into an application may cause it to change its behavior without there
-being any corresponding change in its source code.
+<<component,component>> state, or a snapshot of such a portion, that,
+when imported into a <<component,component>> or
+<<application,application>>, may cause it to change its behavior
+without there being any corresponding change in its source code.
 +
+Configuration is most, but not all, of what makes up an
+<<environment,environment>> and is typically that portion of an
+<<environment,environment>> that is created by someone playing the
+<<configuration_author>> role.
++
+[sidebar]
 Configuration often takes the form of textual, human-readable,
 human-writable named values in a file, but need not be of this form.
-+
-Configuration is typically created and managed by the
-<<configuration_author>> role.
 
 [[configuration_coordinates]]Configuration Coordinates:: Notional
-coordinates that locate a deployed application, and its environment,
-in configuration space.
-+
-Configuration coordinates are the "latitude and longitude", loosely
-speaking, of a deployed application within configuration space.
+coordinates that partially locate a <<configuration,configuration>> in
+<<configuration_space,configuration space>>.
 
 [[configuration_loader]]Configuration Loader:: A conceptual entity
-that "knows" where configuration lives within an environment and can
-load it when requested.
+that "knows" where <<configuration,configuration>> lives within an
+<<environment,environment>> and can load it into an
+<<application,application>> or <<component,component>> when requested.
 
 [[configuration_space]]Configuration Space:: The universe of all
-possible configurations for all possible applications.
+possible <<configuration,configurations>> for all possible
+<<component,components>>.
++
+[sidebar]
+Configuration space is a subset of <<environment_space,environment
+space>>.
 
-[[deploy]]Deploy:: To start an application with a particular
-configuration in a particular environment for which that configuration
-is suited.
+[[deploy]]Deploy:: To start an <<application,application>> with a
+particular <<configuration,configuration>> partially comprising a
+particular <<environment,environment>> for which that
+<<configuration,configuration>>, and hence that
+<<application,application>>, is suited. Deployments are carried out by
+someone playing the <<application_deployer>> role.
 
-[[environment]]Environment:: A location in configuration space into
-which an application is deployed.  Equivalently, a particular
-configuration within configuration space.
+[[environment]]Environment:: A location in
+<<environment_space,environment space>> into which an
+<<application,application>> is deployed. An environment features a
+<<configuration,configuration>> and other data typically outside of
+the responsibilities of the <<component_developer>> and
+<<configuration_author>> roles, such as the current locale, the
+machine architecture, the current time, the current working directory,
+and so on.
 
-[[qualifier]]Qualifier:: A configuration coordinate, particularly one
-characterized by a name and a textual value.
+[[environment_coordinates]]Environment Coordinates:: Notional
+coordinates that partially or completely locate an
+<<environment,environment>>, and hence a <<deploy,deployed>>
+<<application,application>>, in <<environment_space,environment
+space>>.
++
+[sidebar]
+Environment coordinates are the "latitude and longitude", loosely
+speaking, of an <<environment,environment>>, and hence a
+<<deploy,deployed>> <<application,application>>, within
+<<environment_space,environment space>>.
 
+[[environment_space]]Environment Space:: The universe of all possible
+<<environment,environments>>, and hence all possible
+<<configuration,configurations>>, for all possible
+<<application,applications>>.
 
-
+[[qualifier]]Qualifier:: An <<environment_coordinates,environment
+coordinate>>, particularly one that is characterized by a name and a
+textual value.

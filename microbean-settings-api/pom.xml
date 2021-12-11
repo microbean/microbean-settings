@@ -75,6 +75,7 @@
             <configuration>
               <attributes>
                 <doctitle/>
+                <imagesdir>images</imagesdir>
               </attributes>
               <backend>html5</backend>
               <doctype>book</doctype>
