@@ -277,24 +277,21 @@ public interface Configured<T> extends OptionalSupplier<T> {
     if (path.isTransliterated()) {
       return path;
     }
-    final TypeToken<Path<U>> typeToken = new TypeToken<Path<U>>() {};
-    if (path.type().equals(typeToken.type())) {
-      final Element<U> last = path.last();
-      if (last.name().equals("transliterate")) {
-        final List<Class<?>> parameters = last.parameters().orElseThrow();
-        if (parameters.size() == 1 && parameters.get(0) == Path.class) {
-          // Are we in the middle of a transliteration request? Avoid
-          // the infinite loop.
-          return path;
-        }
+    final Element<U> last = path.last();
+    if (last.name().equals("transliterate")) {
+      final List<Class<?>> parameters = last.parameters().orElseThrow();
+      if (parameters.size() == 1 && parameters.get(0) == Path.class) {
+        // Are we in the middle of a transliteration request? Avoid
+        // the infinite loop.
+        return path;
       }
     }
-    final Configured<Path<U>> configured =
-      this.of(Element.of("transliterate", // name
-                         typeToken, // type
-                         Path.class, // parameter
-                         path.toString())); // sole argument
-    return configured.orElse(path);
+    return
+      this.of(this.absolutePath().plus(Path.of(Element.of("transliterate", // name
+                                                          new TypeToken<Path<U>>() {}, // type
+                                                          Path.class, // parameter
+                                                          path.toString())))) // sole argument
+      .orElse(path);
   }
 
   @Convenience

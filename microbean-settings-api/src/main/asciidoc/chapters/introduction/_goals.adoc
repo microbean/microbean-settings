@@ -1,0 +1,65 @@
+[#goals]
+=== Goals
+
+The following is a non-exhaustive list of goals in no particular order
+of this specification and, by extension, any conforming
+implementation:
+
+Use Cases::
+ * This specification should be *primarily* focused on the use cases
+   of the <<component_developer>> as she seeks to acquire Java objects
+   from configuration.
+
+ * This specification should be *secondarily* focused on the use cases
+   of the <<application_assembler>> as she seeks to combine disparate
+   components into a Java application, while resolving
+   configuration-related conflicts.
+
+ * This specification should be *tertiarily* focused on any use cases
+   of the <<infrastructure_developer>> as she seeks to adapt a
+   conforming implementation of this specification to her
+   configuration management system.
+
+Self-Configurability::
+ * A conforming implementation should be able to configure itself
+   using itself.
+
+No Dependency Injection::
+ * This specification and any conforming implementation should not be
+   dependent upon or tied in any way to any dependency injection
+   system.
+
+ * A conforming implementation of this specification should be usable
+   in any Java program, including those whose structure is defined by
+   any of a variety of application frameworks.
+
+ * This specification should depend on as few externalities as is
+   possible.
+
+ * There should be no concept of "managed component" in the
+   specification.
+
+Java 9 Compatibility::
+ * This specification should allow conforming implementations to be
+   https://www.jcp.org/en/jsr/detail?id=376[Java Platform Module
+   System modules].
+
+
+Configuration Discoverability::
+ * Configuration values that an application component needs should be
+   discoverable in some way by a <<configuration_author>> without
+   requiring the source code.
+
+Separation of Concerns::
+ * Component-level concerns and application-level concerns should be
+   separated as much as possible.
+
+ * Where component concerns conflict in a given application,
+   mechansims should be provided by this specification to help resolve
+   them.
+
+Early Failure::
+ * Missing and otherwise invalid configuration values should be
+   detectable as early as possible, ideally before application
+   startup, or, in the worst cases, immediately upon startup.
+

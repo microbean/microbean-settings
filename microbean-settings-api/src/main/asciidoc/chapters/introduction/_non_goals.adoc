@@ -1,0 +1,22 @@
+[#non-goals]
+=== Non-Goals
+
+The following are deliberately not goals of the microBean Settings
+specification:
+
+No Injection Required::
+ * It is not a goal that a conforming implementation of this
+   specification be able to inject dependencies.
+
+ * It is not a goal that a conforming implementation of this
+   specification be a dependency injection system under any meaning
+   assigned to that term.
+
+No Authoring Environment::
+ * This specification does not specify any kind of authoring
+   environment for configuration values.
+
+Java Only::
+ * It is not a goal of this specification that it ever be extended to
+   computer languages other than Java.
+

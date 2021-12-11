@@ -19,9 +19,7 @@ package org.microbean.settings;
 import java.lang.reflect.Type;
 
 import java.util.ArrayDeque;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
@@ -37,8 +35,6 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.function.BiPredicate;
 import java.util.function.Supplier;
 
-import java.util.stream.Stream;
-
 import org.microbean.development.annotation.Experimental;
 
 import org.microbean.settings.api.Configured;
@@ -46,7 +42,6 @@ import org.microbean.settings.api.Path;
 import org.microbean.settings.api.Path.Element;
 import org.microbean.settings.api.Qualified;
 import org.microbean.settings.api.Qualifiers;
-import org.microbean.settings.api.TypeToken;
 
 import org.microbean.settings.provider.AmbiguityHandler;
 import org.microbean.settings.provider.AssignableType;
@@ -316,35 +311,11 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
   }
 
   @Override // Configured<T>
-  public final <U> Path<U> transliterate(final Path<U> path) {
-    if (path.isTransliterated()) {
-      return path;
-    }
-    final TypeToken<Path<U>> typeToken = new TypeToken<Path<U>>() {};
-    final Element<U> last = path.last();
-    if (last.type().orElseThrow().equals(typeToken.type()) &&
-        last.name().equals("transliterate")) {
-      final List<Class<?>> parameters = last.parameters().orElseThrow();
-      if (parameters.size() == 1 && parameters.get(0) == Path.class) {
-        // Are we in the middle of a transliteration request? Avoid
-        // the infinite loop.
-        return path;
-      }
-    }
-    final Path<Path<U>> transliterationRequestPath =
-      this.absolutePath().plus(Path.of(Element.of("transliterate", // name
-                                                  typeToken, // type
-                                                  Path.class, // parameter
-                                                  path.toString()))); // sole argument
-    final Configured<Path<U>> configured = this.of(transliterationRequestPath);
-    return configured.orElse(path);
-  }
-
-  @Override // Configured<T>
   public final <U> Settings<U> of(final Path<U> path) {
     final Path<U> absolutePath = this.normalize(path);
-    assert absolutePath.isAbsolute() : "!normalize(path).isAbsolute(): " + absolutePath;
-    if (absolutePath.isRoot()) {
+    if (!absolutePath.isAbsolute()) {
+      throw new IllegalArgumentException("!normalize(path).isAbsolute(): " + absolutePath);
+    } else if (absolutePath.isRoot()) {
       throw new IllegalArgumentException("normalize(path).isRoot(): " + absolutePath);
     }
     final Settings<?> requestor = this.configuredFor(absolutePath);
@@ -366,8 +337,6 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
         settings = this.settingsCache.get(qp);
       }
     }
-    assert settings != null;
-    assert settings == this.settingsCache.get(qp);
     @SuppressWarnings("unchecked")
     final Settings<U> returnValue = (Settings<U>)settings;
     return returnValue;
@@ -395,8 +364,7 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
           try {
             candidate = candidateProvider.get(requestor, absolutePath);
           } finally {
-            final Provider popped = pop(map, absolutePath);
-            assert popped == candidateProvider;
+            pop(map, absolutePath);
           }
           if (candidate == null) {
             ambiguityHandler.providerRejected(requestor, absolutePath, candidateProvider);
@@ -432,8 +400,7 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
           try {
             value = provider.get(requestor, absolutePath);
           } finally {
-            final Provider popped = pop(map, absolutePath);
-            assert popped == provider;
+            pop(map, absolutePath);
           }
 
           if (value == null) {

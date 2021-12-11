@@ -1,0 +1,49 @@
+[#terminology]
+=== Terminology
+
+[[application]]Application:: A Java program. The term _application_ is
+also sometimes used adjectivally to distinguish application concerns
+from component concerns.
+
+[[component]]Component:: A Java library that is not runnable via a
+`main()` method. Applications are assembled from components by someone
+playing the <<application_assembler>> role.
+
+[[configuration]]Configuration:: An externalized portion of
+application state, or a snapshot of such state, that when imported
+into an application may cause it to change its behavior without there
+being any corresponding change in its source code.
++
+Configuration often takes the form of textual, human-readable,
+human-writable named values in a file, but need not be of this form.
++
+Configuration is typically created and managed by the
+<<configuration_author>> role.
+
+[[configuration_coordinates]]Configuration Coordinates:: Notional
+coordinates that locate a deployed application, and its environment,
+in configuration space.
++
+Configuration coordinates are the "latitude and longitude", loosely
+speaking, of a deployed application within configuration space.
+
+[[configuration_loader]]Configuration Loader:: A conceptual entity
+that "knows" where configuration lives within an environment and can
+load it when requested.
+
+[[configuration_space]]Configuration Space:: The universe of all
+possible configurations for all possible applications.
+
+[[deploy]]Deploy:: To start an application with a particular
+configuration in a particular environment for which that configuration
+is suited.
+
+[[environment]]Environment:: A location in configuration space into
+which an application is deployed.  Equivalently, a particular
+configuration within configuration space.
+
+[[qualifier]]Qualifier:: A configuration coordinate, particularly one
+characterized by a name and a textual value.
+
+
+

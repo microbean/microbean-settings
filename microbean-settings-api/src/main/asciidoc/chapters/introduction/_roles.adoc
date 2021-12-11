@@ -1,0 +1,46 @@
+[#roles]
+=== Roles
+
+This specification defines various _user roles_ that users of a
+conforming implementation may play.  An actual person may play more
+than one role, even at a time.
+
+[[component_developer]]Component Developer:: _Develops_ Java
+application components and libraries that may be used in a variety of
+applications. Focuses on business logic. Wants to acquire certain Java
+objects from configuration so that a component does not have to have
+its code changed when the values from which those objects are
+composited change.
+
+[[application_assembler]]Application Assembler:: _Assembles_
+applications by packaging components and disambiguating
+component-level conflicts. Ensures that application-level
+configuration is properly implemented and disambiguated when
+components supply competing or ambiguous configuration values. Notably
+does not deploy an application or tailor it to its environment.
+
+[[configuration_author]]Configuration Author:: _Authors_ configuration
+values for a variety of assembled applications and a variety of
+environments. _Tailors_ an application's configuration for a
+particular environment. Needs to understand what configuration values
+need to be present and how they are to be formatted. Understands the
+configuration management system and its authoring tools specific to
+her organization. Works with the <<component_developer>> to understand
+what configuration values need to be present. Wants to avoid
+duplicating configuration values as much as possible to minimize
+errors.
+
+[[application_deployer]]Application Deployer:: _Deploys_ assembled
+applications to environments. Does not change the applications, but
+may design the way they are started and run, e.g. in order for them to
+be able to discover what environment they are running in.
+
+[[infrastructure_developer]]Infrastructure Developer:: Develops Java
+components and writes other code to _adapt_ a conforming
+implementation of this specification to her configuration management
+system or systems (which in many cases is simply files in
+directories). The components supplying configuration values may
+conform to _service provider interfaces_ defined by this
+specification, and may be among those that the
+<<application_assembler>> uses when assembling an application.
+

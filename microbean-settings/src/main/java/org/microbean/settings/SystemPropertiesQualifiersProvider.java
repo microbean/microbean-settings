@@ -46,7 +46,7 @@ public class SystemPropertiesQualifiersProvider extends AbstractProvider<Qualifi
     final Value<T> value =
       new Value<>(null, // no defaults
                   Qualifiers.of(),
-                  Path.of(absolutePath.last()),
+                  (Path<T>)Path.of(absolutePath.type()),
                   (Supplier<T>)() -> (T)qualifiers(requestor),
                   false, // nulls are not legal values
                   false); // not deterministic

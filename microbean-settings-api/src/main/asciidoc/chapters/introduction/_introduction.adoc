@@ -1,0 +1,15 @@
+[#introduction]
+== Introduction
+
+This specification defines a set of Java APIs and attendant behavioral
+contracts for the easy acquisition of Java objects from
+<<configuration,configurations>>.
+
+include::_goals.adoc[]
+
+include::_non_goals.adoc[]
+
+include::_roles.adoc[]
+
+include::_terminology.adoc[]
+

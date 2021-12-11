@@ -52,6 +52,40 @@
 
   </dependencies>
 
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.asciidoctor</groupId>
+        <artifactId>asciidoctor-maven-plugin</artifactId>
+        <configuration>
+          <logHandler>
+            <failIf>
+              <severity>ERROR</severity>
+            </failIf>
+          </logHandler>
+          <sourceDirectory>src/main/asciidoc</sourceDirectory>
+        </configuration>
+        <executions>
+          <execution>
+            <id>Generate HTML from AsciiDoc</id>
+            <phase>generate-resources</phase>
+            <goals>
+              <goal>process-asciidoc</goal>
+            </goals>
+            <configuration>
+              <attributes>
+                <doctitle/>
+              </attributes>
+              <backend>html5</backend>
+              <doctype>book</doctype>
+              <enableVerbose>true</enableVerbose>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+
   <properties>
     <github.site.skip>true</github.site.skip>
   </properties>

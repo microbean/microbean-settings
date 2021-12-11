@@ -1,0 +1,12 @@
+= README
+Laird Nelson
+:toc: left
+:reproducible:
+:nofooter:
+
+If you are reading this, or any other document in this directory,
+until this message is removed you are reading a draft in progress.
+Its contents are subject to change without notice at any time.
+
+include::chapters/introduction/_introduction.adoc[]
+
