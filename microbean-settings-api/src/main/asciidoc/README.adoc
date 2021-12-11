@@ -1,5 +1,6 @@
 = README
 Laird Nelson
+:imagesdir: images
 :toc: left
 :reproducible:
 :nofooter:

@@ -6,8 +6,9 @@ is only for the purposes of this specification and none other.
 
 image::ConfigurationOntology.png[]
 
-[[application]]Application:: A Java program. The term _application_ is
-also sometimes used adjectivally to distinguish application concerns
+[[application]]Application:: A Java program, especially one that is
+made up of <<component,components>>. The term _application_ is also
+sometimes used adjectivally, e.g. to distinguish application concerns
 from <<component,component>> concerns.
 
 [[component]]Component:: A Java class that does not declare, and hence
@@ -19,9 +20,10 @@ someone playing the <<application_assembler>> role.
 
 [[configuration]]Configuration:: An externalized portion of
 <<component,component>> state, or a snapshot of such a portion, that,
-when imported into a <<component,component>> or
-<<application,application>>, may cause it to change its behavior
-without there being any corresponding change in its source code.
+when imported into a <<component,component>> of a running
+<<application,application>>, may cause the <<component,component>> to
+change its behavior without there being any corresponding change in
+its source code.
 +
 Configuration is most, but not all, of what makes up an
 <<environment,environment>> and is typically that portion of an
@@ -36,45 +38,47 @@ human-writable named values in a file, but need not be of this form.
 coordinates that partially locate a <<configuration,configuration>> in
 <<configuration_space,configuration space>>.
 
-[[configuration_loader]]Configuration Loader:: A conceptual entity
-that "knows" where <<configuration,configuration>> lives within an
-<<environment,environment>> and can load it into an
+[[configuration_loader]]Configuration Loader:: A notional
+<<component,component>> that "knows" where
+<<configuration,configuration>> lives within an
+<<environment,environment>> and can load it on behalf of an
 <<application,application>> or <<component,component>> when requested.
 
 [[configuration_space]]Configuration Space:: The universe of all
 possible <<configuration,configurations>> for all possible
-<<component,components>>.
+<<component,components>> that are part of all possible
+<<application,applications>>.
 +
 [sidebar]
 Configuration space is a subset of <<environment_space,environment
 space>>.
 
-[[deploy]]Deploy:: To start an <<application,application>> with a
-particular <<configuration,configuration>> partially comprising a
-particular <<environment,environment>> for which that
-<<configuration,configuration>>, and hence that
-<<application,application>>, is suited. Deployments are carried out by
-someone playing the <<application_deployer>> role.
+[[deploy]]Deploy:: To start an <<application,application>> in a
+particular <<environment,environment>>.  <<deployment,Deployments>>
+are carried out by someone playing the <<application_deployer>> role.
 
-[[environment]]Environment:: A location in
+[[deployment]]Deployment:: The notional result of <<deploy,deploying>>
+an <<application,application>>.
+
+[[environment]]Environment:: A notional location in
 <<environment_space,environment space>> into which an
-<<application,application>> is deployed. An environment features a
-<<configuration,configuration>> and other data typically outside of
-the responsibilities of the <<component_developer>> and
+<<application,application>> is <<deploy,deployed>>. An environment
+comprises <<configuration,configurations>> and other data typically
+outside of the responsibilities of the <<component_developer>> and
 <<configuration_author>> roles, such as the current locale, the
 machine architecture, the current time, the current working directory,
 and so on.
 
 [[environment_coordinates]]Environment Coordinates:: Notional
 coordinates that partially or completely locate an
-<<environment,environment>>, and hence a <<deploy,deployed>>
-<<application,application>>, in <<environment_space,environment
+<<environment,environment>>, and its <<deploy,deployed>>
+<<application,applications>>, in <<environment_space,environment
 space>>.
 +
 [sidebar]
 Environment coordinates are the "latitude and longitude", loosely
-speaking, of an <<environment,environment>>, and hence a
-<<deploy,deployed>> <<application,application>>, within
+speaking, of an <<environment,environment>>, and hence its
+<<deploy,deployed>> <<application,applications>>, within
 <<environment_space,environment space>>.
 
 [[environment_space]]Environment Space:: The universe of all possible

@@ -44,9 +44,9 @@ bg=light_gray</panel_attributes>
     <id>UMLClass</id>
     <coordinates>
       <x>440</x>
-      <y>250</y>
+      <y>230</y>
       <w>100</w>
-      <h>50</h>
+      <h>70</h>
     </coordinates>
     <panel_attributes>&lt;&lt;notional&gt;&gt;
 *Component*
@@ -180,7 +180,7 @@ m2=0..*</panel_attributes>
       <h>40</h>
     </coordinates>
     <panel_attributes>lt=&lt;-&gt;&gt;&gt;&gt;
-m1=0..1
+m1=0..*
 m2=1..*</panel_attributes>
     <additional_attributes>10.0;10.0;110.0;10.0</additional_attributes>
   </element>
