@@ -1,9 +1,11 @@
-= README
+= microBean™ Settings Specification
 Laird Nelson
 :imagesdir: images
-:toc: left
-:reproducible:
 :nofooter:
+:reproducible:
+:sectnums:
+:toc: left
+:toclevels: 4
 
 If you are reading this, or any other document in this directory,
 until this message is removed you are reading a draft in progress.

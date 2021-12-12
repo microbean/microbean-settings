@@ -1,8 +1,7 @@
 [#non-goals]
 === Non-Goals
 
-The following are deliberately not goals of the microBean Settings
-specification:
+The following are deliberately not goals of this specification:
 
 No Injection Required::
  * It is not a goal that a conforming implementation of this

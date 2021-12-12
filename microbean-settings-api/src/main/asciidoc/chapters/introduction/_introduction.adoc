@@ -1,9 +1,7 @@
 [#introduction]
 == Introduction
 
-This specification defines a set of Java APIs and attendant behavioral
-contracts for the easy acquisition of Java objects from
-<<configuration,configurations>>.
+include::_purpose.adoc[]
 
 include::_goals.adoc[]
 

@@ -4,88 +4,180 @@
 Unless otherwise noted, all terminology defined in this specification
 is only for the purposes of this specification and none other.
 
+[#notional_ontology]
+==== Notional Ontology
+
+.Notional Ontology
 image::ConfigurationOntology.png[]
 
-[[application]]Application:: A Java program, especially one that is
-made up of <<component,components>>. The term _application_ is also
-sometimes used adjectivally, e.g. to distinguish application concerns
-from <<component,component>> concerns.
+[#application]
+==== Application
 
-[[component]]Component:: A Java class that does not declare, and hence
-is not runnable via, a `static` `main` method, or a notional
-collection of such classes, or a physical collection of such classes,
-or a physical packaging of a collection of such
-classes. <<application,Applications>> are assembled from components by
-someone playing the <<application_assembler>> role.
+A Java program, especially one that is made up of
+<<component,components>> (and that may be a <<component,component>>
+itself). The term _application_ is also sometimes used adjectivally,
+e.g. to distinguish <<application_concern,application concerns>> from
+<<component_concern,component concerns>>.
 
-[[configuration]]Configuration:: An externalized portion of
+****
+Although <<application,applications>> may be <<component,components>>,
+applications are the only things that can be <<assemble,assembled>>
+and <<deploy,deployed>>.
+
+An application may be as straightforward as a Java class with a
+`static` `main` method, as simple as a unit test running in a test
+harness, or as complicated as a Servlet application
+<<deploy,deployed>> to an application server. What applications have
+in common is:
+
+ 1. they are <<assemble,assembled>>
+ 2. once <<assemble,assembled>>, they may be <<deploy,deployed>> into
+    an <<environment,environment>>
+****
+
+[#application_concern]
+==== Application Concern
+
+Something that is properly the domain of an
+<<application,application>>, particularly as distinguished from a
+<<component_concern,component concern>>.
+
+[#assemble]
+==== Assemble
+
+To create an <<application,application>> out of constituent
+<<component,components>> and to prepare it for <<deploy,deployment>>
+into an <<environment,environment>>.
+
+****
+<<application,Applications>> are assembled from
+<<component,components>> by someone playing the
+<<application_assembler>> role.
+****
+
+[#component]
+==== Component
+
+A Java class containing business logic, or a notional collection of
+such classes, or a physical collection of such classes, or a physical
+packaging of a collection of such classes. The term _component_ is
+also sometimes used adjectivally, e.g. to distinguish
+<<component_concern,component concerns>> from
+<<application_concern,application concerns>>.
+
+****
+<<application,Applications>> are <<assemble,assembled>> from
+components by someone playing the <<application_assembler>> role.
+****
+
+[#component_concern]
+==== Component Concern
+
+Something that is properly the domain of a <<component,component>>,
+particularly as distinguished from an
+<<application_concern,application concern>>.
+
+[#configuration]
+==== Configuration
+
+An externalized, often persistent, portion of
 <<component,component>> state, or a snapshot of such a portion, that,
-when imported into a <<component,component>> of a running
+when loaded into a <<component,component>> of a running
 <<application,application>>, may cause the <<component,component>> to
 change its behavior without there being any corresponding change in
 its source code.
-+
+
 Configuration is most, but not all, of what makes up an
 <<environment,environment>> and is typically that portion of an
 <<environment,environment>> that is created by someone playing the
 <<configuration_author>> role.
-+
-[sidebar]
+
+****
 Configuration often takes the form of textual, human-readable,
 human-writable named values in a file, but need not be of this form.
+****
 
-[[configuration_coordinates]]Configuration Coordinates:: Notional
-coordinates that partially locate a <<configuration,configuration>> in
-<<configuration_space,configuration space>>.
+[#configuration_coordinates]
+==== Configuration Coordinates
 
-[[configuration_loader]]Configuration Loader:: A notional
-<<component,component>> that "knows" where
-<<configuration,configuration>> lives within an
-<<environment,environment>> and can load it on behalf of an
-<<application,application>> or <<component,component>> when requested.
-
-[[configuration_space]]Configuration Space:: The universe of all
-possible <<configuration,configurations>> for all possible
-<<component,components>> that are part of all possible
-<<application,applications>>.
-+
-[sidebar]
-Configuration space is a subset of <<environment_space,environment
+Notional coordinates that partially locate a
+<<configuration,configuration>> in <<configuration_space,configuration
 space>>.
 
-[[deploy]]Deploy:: To start an <<application,application>> in a
+****
+Configuration coordinates are often simple named textual values, but
+are not to be confused with any simple named textual values that may
+constitute a <<configuration,configuration's>> state. They locate that
+state in <<configuration_space,configuration space>>.
+****
+
+[#configuration_space]
+==== Configuration Space
+
+The universe of all possible <<configuration,configurations>> for all
+possible <<component,components>> that are part of all possible
+<<application,applications>>.
+
+****
+Configuration space is a subset of <<environment_space,environment
+space>>.
+****
+
+[#deploy]
+==== Deploy
+
+To start an (<<assemble,assembled>>) <<application,application>> in a
 particular <<environment,environment>>.  <<deployment,Deployments>>
 are carried out by someone playing the <<application_deployer>> role.
 
-[[deployment]]Deployment:: The notional result of <<deploy,deploying>>
-an <<application,application>>.
+[#deployment]
+==== Deployment
 
-[[environment]]Environment:: A notional location in
-<<environment_space,environment space>> into which an
-<<application,application>> is <<deploy,deployed>>. An environment
-comprises <<configuration,configurations>> and other data typically
-outside of the responsibilities of the <<component_developer>> and
-<<configuration_author>> roles, such as the current locale, the
-machine architecture, the current time, the current working directory,
-and so on.
+The notional result of <<deploy,deploying>> an
+(<<assemble,assembled>>) <<application,application>>.
 
-[[environment_coordinates]]Environment Coordinates:: Notional
-coordinates that partially or completely locate an
+[#environment]
+==== Environment
+
+A notional location in <<environment_space,environment space>> into
+which an <<application,application>> is <<deploy,deployed>>. An
+environment comprises <<configuration,configurations>> and other data
+typically outside of the responsibilities of the
+<<component_developer>> and <<configuration_author>> roles, such as
+the current locale, the machine architecture, the current time, the
+current working directory, and so on.
+
+[#environment_coordinates]
+==== Environment Coordinates
+
+Notional coordinates that partially or completely locate an
 <<environment,environment>>, and its <<deploy,deployed>>
 <<application,applications>>, in <<environment_space,environment
 space>>.
-+
-[sidebar]
+
+****
 Environment coordinates are the "latitude and longitude", loosely
 speaking, of an <<environment,environment>>, and hence its
 <<deploy,deployed>> <<application,applications>>, within
 <<environment_space,environment space>>.
+****
 
-[[environment_space]]Environment Space:: The universe of all possible
-<<environment,environments>>, and hence all possible
-<<configuration,configurations>>, for all possible
+[#environment_loader]
+==== Environment Loader
+
+A notional <<component,component>> that can load an
+<<environment,environment>> on behalf of an <<component,component>> or
+<<application,application>> when requested.
+
+[#environment_space]
+==== Environment Space
+
+The universe of all possible <<environment,environments>>, and hence
+all possible <<configuration,configurations>>, for all possible
 <<application,applications>>.
 
-[[qualifier]]Qualifier:: An <<environment_coordinates,environment
-coordinate>>, particularly one that is characterized by a name and a
-textual value.
+[#qualifier]
+==== Qualifier
+
+An <<environment_coordinates,environment coordinate>>, particularly
+one that is characterized by a name and a textual value.

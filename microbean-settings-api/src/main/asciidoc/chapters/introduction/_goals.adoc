@@ -2,64 +2,82 @@
 === Goals
 
 The following is a non-exhaustive list of goals in no particular order
-of this specification and, by extension, any conforming
-implementation:
+that guide the development of this specification. They are also by
+extension the goals of any conforming implementation.
 
 Use Cases::
- * This specification should be *primarily* focused on the use cases
-   of the <<component_developer>> as she seeks to acquire Java objects
-   from configuration.
+ * This specification should be *primarily* focused on the use cases of
+   the <<component_developer>> as she seeks to acquire Java objects
+   from an <<environment,environment>>.
 
  * This specification should be *secondarily* focused on the use cases
-   of the <<application_assembler>> as she seeks to combine disparate
-   components into a Java application, while resolving
-   configuration-related conflicts.
+   of the <<application_assembler>> as she seeks to <<assemble,combine
+   disparate components into a Java application>>, while resolving
+   <<configuration,configuration>>-related conflicts.
 
  * This specification should be *tertiarily* focused on any use cases
    of the <<infrastructure_developer>> as she seeks to adapt a
    conforming implementation of this specification to her
    configuration management system.
 
+Abstraction::
+ * This specification should aim to abstract away as much as possible
+   the details of how a <<configuration,configuration>> is represented
+   persistently.
+
 Self-Configurability::
  * A conforming implementation should be able to configure itself
    using itself.
 
 No Dependency Injection::
- * This specification and any conforming implementation should not be
-   dependent upon or tied in any way to any dependency injection
-   system.
+ * This specification should not be dependent upon or tied in any way
+   to any dependency injection system.
 
  * A conforming implementation of this specification should be usable
    in any Java program, including those whose structure is defined by
    any of a variety of application frameworks.
 
- * This specification should depend on as few externalities as is
-   possible.
+ * This specification should have as few external dependencies as
+   possible. This specification should aim to be at a fundamental
+   enough architectural layer within the ecosystem of a Java
+   application so that it can be used to configure all the layers
+   above it.
 
- * There should be no concept of "managed component" in the
-   specification.
+ * There should be no concept of "managed component" in this
+   specification, as is found in other specifications like
+   https://jakarta.ee/specifications/cdi/3.0/jakarta-cdi-spec-3.0.html[CDI],
+   https://jakarta.ee/specifications/managedbeans/2.0/jakarta-managed-beans-spec-2.0.html[Managed
+   Beans] and so on.
++
+[sidebar]
+This goal helps situate this specification in architectural space low
+enough that a conforming implementation may be used to configure
+layers above it.
 
 Java 9 Compatibility::
  * This specification should allow conforming implementations to be
    https://www.jcp.org/en/jsr/detail?id=376[Java Platform Module
    System modules].
 
-
 Configuration Discoverability::
- * Configuration values that an application component needs should be
-   discoverable in some way by a <<configuration_author>> without
-   requiring the source code.
+ * A <<configuration,configuration>> that an application
+   <<component,component>> needs should be discoverable in some way,
+   perhaps with unspecified or vendor-defined tooling, by a
+   <<configuration_author>> without requiring the
+   <<component,component's>> source code.
 
 Separation of Concerns::
- * Component-level concerns and application-level concerns should be
+ * <<component_concern,Component-level concerns>> and
+   <<application_concern,application-level concerns>> should be
    separated as much as possible.
 
- * Where component concerns conflict in a given application,
-   mechansims should be provided by this specification to help resolve
-   them.
+ * Where <<component_concern,component concerns>> conflict in a given
+   <<application,application>>, mechansims should be provided by this
+   specification to help resolve them.
 
 Early Failure::
- * Missing and otherwise invalid configuration values should be
-   detectable as early as possible, ideally before application
-   startup, or, in the worst cases, immediately upon startup.
+ * Missing and otherwise invalid <<configuration,configurations>>
+   should be detectable as early as possible, ideally before
+   <<application,application>> <<deploy,deployment>>, or, in the worst
+   cases, immediately upon startup after <<deploy,deployment>>.
 
