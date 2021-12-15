@@ -8,60 +8,104 @@ role, even at a time.
 [#component_developer]
 ==== Component Developer
 
-_Develops_ Java <<component,components>> and libraries that may be
-used in a variety of <<application,applications>>. Focuses on business
-logic. Wants to acquire certain Java objects from
-<<configuration,configuration>> so that a <<component,component>> does
-not have to have its code changed when the values from which those
-objects are composited change.
+ * _Develops_ Java <<component,components>> and libraries that may be
+   used in a variety of <<application,applications>>.
+   
+ * Focuses on business logic.
+
+ * Wants to acquire certain Java objects
+   from <<configuration,configuration>> so that a
+   <<component,component>> does not have to have its code changed when
+   the values from which those objects are composited change.
+   
+ * _Advertises_ <<configuration,configuration>> information that her
+   <<component,components>> will consult.
+
+Roles that are interested in the <<component,components>> she produces
+include the <<application_assembler>> and the
+<<configuration_author>>.
 
 [#application_assembler]
 ==== Application Assembler
 
-<<assemble,_Assembles_>> <<application,applications>> by packaging
-<<component,components>> and disambiguating
-<<component,component>>-level conflicts so that they become valid
-<<application_concern,application concerns>> instead. Ensures that
-<<application,application>>-level <<configuration,configuration>> is
-properly implemented and disambiguated when <<component,components>>
-supply competing or ambiguous <<configuration,configuration>>
-values. Notably does not <<deploy,deploy>> an
-<<application,application>> or tailor it to its
-<<environment,environment>>.
+ * <<assemble,_Assembles_>> <<application,applications>> by packaging
+   <<component,components>> and disambiguating
+   <<component,component>>-level conflicts so that they become valid
+   <<application_concern,application concerns>> instead.
+
+ * Ensures that <<application,application>>-level
+   <<configuration,configuration>> is properly implemented and
+   disambiguated when <<component,components>> supply competing or
+   ambiguous <<configuration,configuration>> values.
+
+ * May add <<component,components>> developed by the
+   <<infrastructure_developer>> while assembling an
+   <<application,application>>.
+
+ * Notably does not <<deploy,deploy>> an <<application,application>>
+   or tailor it to its <<environment,environment>>.
+
+Roles that are interested in the <<assemble,assembled>>
+<<application,application>> she produces include the
+<<application_deployer>> and the <<configuration_author>>.
 
 [#configuration_author]
 ==== Configuration Author
 
-_Authors_ <<configuration,configuration>> values for a variety of
-<<assemble,assembled>> <<application,applications>> and a variety of
-<<environment,environments>>. _Tailors_ an
-<<application,application's>> <<configuration,configuration>> for a
-particular <<environment,environment>>. Needs to understand what
-<<configuration,configuration>> values need to be present and how they
-are to be formatted. Understands her configuration management system
-and its authoring tools.  Works with the <<component_developer>> to
-understand what <<configuration,configuration>> values need to be
-present. Wants to avoid duplicating <<configuration,configuration>>
-values as much as possible to minimize errors.
+ * _Authors_ <<configuration,configuration>> values for a variety of
+   <<assemble,assembled>> <<application,applications>> and a variety of
+   <<environment,environments>>.
+
+ * _Tailors_ an <<application,application's>>
+   <<configuration,configuration>> for a particular
+   <<environment,environment>>.
+
+ * _Discovers_ <<configuration,configuration>> information advertised
+   by the <<component_developer>> for a given <<component,component>>
+   in order to understand what <<configuration,configuration>> values
+   need to be present.
+
+ * Understands her configuration management system and its authoring
+   tools.
+
+ * Uses, directly or indirectly, knowingly
+   or unknowingly, the work of an <<infrastructure_developer>> in
+   order to correctly supply properly authored and formatted
+   <<configuration,configuration>> information to a conforming
+   implementation of this specification.
+
+ * Wants to avoid duplicating
+   <<configuration,configuration>> values as much as possible to
+   minimize errors.
+
+Roles that are interested in the <<configuration,configuration>>
+values she authors include the <<application_assembler>>.
 
 [#application_deployer]
 ==== Application Deployer
 
-<<deploy,_Deploys_>> <<assemble,assembled>>
-<<application,applications>> to <<environment,environments>>. Does not
-change the <<application,applications>>, but may design the way they
-are started and run, e.g. in order for them to be able to discover
-what <<environment,environment>> they are running in.
+ * <<deploy,_Deploys_>> <<assemble,assembled>>
+   <<application,applications>> to <<environment,environments>>.
+
+ * Does not change <<application,applications>>, but may design the
+   way they are started and run, e.g. in order for them to be able to
+   discover what <<environment,environment>> they are running in.
 
 [#infrastructure_developer]
 ==== Infrastructure Developer
 
-Develops Java <<component,components>> and writes other code to
-_adapt_ a conforming implementation of this specification to her
-configuration management system or systems (which in many cases is
-simply files in directories). The <<component,components>> supplying
+ * Develops Java <<component,components>> and writes other code to
+   _adapt_ a conforming implementation of this specification to a
+   configuration management system or systems (which in many cases is
+   simply files in directories).
+
+The <<component,components>> she develops that supply
 <<configuration,configuration>> values may conform to _service
 provider interfaces_ defined by this specification, and may be among
 those that the <<application_assembler>> uses when
 <<assemble,assembling>> an <<application,application>>.
+
+Roles that are interested in the choices and components she makes and
+develops include the <<configuration_author>> and the
+<<application_assembler>>.
 

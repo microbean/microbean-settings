@@ -19,3 +19,6 @@ Java Only::
  * It is not a goal of this specification that it ever be extended to
    computer languages other than Java.
 
+Not High Performance::
+ * It is not a goal of this specification that it prioritize
+   performance over other concerns.

@@ -74,6 +74,7 @@
             </goals>
             <configuration>
               <attributes>
+                <docinfo>shared</docinfo>
                 <doctitle/>
                 <imagesdir>images</imagesdir>
               </attributes>

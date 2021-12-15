@@ -1,0 +1,168 @@
+[#concepts]
+== Concepts
+
+=== Components
+
+A _component_, for the purposes of this specification, is a Java class
+or a collection of Java classes that may behave differently based on
+state loaded from its surrounding environment without requiring its
+source code to change.
+
+Because components are often developed by different people and
+organizations and combined only at the point of application assembly,
+they can inadvertently make configuration-related assumptions that may
+be true during development, in isolation, but may not be true in the
+presence of other components, such as, for example, during application
+assembly.
+
+For example, where names are involved, two components might reference
+the same name but expect different named objects or results as a
+result of the reference. In order to assemble these components into an
+application, an application assembler will have to resolve this
+conflict.
+
+In the realm of configuration, namespaces are an example of component
+concerns clashing with application concerns. Where there is a
+conflict, the application assembler must be able to disambiguate
+component concerns and reframe them as application concerns.
+
+****
+Consider a hypothetical method invocation from a component:
+[source,java]
+----
+final Frobnicator f = gorp.getFrobnicator("special");
+----
+The namespace governing "`special`" in this example is that of the
+invoker of the `getFrobnicator("special")` method.
+
+Now consider another hypothetical method invocation from another
+component:
+[source,java]
+----
+final Caturgiator c = floo.getCaturgiator("special");
+----
+If `gorp` and `floo` access configuration based on the name they are
+supplied, there could be clashing component concerns. An application
+assembler would have to somehow resolve the conflicting facts that in
+the first example "`special`" refers to a particular kind of
+`Frobnicator`, and in the second example "`special`" refers to a
+particular kind of `Caturgiator`.
+****
+
+Components are not directly represented in the APIs defined by this
+specification.
+
+=== Applications
+
+An _application_, for the purposes of this specification, is an
+assembled collection of components whose component concerns have been
+reframed as application concerns by an application assembler.
+
+Applications are deployed into environments.
+
+Applications are not directly represented in the APIs defined by this
+specification.
+
+Applications are particularly significant nonetheless to this
+specification because applications, not their constituent components,
+are what is deployed into environments, and the namespaces (and other
+similar concerns) of an application deployment are that of the
+deployed application, not of any of its constituent components.
+
+=== Configurations
+
+A _configuration_, for the purposes of this specification, is a persistent
+human-authored collection of named values that serves as a portion of
+the externalized state of a component.
+
+A configuration belongs to one and only one environment.
+
+[#determinism]
+=== Determinism
+
+A non-`null` `java.util.Supplier` instance is said to be
+_deterministic_ if and only if repeated invocations of its `get()`
+method on any thread yield Java objects that are guaranteed to be
+identical to one another.
+
+NOTE: A `Supplier` whose `get()` implementation always returns `null`
+is deterministic, though it produces a value that is
+<<presence,permanently absent>>.
+
+[#presence]
+=== Presence
+
+This specification makes a distinction between notional
+<<configuration,configuration>> values that are:
+
+ * Currently present (or absent), but perhaps not so in the future
+
+ * Permanently present in the manner of a singleton, but perhaps one
+   whose internal state may change over time
+
+ * Permanently absent, indicating that there simply is no such value
+
+In general, regarding the Java objects discussed in this
+specification:
+
+ * A currently present (or currently absent) object is represented by
+   a non-`null` instance of `java.util.Supplier`.  The actual
+   underlying value may be requested by invoking its `get()` method.
+   The `Supplier` may or may not be <<determinism,deterministic>>.
+
+ * A permanently present object is represented by the object itself.
+   Its internal state may or may not change over time, and its
+   accessor methods (its "getters") may or may not reflect such
+   changes.
+
+ * A permanently absent object is represented by `null`.
+
+[#morphology]
+=== Morphology
+
+<<configuration,Configurations>> can change over time, even while an
+<<application,application>> is running. Changes over time may include
+changes over time to values underlying, and possibly represented by,
+the <<configuration,configuration>>, as well as changes over time to
+the _structure_ of the <<configuration,configuration>>, i.e. changes
+to the set of its values for which it is even sensible to issue a
+request.  The first kind of changes are _content changes_.  The second
+kind of changes are _morphology changes_.
+
+This specification deliberately does not specify whether content
+changes or morphology changes are valid changes for any given
+<<configuration,configuration>>.  Nor does it specify whether any
+changes of either variety must or must not be made available to the
+<<component_developer>>.  The <<component_developer>> may model her
+<<configuration,configuration>> to expose these changes or not, as she
+sees fit.
+
+****
+
+ * If the <<component_developer>> chooses to model a
+   <<configuration,configuration>> as a "business object" (a designed,
+   special-purpose Java class), then by extension she is indicating
+   that the <<configuration,configuration's>> morphology cannot
+   change.
+
+ * If on the other hand she models a
+   <<configuration,configuration>> as, say, a `java.util.Map`, then by
+   extension she may be indicating that the
+   <<configuration,configuration's>> morphology _can_ change (perhaps
+   the set of its keys will change).
+
+ * If she models the mechanism used
+   to access an underlying portion of the
+   <<configuration,configuration's>> state as a `java.util.Supplier`,
+   then she is indicating that that portion of state may be present at
+   one moment in time, and potentially absent at another, or, if the
+   `Supplier` in question is itself allowed to be `null`, permanently
+   absent.
+
+ * If she chooses to model the mechanism as a simple "getter"
+   method that returns a Java object representing the state directly,
+   then in so doing she chooses to designate that value as being
+   permanently present or permanently absent (depending on whether
+   `null` is a permitted return value).
+
+****

@@ -1,0 +1,54 @@
+<!-- See https://raw.githubusercontent.com/eclipse-ee4j/cdi/master/spec/src/main/asciidoc/docinfo.html -->
+<script src="https://code.jquery.com/jquery-1.11.3.min.js"></script>
+<script src="https://code.jquery.com/ui/1.11.4/jquery-ui.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.tocify/1.9.0/javascripts/jquery.tocify.min.js"></script>
+
+<style>
+.tocify-subheader {
+    font-style: normal;
+    font-size: 95%;
+}
+.tocify ul {
+    margin: 0;
+}
+.tocify-focus {
+    background-color: #D3D3D3;
+}
+.tocify-focus > a {
+    color: black;
+}
+</style>
+
+<script type="text/javascript">
+  $(function () {
+      $("#toc").append("<div id='generated-toc'></div>");
+      $("#generated-toc").tocify({
+          extendPage: true,
+          context: "#content",
+          highlightOnScroll: true,
+          hideEffect: "slideUp",
+          hashGenerator: function(text, element) {
+              return $(element).attr("id");
+          },
+          smoothScroll: false,
+          theme: "none",
+          selectors: $( "#content" ).has( "h1" ).size() > 0 ? "h1,h2,h3,h4,h5" : "h2,h3,h4,h5",
+          ignoreSelector: ".discrete"
+      });
+      var handleTocOnResize = function() {
+          if ($(document).width() < 768) {
+              $("#generated-toc").hide();
+              $(".sectlevel0").show();
+              $(".sectlevel1").show();
+          }
+          else {
+              $("#generated-toc").show();
+              $(".sectlevel0").hide();
+              $(".sectlevel1").hide();
+          }
+      }
+      $(window).resize(handleTocOnResize);
+      handleTocOnResize();
+      $("ul.tocify-subheader[data-tag='4']").hide();
+  });
+</script>

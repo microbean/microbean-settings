@@ -1,0 +1,77 @@
+[#use_cases]
+== Use Cases
+
+The following are significant use cases addressed by this
+specification.  The specific ways in which the use cases are
+implemented are discussed later in this specification.
+
+[#environment_model_acquisition]
+=== Environment Model Acquisition
+
+==== Overview
+
+ . The <<component_developer>> wants to acquire a single Java object
+   whose class she has designed that models the current
+   <<component,component's>> <<environment,environment>>.
+
+ . She invokes a simple method on a simple specification-defined
+   <<environment_loader,environment loader>>, supplying it with the
+   class designating the object that models the type of
+   <<environment,environment>> she wants to acquire.
+
+ .. The <<qualifier,qualifiers>> for the current
+    <<application,application>> are determined automatically.
+
+ . The <<environment_loader,environment loader>> takes the
+   <<qualifier,qualifiers>> into consideration as well as the desired
+   <<environment,environment>>-modeling class, and arranges for the
+   proper object representing the current qualified
+   <<application,application's>> <<environment,environment>> to be
+   selected, instantiated and retrieved.
+
+[#named_object_acquisition]
+=== Named Object Acquisition
+
+==== Overview
+
+ . The <<component_developer>> wants to acquire a _portion_ of an
+   <<environment,environment>>, represented as a Java object whose
+   class she may or may not have designed.
+
+ .. The object is qualified by a particular name belonging notionally
+    to the <<component,component>> namespace.
+
+ . She invokes a simple method on a simple specification-defined
+   <<environment_loader,environment loader>>, supplying it with the
+   component-namespaced name and the class designating the object she
+   wants.
+
+ .. The <<qualifier,qualifiers>> for the current
+    <<application,application>> are determined automatically.
+
+ . The <<environment_loader,environment loader>> takes the supplied
+   name designating the portion of the <<environment,environment>> to
+   retrieve, the <<application,application>> <<qualifier,qualifiers>>
+   and the supplied class into consideration, and arranges for the
+   proper object to be instantiated and retrieved.
+
+[#disambiguation]
+=== Disambiguation
+
+==== Overview
+
+ . The <<application_assembler>> wants to ensure that if two
+   <<component,components>> use the same name internally they do
+   not intend for two different kinds of objects to be designated.
+
+ . She supplies <<configuration,configuration>> that maps
+   <<component,component>> names to <<application,application>> names,
+   thus disambiguating them, to the <<environment_loader,environment
+   loader>> defined by this specification itself.
+
+ . The <<environment_loader,environment loader>> discovers or
+   otherwise accepts this supplied <<configuration,configuration>> and
+   applies its disambiguation semantics automatically for the lifetime
+   of the <<application,application>>, particularly during the
+   <<named_object_acquisition>> use case.
+

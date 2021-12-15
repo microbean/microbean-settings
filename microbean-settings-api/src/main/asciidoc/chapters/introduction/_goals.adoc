@@ -2,34 +2,40 @@
 === Goals
 
 The following is a non-exhaustive list of goals in no particular order
-that guide the development of this specification. They are also by
-extension the goals of any conforming implementation.
+that have guided and continue to guide the development of this
+specification. They are also by extension the goals of any conforming
+implementation.
 
 Use Cases::
- * This specification should be *primarily* focused on the use cases of
-   the <<component_developer>> as she seeks to acquire Java objects
-   from an <<environment,environment>>.
 
- * This specification should be *secondarily* focused on the use cases
-   of the <<application_assembler>> as she seeks to <<assemble,combine
-   disparate components into a Java application>>, while resolving
+ * *Firstly*, this specification should focus on the <<use_cases,use
+   cases>> of the <<component_developer>> as she seeks to acquire Java
+   objects from an <<environment,environment>>.
+
+ * *Secondly*, this specification should focus on the <<use_cases,use
+   cases>> of the <<application_assembler>> as she seeks to
+   <<assemble,combine disparate components into a Java application>>,
+   while <<disambiguation,resolving>>
    <<configuration,configuration>>-related conflicts.
 
- * This specification should be *tertiarily* focused on any use cases
-   of the <<infrastructure_developer>> as she seeks to adapt a
+ * *Thirdly*, this specification should focus on any <<use_cases,use
+   cases>> of the <<infrastructure_developer>> as she seeks to adapt a
    conforming implementation of this specification to her
    configuration management system.
 
 Abstraction::
+
  * This specification should aim to abstract away as much as possible
    the details of how a <<configuration,configuration>> is represented
    persistently.
 
 Self-Configurability::
+
  * A conforming implementation should be able to configure itself
    using itself.
 
 No Dependency Injection::
+
  * This specification should not be dependent upon or tied in any way
    to any dependency injection system.
 
@@ -39,27 +45,23 @@ No Dependency Injection::
 
  * This specification should have as few external dependencies as
    possible. This specification should aim to be at a fundamental
-   enough architectural layer within the ecosystem of a Java
-   application so that it can be used to configure all the layers
-   above it.
+   enough layer within the architecture of a Java application that
+   it can be used to configure itself and all the layers above it.
 
  * There should be no concept of "managed component" in this
    specification, as is found in other specifications like
    https://jakarta.ee/specifications/cdi/3.0/jakarta-cdi-spec-3.0.html[CDI],
    https://jakarta.ee/specifications/managedbeans/2.0/jakarta-managed-beans-spec-2.0.html[Managed
    Beans] and so on.
-+
-[sidebar]
-This goal helps situate this specification in architectural space low
-enough that a conforming implementation may be used to configure
-layers above it.
 
 Java 9 Compatibility::
+
  * This specification should allow conforming implementations to be
    https://www.jcp.org/en/jsr/detail?id=376[Java Platform Module
    System modules].
 
 Configuration Discoverability::
+
  * A <<configuration,configuration>> that an application
    <<component,component>> needs should be discoverable in some way,
    perhaps with unspecified or vendor-defined tooling, by a
@@ -67,6 +69,7 @@ Configuration Discoverability::
    <<component,component's>> source code.
 
 Separation of Concerns::
+
  * <<component_concern,Component-level concerns>> and
    <<application_concern,application-level concerns>> should be
    separated as much as possible.
@@ -75,7 +78,12 @@ Separation of Concerns::
    <<application,application>>, mechansims should be provided by this
    specification to help resolve them.
 
+ * The consumption and production of <<configuration,configurations>>
+   and other <<environment,environmental>> objects should be separated
+   as much as possible.
+
 Early Failure::
+
  * Missing and otherwise invalid <<configuration,configurations>>
    should be detectable as early as possible, ideally before
    <<application,application>> <<deploy,deployment>>, or, in the worst

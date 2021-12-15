@@ -1,9 +1,13 @@
 = microBean™ Settings Specification
 Laird Nelson
+0.0.0, {docdate}: DRAFT
 :imagesdir: images
+:license: asl2
 :nofooter:
 :reproducible:
+:sectanchors:
 :sectnums:
+:source-highlighter: coderay
 :toc: left
 :toclevels: 4
 
@@ -12,4 +16,10 @@ until this message is removed you are reading a draft in progress.
 Its contents are subject to change without notice at any time.
 
 include::chapters/introduction/_introduction.adoc[]
+
+include::chapters/concepts/_concepts.adoc[]
+
+include::chapters/usecases/_usecases.adoc[]
+
+include::chapters/interfaces/_interfaces.adoc[]
 

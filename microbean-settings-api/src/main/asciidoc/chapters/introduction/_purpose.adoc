@@ -4,17 +4,32 @@
 This specification defines a set of Java APIs and behavioral contracts
 for:
 
- * a <<component_developer>> to use in order to acquire Java objects
-   from <<configuration,configurations>> and their containing
-   <<environment,environments>>
+ * a <<component_developer>> to use in order to:
 
- * an <<application_assembler>> to use in order to disambiguate
-   <<component_concern,component concerns>> while preparing an
+ ** <<environment_model_acquisition,acquire>> Java objects from
+    <<configuration,configurations>> and their containing
+    <<environment,environments>>
+
+ ** advertise the kind of
+    <<configuration,configuration>> her <<component,component>> needs
+
+ * an <<application_assembler>> to use in order to
+   <<disambiguation,disambiguate>> <<component_concern,component
+   concerns>> while <<assemble,assembling>> an
    <<application,application>> for <<deploy,deployment>>
 
- * a <<configuration_author>> to use in order to create the proper
-   <<configuration,configuration>> for a given <<deploy,deployment>>
-   of an <<application,application>> into an
-   <<environment,environment>> containing that
-   <<configuration,configuration>
+ * an <<infrastructure_developer>> to use in order to adapt a
+   configuration system to a conforming implementation of this
+   specification
 
+ * a <<configuration_author>> to use in order to discover and create
+   proper <<configuration,configurations>> for a given
+   <<deploy,deployment>> of an <<application,application>> into an
+   <<environment,environment>> containing those
+   <<configuration,configurations>>
+
+These APIs and contracts cleanly separate <<component,components>> and
+<<application,applications>> from the <<environment,environments>>
+into which they might be <<deploy,deployed>>.  They also separate the
+consumption of <<configuration,configurations>> and other
+<<environment,environmental>> objects from their production.
