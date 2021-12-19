@@ -23,8 +23,11 @@ import java.util.ServiceLoader;
 
 import java.util.function.Supplier;
 
+import java.util.stream.Stream;
+
 import org.microbean.development.annotation.Convenience;
 import org.microbean.development.annotation.EntryPoint;
+import org.microbean.development.annotation.Experimental;
 import org.microbean.development.annotation.OverridingDiscouraged;
 import org.microbean.development.annotation.OverridingEncouraged;
 
@@ -187,6 +190,41 @@ public interface Configured<T> extends OptionalSupplier<T> {
    * Default instance methods.
    */
 
+
+  /**
+   * Returns a {@link Stream} of {@link Path}s <strong>{@linkplain
+   * Path#isRelative() relative} to this {@link Configured}</strong>
+   * that are known to be valid.
+   *
+   * <p>The {@link Path}s supplied by the returned {@link Stream}
+   * constitute a subset of all valid {@link Path}s.</p>
+   *
+   * <p>The {@link Stream} may supply duplicate {@link Path} objects.
+   * It is up to the caller how to process them.</p>
+   *
+   * <p>It is often impossible for a configuration system to know its
+   * valid {@link Path}s in advance, in which case the return value of
+   * this method might very well be equal to the return value of the
+   * {@link Stream#empty()} method.</p>
+   *
+   * <p>The default implementation of this method returns the return
+   * value of an invocation of the {@link Stream#empty()} method.</p>
+   *
+   * @return a {@link Stream} of {@link Path}s; never {@code null}
+   *
+   * @nullability This method never returns {@code null}
+   *
+   * @idempotency This method is, and its overrides must be,
+   * idempotent.  This method is, but its overrides need not be,
+   * deterministic.
+   *
+   * @threadsafety This method is, and its overrides must be, safe for
+   * concurrent use by multiple threads.
+   */
+  @Experimental
+  public default Stream<Path<?>> paths() {
+    return Stream.empty();
+  }
 
   /**
    * <em>Transliterates</em> the supplied {@linkplain

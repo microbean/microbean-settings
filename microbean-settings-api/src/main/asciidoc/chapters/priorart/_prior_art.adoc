@@ -1,0 +1,39 @@
+[#prior_art]
+== Prior Art
+
+=== Java Naming and Directory Interface
+
+Known now mostly as a library for accessing LDAP servers, JNDI is
+actually primarily a specification for what amounts to
+<<named_object_acquisition,the Named Object Acquisition use case>>,
+complete with namespace resolution, partial or complete
+<<environment,environmental>> object acquisition, user-supplied
+factories, composite naming systems and so on.  This specification
+leans heavily on the concepts at the heart of the "read-only" parts of
+JNDI.
+
+=== DropWizard
+
+DropWizard forces an application to model its entire configuration as
+a Java object that is deserialized by Jackson, often thought of
+incorrectly as just a JSON library.  This specification leans heavily
+on DropWizard's insistence that configuration be modeled up front and
+by the user, and imagines a deliberately unspecified "back end" to
+permit technologies other than Jackson to play the role of object
+deserializer.
+
+=== Spring Boot's Type-Safe Configuration Properties
+
+Spring Boot's
+https://docs.spring.io/spring-boot/docs/current/reference/html/features.html#features.external-config.typesafe-configuration-properties[type-safe
+configuration properties] has a mechanism for deserializing Java
+objects from
+https://docs.spring.io/spring-boot/docs/current/reference/html/features.html#features.external-config.yaml[YAML],
+https://docs.spring.io/spring-boot/docs/current/reference/html/features.html#features.external-config.application-json[JSON]
+and
+https://docs.spring.io/spring-boot/docs/current/reference/html/features.html#features.external-config.files[Java
+properties files].  Spring Boot also has a deliberately opinionated
+position on how externalized configuration is layered and stacked,
+which, though flawed at its core, has inspired almost every other Java
+configuration framework in existence.
+

@@ -23,3 +23,6 @@ include::chapters/usecases/_usecases.adoc[]
 
 include::chapters/interfaces/_interfaces.adoc[]
 
+include::chapters/priorart/_prior_art.adoc[]
+
+include::chapters/junkdrawer/_junk_drawer.adoc[]

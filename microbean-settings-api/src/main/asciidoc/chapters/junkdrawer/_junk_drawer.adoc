@@ -1,0 +1,22 @@
+[#junk_drawer]
+== Junk Drawer
+
+=== Value
+
+The term "value" is something that keeps coming up and probably should
+have a definition.  The challenge is: we don't want it to be something
+handwavy.  The general idea is that a value in flight is just a Java
+object (`String`, `int`, `MyStructuredObject`) but with additional
+semantics (it may be <<presence,permanently or only currently present
+or absent>>, for example).
+
+=== Enumerating Environment Space
+
+<<environment_space,Environment space>> is not fully enumerable. It
+contains an infinity of <<path,paths>>. It is therefore nonsensical to
+force an implementation of this specification to provide a set of all
+<<path,paths>> for which there are values.
+
+Does it make sense to provide the ability for an implementation of
+this specification to provide a set of _some_ <<path,paths>> for which
+there are values?

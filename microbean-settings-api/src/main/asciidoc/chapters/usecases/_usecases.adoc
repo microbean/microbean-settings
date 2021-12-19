@@ -34,39 +34,95 @@ implemented are discussed later in this specification.
 
 ==== Overview
 
- . The <<component_developer>> wants to acquire a _portion_ of an
-   <<environment,environment>>, represented as a Java object whose
-   class she may or may not have designed.
+ . The <<component_developer>> wants to acquire a _portion_ of a
+   <<component,component's>> <<environment,environment>>, represented
+   as a Java object whose class she may or may not have designed. The
+   object may be a simple scalar value, such as a `String` or an
+   `int`, or a structured type, or any other kind of object.
 
- .. The object is qualified by a particular name belonging notionally
-    to the <<component,component>> namespace.
+ .. The object representing the portion is qualified by a particular
+    <<path,path>> belonging notionally to the <<component,component>>
+    namespace. The <<path,path>> may consist of, effectively, a single
+    name, or multiple name components.
++
+NOTE: A <<path,path>> that is effectively a single name used to
+retrieve an object that is a simple scalar value models retrieving a
+"property", a use case found in many other configuration frameworks.
+
+ .. The object representing the portion may be a simple scalar
+    value, such as a `String` or an `int`, or a structured type.
 
  . She invokes a simple method on a simple specification-defined
    <<environment_loader,environment loader>>, supplying it with the
-   component-namespaced name and the class designating the object she
-   wants.
+   component-namespaced <<path,path>> and the class designating the
+   object she wants.
 
  .. The <<qualifier,qualifiers>> for the current
     <<application,application>> are determined automatically.
 
- . The <<environment_loader,environment loader>> takes the supplied
-   name designating the portion of the <<environment,environment>> to
-   retrieve, the <<application,application>> <<qualifier,qualifiers>>
-   and the supplied class into consideration, and arranges for the
-   proper object to be instantiated and retrieved.
+ .. The <<environment_loader,environment loader>> consults any
+    <<disambiguation,disambiguation>> information supplied by the
+    <<application_assembler>> and transliterates the
+    component-namespaced <<path,path>> into an equivalent
+    <<application,application>>-namespaced <<path,path>>, thus turning
+    a <<coponent_concern,component concern>> into an equivalent
+    <<application_concern,application concern>>
+
+ . The <<environment_loader,environment loader>> takes the (possibly
+   transliterated) <<path,path>> designating the portion of the
+   <<environment,environment>> to retrieve, the
+   <<application,application>> <<qualifier,qualifiers>> and the
+   supplied class into consideration, and arranges for the proper
+   object to be instantiated and retrieved.
 
 [#disambiguation]
 === Disambiguation
 
 ==== Overview
 
- . The <<application_assembler>> wants to ensure that if two
-   <<component,components>> use the same name internally they do
-   not intend for two different kinds of objects to be designated.
+ . The <<application_assembler>> wants to resolve the ambiguity
+   introduced when two <<component,components>> that she is
+   <<assemble,assembling>> into an <<application,application>> define,
+   intentionally or unintentionally, equal <<path,paths>> that target
+   two different kinds of objects. To do this, she must
+   _transliterate_ at least one of the <<path,paths>> in question.
 
- . She supplies <<configuration,configuration>> that maps
-   <<component,component>> names to <<application,application>> names,
-   thus disambiguating them, to the <<environment_loader,environment
+ . To transliterate a <<component,component>>-defined
+   <<path,path>>, she supplies <<configuration,configuration>> that
+   maps the relevant <<component,component>>-defined <<path,path>> to
+   an equivalent <<application,application>>-defined <<path,path>>
+   featuring different but semantically equal path elements, thus
+   disambiguating it, to the <<environment_loader,environment
+   loader>> defined by this specification itself.
+
+ . The <<environment_loader,environment loader>> discovers or
+   otherwise accepts this supplied <<configuration,configuration>> and
+   applies its disambiguation semantics automatically for the lifetime
+   of the <<application,application>>, particularly during the
+   <<named_object_acquisition>> use case.
+
+==== Alternate Case: Retargeting
+
+ . The <<application_assembler>> may want to ensure that, if two
+   <<component,components>> that she is <<assemble,assembling>> into
+   an <<application,application>> define, intentionally or
+   unintentionally, different <<path,paths>> that target the same kind
+   of object, the <<component,components>> will actually use a single
+   <<application,application>>-defined <<path,path>> targeting that
+   kind of object instead.
+
+ .. Consolidating <<path,paths>> in this way may help the
+    <<configuration_author>> in her goal to avoid duplication of
+    <<configuration,configuration>> values.
+
+ .. In such a case, at least one of the <<path,paths>> will need to be
+    _transliterated_.
+
+ . To transliterate any <<component,component>>-defined
+   <<path,paths>>, she supplies <<configuration,configuration>> that
+   maps the relevant <<component,component>>-defined <<path,paths>> to
+   <<application,application>>-defined <<path,paths>>, thus
+   disambiguating them, to the <<environment_loader,environment
    loader>> defined by this specification itself.
 
  . The <<environment_loader,environment loader>> discovers or
