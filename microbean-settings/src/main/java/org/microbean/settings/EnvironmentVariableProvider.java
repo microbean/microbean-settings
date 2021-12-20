@@ -18,7 +18,7 @@ package org.microbean.settings;
 
 import java.util.function.Supplier;
 
-import org.microbean.settings.api.Configured;
+import org.microbean.settings.api.Loader;
 import org.microbean.settings.api.Path;
 import org.microbean.settings.api.Qualifiers;
 
@@ -32,7 +32,7 @@ public final class EnvironmentVariableProvider extends AbstractProvider<String> 
   }
 
   @Override // AbstractProvider<String>
-  public <T> Value<T> get(final Configured<?> requestor, final Path<T> absolutePath) {
+  public <T> Value<T> get(final Loader<?> requestor, final Path<T> absolutePath) {
     assert absolutePath.isAbsolute();
     assert absolutePath.startsWith(requestor.absolutePath());
     assert !absolutePath.equals(requestor.absolutePath());

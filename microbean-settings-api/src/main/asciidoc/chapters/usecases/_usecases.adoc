@@ -65,7 +65,7 @@ retrieve an object that is a simple scalar value models retrieving a
     <<application_assembler>> and transliterates the
     component-namespaced <<path,path>> into an equivalent
     <<application,application>>-namespaced <<path,path>>, thus turning
-    a <<coponent_concern,component concern>> into an equivalent
+    a <<component_concern,component concern>> into an equivalent
     <<application_concern,application concern>>
 
  . The <<environment_loader,environment loader>> takes the (possibly

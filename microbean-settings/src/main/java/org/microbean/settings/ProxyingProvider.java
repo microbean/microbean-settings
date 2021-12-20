@@ -38,7 +38,7 @@ import java.util.function.Supplier;
 
 import org.microbean.development.annotation.Convenience;
 
-import org.microbean.settings.api.Configured;
+import org.microbean.settings.api.Loader;
 import org.microbean.settings.api.OptionalSupplier;
 import org.microbean.settings.api.Path;
 import org.microbean.settings.api.Path.Element;
@@ -52,15 +52,15 @@ import org.microbean.type.Types;
 
 /**
  * An {@link AbstractProvider} that is capable of {@linkplain Proxy
- * proxying} {@linkplain #isProxiable(Configured, Path) certain}
+ * proxying} {@linkplain #isProxiable(Loader, Path) certain}
  * interfaces and supplying them as configured objects.
  *
  * @author <a href="https://about.me/lairdnelson"
  * target="_parent">Laird Nelson</a>
  *
- * @see #get(Configured, Path)
+ * @see #get(Loader, Path)
  *
- * @see #isProxiable(Configured, Path)
+ * @see #isProxiable(Loader, Path)
  */
 public class ProxyingProvider extends AbstractProvider<Object> {
 
@@ -97,7 +97,7 @@ public class ProxyingProvider extends AbstractProvider<Object> {
 
 
   @Override // Provider
-  public final <T> Value<T> get(final Configured<?> requestor, final Path<T> absolutePath) {
+  public final <T> Value<T> get(final Loader<?> requestor, final Path<T> absolutePath) {
     assert absolutePath.isAbsolute();
     assert absolutePath.startsWith(requestor.absolutePath());
     assert !absolutePath.equals(requestor.absolutePath());
@@ -147,7 +147,7 @@ public class ProxyingProvider extends AbstractProvider<Object> {
    * test codified by the {@link #isIndexLike(Class)} method or more
    * than one parameter.</p>
    *
-   * @param requestor the {@link Configured} seeking a configured
+   * @param requestor the {@link Loader} seeking a configured
    * object; must not be {@code null}; ignored by the default
    * implementation of this method
    *
@@ -174,7 +174,7 @@ public class ProxyingProvider extends AbstractProvider<Object> {
    *
    * @see #isIndexLike(Class)
    */
-  protected boolean isProxiable(final Configured<?> requestor, final Path<?> absolutePath) {
+  protected boolean isProxiable(final Loader<?> requestor, final Path<?> absolutePath) {
     final Class<?> c = absolutePath.typeErasure();
     if (c.isInterface() &&
         !c.isHidden() &&
@@ -219,7 +219,7 @@ public class ProxyingProvider extends AbstractProvider<Object> {
     return false;
   }
 
-  protected <T> Path<T> path(final Configured<?> requestor, final Path<T> absolutePath) {
+  protected <T> Path<T> path(final Loader<?> requestor, final Path<T> absolutePath) {
     return Path.of(absolutePath.typeErasure());
   }
   
@@ -233,7 +233,7 @@ public class ProxyingProvider extends AbstractProvider<Object> {
    * {@link Integer}, or a {@link CharSequence}.</p>
    *
    * <p>This method is called by the default implementation of the
-   * {@link #isProxiable(Configured, Path)} method.</p>
+   * {@link #isProxiable(Loader, Path)} method.</p>
    *
    * @param parameterType the method parameter type to test; may be
    * {@code null} in which case {@code false} will be returned
@@ -255,7 +255,7 @@ public class ProxyingProvider extends AbstractProvider<Object> {
       CharSequence.class.isAssignableFrom(parameterType);
   }
 
-  protected Object newProxyInstance(final Configured<?> requestor, final Path<?> absolutePath, final Class<?> interfaceToProxy) {
+  protected Object newProxyInstance(final Loader<?> requestor, final Path<?> absolutePath, final Class<?> interfaceToProxy) {
     return
       Proxy.newProxyInstance(interfaceToProxy.getClassLoader(),
                              new Class<?>[] { interfaceToProxy },
@@ -393,12 +393,12 @@ public class ProxyingProvider extends AbstractProvider<Object> {
   private static final class Handler implements InvocationHandler {
 
     /**
-     * A {@link Configured} whose {@link Configured#of(Path)} method
+     * A {@link Loader} whose {@link Loader#of(Path)} method
      * will eventually be called by the {@link #invoke(Object, Method,
      * Object[])} method.
      *
-     * <p>Note that this {@link Configured}'s {@link
-     * Configured#absolutePath()} method will return a {@link Path}
+     * <p>Note that this {@link Loader}'s {@link
+     * Loader#absolutePath()} method will return a {@link Path}
      * that <em>does not identify</em> the actual interface being
      * proxied, much less the {@link Method} being handled by this
      * {@link Handler}.  The {@link #absolutePath} field, instead,
@@ -410,13 +410,13 @@ public class ProxyingProvider extends AbstractProvider<Object> {
      * field will be appended with a relative {@link Path}
      * corresponding to the {@link Method} being handled, and
      * <em>that</em> resulting absolute {@link Path} will be supplied
-     * to the {@link Configured#of(Path)} method.  Note further that
-     * the {@link Configured#of(Path)} method will internally adjust
-     * the <em>actual</em> {@link Configured} used (see {@link
-     * Configured#configuredFor(Path)}).</p>
+     * to the {@link Loader#of(Path)} method.  Note further that
+     * the {@link Loader#of(Path)} method will internally adjust
+     * the <em>actual</em> {@link Loader} used (see {@link
+     * Loader#configuredFor(Path)}).</p>
      *
-     * <p>All of this to say: this {@link Configured} is just a handle
-     * of sorts to the proper {@link Configured} that will eventually
+     * <p>All of this to say: this {@link Loader} is just a handle
+     * of sorts to the proper {@link Loader} that will eventually
      * be used to locate the configured object corresponding to the
      * return value of the {@link Method} being handled, and serves no
      * other purpose.</p>
@@ -425,13 +425,13 @@ public class ProxyingProvider extends AbstractProvider<Object> {
      *
      * @see #invoke(Object, Method, Object[])
      */
-    private final Configured<?> requestor;
+    private final Loader<?> requestor;
 
     private final Path<?> absolutePath;
 
     private final BiFunction<? super Method, ? super Object[], ? extends Path<?>> pathFunction;
 
-    private Handler(final Configured<?> requestor,
+    private Handler(final Loader<?> requestor,
                     final Path<?> absolutePath,
                     final BiFunction<? super Method, ? super Object[], ? extends Path<?>> pathFunction) {
       super();

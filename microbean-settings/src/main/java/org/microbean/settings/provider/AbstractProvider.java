@@ -19,7 +19,7 @@ package org.microbean.settings.provider;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 
-import org.microbean.settings.api.Configured;
+import org.microbean.settings.api.Loader;
 import org.microbean.settings.api.Path;
 import org.microbean.settings.api.Qualifiers;
 import org.microbean.settings.api.TypeToken.ActualTypeArgumentExtractor;
@@ -28,7 +28,7 @@ import org.microbean.settings.api.TypeToken.ActualTypeArgumentExtractor;
  * A skeletal {@link Provider} implementation.
  *
  * @param <T> the upper bound of the types of objects produced by the
- * {@link #get(Configured, Path)} method
+ * {@link #get(Loader, Path)} method
 
  * @author <a href="https://about.me/lairdnelson"
  * target="_parent">Laird Nelson</a>
@@ -62,7 +62,7 @@ public abstract class AbstractProvider<T> implements Provider {
 
   /**
    * Returns a {@link Type} representing the upper bound of all
-   * possible {@linkplain Value values} {@linkplain #get(Configured,
+   * possible {@linkplain Value values} {@linkplain #get(Loader,
    * Path) supplied} by this {@link AbstractProvider}.
    *
    * <p>The value returned is harvested from the sole type argument

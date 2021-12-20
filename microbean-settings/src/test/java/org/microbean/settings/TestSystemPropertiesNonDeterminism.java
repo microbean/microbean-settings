@@ -21,8 +21,6 @@ import java.util.Properties;
 
 import org.junit.jupiter.api.Test;
 
-import org.microbean.settings.api.Configured;
-
 import org.microbean.settings.provider.Provider;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;

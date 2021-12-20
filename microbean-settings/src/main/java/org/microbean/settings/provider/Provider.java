@@ -20,12 +20,12 @@ import java.lang.reflect.Type;
 
 import java.util.stream.Stream;
 
-import org.microbean.settings.api.Configured;
+import org.microbean.settings.api.Loader;
 import org.microbean.settings.api.Path;
 
 /**
  * A service provider of {@link Value}s that might be suitable for a
- * {@link Configured} implementation to return.
+ * {@link Loader} implementation to return.
  *
  * <p>{@link Provider} instances are subordinate to {@link
  * org.microbean.settings.Settings}.</p>
@@ -36,7 +36,7 @@ import org.microbean.settings.api.Path;
  * @author <a href="https://about.me/lairdnelson"
  * target="_parent">Laird Nelson</a>
  *
- * @see #get(Configured, Path)
+ * @see #get(Loader, Path)
  *
  * @see AbstractProvider
  *
@@ -53,7 +53,7 @@ public interface Provider {
 
   /**
    * Returns a {@link Type} representing the upper bound of all
-   * possible {@linkplain Value values} {@linkplain #get(Configured,
+   * possible {@linkplain Value values} {@linkplain #get(Loader,
    * Path) supplied} by this {@link Provider}.
    *
    * <p>Often the value returned by implementations of this method is
@@ -66,7 +66,7 @@ public interface Provider {
    * Object Object.class}.</p>
    *
    * @return a {@link Type} representing the upper bound of all
-   * possible {@linkplain Value values} {@linkplain #get(Configured,
+   * possible {@linkplain Value values} {@linkplain #get(Loader,
    * Path) supplied} by this {@link Provider}; never {@code null}
    *
    * @nullability This method does not, and overrides of this method
@@ -88,7 +88,7 @@ public interface Provider {
 
   /**
    * Returns a {@link Value} suitable for the supplied {@link
-   * Configured} and {@link Path}, or {@code null} if there is no such
+   * Loader} and {@link Path}, or {@code null} if there is no such
    * {@link Value} now <strong>and if there never will be such a
    * {@link Value}</strong> for the supplied arguments.
    *
@@ -109,15 +109,15 @@ public interface Provider {
    *
    * @param <T> the type the supplied {@link Path} is typed with
    *
-   * @param requestor the {@link Configured} seeking a {@link Value};
+   * @param requestor the {@link Loader} seeking a {@link Value};
    * must not be {@code null}
    *
    * @param absolutePath an {@linkplain Path#isAbsolute() absolute
-   * <code>Path</code>} for which the supplied {@link Configured} is
+   * <code>Path</code>} for which the supplied {@link Loader} is
    * seeking a value; must not be {@code null}
    *
    * @return a {@link Value} more or less suitable for the combination
-   * of the supplied {@link Configured} and {@link Path}, or {@code
+   * of the supplied {@link Loader} and {@link Path}, or {@code
    * null} if there is no such {@link Value} now <strong>and if there
    * never will be such a {@link Value}</strong> for the supplied
    * arguments
@@ -137,6 +137,6 @@ public interface Provider {
    * @idempotency Implementations of this method must be idempotent
    * but are not assumed to be deterministic.
    */
-  public <T> Value<T> get(final Configured<?> requestor, final Path<T> absolutePath);
+  public <T> Value<T> get(final Loader<?> requestor, final Path<T> absolutePath);
 
 }

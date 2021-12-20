@@ -16,12 +16,12 @@
  */
 package org.microbean.settings.provider;
 
-import org.microbean.settings.api.Configured;
+import org.microbean.settings.api.Loader;
 import org.microbean.settings.api.Path;
 
 @FunctionalInterface
 public interface ProviderFunction<R> {
 
-  public R apply(final Configured<?> requestor, final Path<?> absolutePath);
+  public R apply(final Loader<?> requestor, final Path<?> absolutePath);
   
 }

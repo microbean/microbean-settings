@@ -24,9 +24,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import com.fasterxml.jackson.dataformat.toml.TomlMapper;
 
-import org.microbean.settings.api.Configured;
-import org.microbean.settings.api.Path;
-
 import org.microbean.settings.jackson.InputStreamJacksonProvider;
 
 import org.microbean.settings.provider.CachingSupplier;

@@ -44,16 +44,16 @@ import org.microbean.development.annotation.Convenience;
 
 import org.microbean.settings.provider.CachingSupplier;
 
-import org.microbean.settings.api.Configured;
+import org.microbean.settings.api.Loader;
 import org.microbean.settings.api.Path;
 
 import org.microbean.settings.jackson.JacksonProvider;
 
 public class InputStreamJacksonProvider<T> extends JacksonProvider<T> {
 
-  private final BiFunction<? super Configured<?>, ? super Path<?>, ? extends ObjectCodec> objectCodecFunction;
+  private final BiFunction<? super Loader<?>, ? super Path<?>, ? extends ObjectCodec> objectCodecFunction;
   
-  private final BiFunction<? super Configured<?>, ? super Path<?>, ? extends InputStream> inputStreamFunction;
+  private final BiFunction<? super Loader<?>, ? super Path<?>, ? extends InputStream> inputStreamFunction;
 
   private final Consumer<? super InputStream> inputStreamReadConsumer;
 
@@ -68,8 +68,8 @@ public class InputStreamJacksonProvider<T> extends JacksonProvider<T> {
          InputStreamJacksonProvider::closeInputStream);
   }
   
-  public InputStreamJacksonProvider(final BiFunction<? super Configured<?>, ? super Path<?>, ? extends ObjectCodec> objectCodecFunction,
-                                    final BiFunction<? super Configured<?>, ? super Path<?>, ? extends InputStream> inputStreamFunction,
+  public InputStreamJacksonProvider(final BiFunction<? super Loader<?>, ? super Path<?>, ? extends ObjectCodec> objectCodecFunction,
+                                    final BiFunction<? super Loader<?>, ? super Path<?>, ? extends InputStream> inputStreamFunction,
                                     final Consumer<? super InputStream> inputStreamReadConsumer) {
     super();
     this.objectCodecFunction = Objects.requireNonNull(objectCodecFunction, "objectCodecFunction");
@@ -78,12 +78,12 @@ public class InputStreamJacksonProvider<T> extends JacksonProvider<T> {
   }
 
   @Override // JacksonProvider<T>
-  protected <T> ObjectCodec objectCodec(final Configured<?> requestor, final Path<T> absolutePath) {
+  protected <T> ObjectCodec objectCodec(final Loader<?> requestor, final Path<T> absolutePath) {
     return this.objectCodecFunction.apply(requestor, absolutePath);
   }
 
   @Override // JacksonProvider<T>
-  protected <T> TreeNode rootNode(final Configured<?> requestor, final Path<T> absolutePath, final ObjectCodec reader) {
+  protected <T> TreeNode rootNode(final Loader<?> requestor, final Path<T> absolutePath, final ObjectCodec reader) {
     TreeNode returnValue = null;
     if (reader != null) {
       InputStream is = null;
@@ -171,7 +171,7 @@ public class InputStreamJacksonProvider<T> extends JacksonProvider<T> {
     }
   }
 
-  private static final <T extends ObjectMapper> BiFunction<? super Configured<?>, ? super Path<?>, ? extends ObjectCodec> objectCodecFunction(final Supplier<T> mapperSupplier) {
+  private static final <T extends ObjectMapper> BiFunction<? super Loader<?>, ? super Path<?>, ? extends ObjectCodec> objectCodecFunction(final Supplier<T> mapperSupplier) {
     if (mapperSupplier == null) {
       return InputStreamJacksonProvider::returnNull;
     } else {

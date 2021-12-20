@@ -26,14 +26,14 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import org.junit.jupiter.api.Test;
 
-import org.microbean.settings.api.Configured;
+import org.microbean.settings.api.Loader;
 import org.microbean.settings.api.Path;
 import org.microbean.settings.api.Qualifiers;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-import static org.microbean.settings.api.Configured.configured;
+import static org.microbean.settings.api.Loader.loader;
 
 final class TestSpike {
 
@@ -47,18 +47,18 @@ final class TestSpike {
     // This treats the whole application.toml as a Frobnicator,
     // ignoring unknown properties.  I'm not sure this is a great use
     // case but it's at least possible.
-    final Frobnicator f = configured().of(Frobnicator.class).orElse(null);
+    final Frobnicator f = loader().of(Frobnicator.class).orElse(null);
     assertNotNull(f);
     assertEquals(37, f.getFrobnicationInterval());
 
     // This extracts an object out of application.toml named "gorp",
     // also ignoring unknown properties.
-    final Blatz b = configured().of("gorp", Blatz.class).orElse(null);
+    final Blatz b = loader().of("gorp", Blatz.class).orElse(null);
     assertNotNull(b);
     assertEquals("foo", b.getBlatz());
 
     // This goes after a single string.
-    final String blatz = configured().of(List.of("gorp", "blatz"), String.class).orElse(null);
+    final String blatz = loader().of(List.of("gorp", "blatz"), String.class).orElse(null);
   }
 
   @JsonAutoDetect(creatorVisibility = Visibility.NONE,

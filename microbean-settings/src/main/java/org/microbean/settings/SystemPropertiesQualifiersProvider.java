@@ -23,7 +23,7 @@ import java.util.TreeMap;
 
 import java.util.function.Supplier;
 
-import org.microbean.settings.api.Configured;
+import org.microbean.settings.api.Loader;
 import org.microbean.settings.api.Path;
 import org.microbean.settings.api.Qualifiers;
 
@@ -37,7 +37,7 @@ public class SystemPropertiesQualifiersProvider extends AbstractProvider<Qualifi
   }
 
   @Override // AbstractProvider<Qualifiers>
-  public <T> Value<T> get(final Configured<?> requestor, final Path<T> absolutePath) {
+  public <T> Value<T> get(final Loader<?> requestor, final Path<T> absolutePath) {
     assert absolutePath.isAbsolute();
     assert absolutePath.startsWith(requestor.absolutePath());
     assert !absolutePath.equals(requestor.absolutePath());
@@ -53,7 +53,7 @@ public class SystemPropertiesQualifiersProvider extends AbstractProvider<Qualifi
     return value;
   }
 
-  private static final Qualifiers qualifiers(final Configured<?> requestor) {
+  private static final Qualifiers qualifiers(final Loader<?> requestor) {
     // Use the configuration system to find a String under the path
     // :void/qualifierPrefix:java.lang.String.
     final String prefix = requestor.of("qualifierPrefix", String.class).orElse("qualifier.");

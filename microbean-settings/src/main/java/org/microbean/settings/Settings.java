@@ -37,7 +37,7 @@ import java.util.function.Supplier;
 
 import org.microbean.development.annotation.Experimental;
 
-import org.microbean.settings.api.Configured;
+import org.microbean.settings.api.Loader;
 import org.microbean.settings.api.Path;
 import org.microbean.settings.api.Path.Element;
 import org.microbean.settings.api.Qualified;
@@ -49,7 +49,7 @@ import org.microbean.settings.provider.Provider;
 import org.microbean.settings.provider.Value;
 
 /**
- * A subclassable default {@link Configured} implementation that
+ * A subclassable default {@link Loader} implementation that
  * delegates its work to {@link Provider}s and an {@link
  * #ambiguityHandler() AmbiguityHandler}.
  *
@@ -59,11 +59,11 @@ import org.microbean.settings.provider.Value;
  * @author <a href="https://about.me/lairdnelson"
  * target="_parent">Laird Nelson</a>
  *
- * @see Configured
+ * @see Loader
  *
  * @see Provider
  */
-public class Settings<T> implements AutoCloseable, Configured<T> {
+public class Settings<T> implements AutoCloseable, Loader<T> {
 
 
   private static final ThreadLocal<Map<Path<?>, Deque<Provider>>> currentProviderStacks = ThreadLocal.withInitial(() -> new HashMap<>(7));
@@ -98,7 +98,7 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
   /**
    * Creates a new {@link Settings}.
    *
-   * @see Configured#configured()
+   * @see org.microbean.settings.api.Loader#loader()
    *
    * @deprecated This constructor should be invoked by subclasses and
    * {@link ServiceLoader java.util.ServiceLoader} instances only.
@@ -258,7 +258,7 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
    *
    * @idempotency This method is idempotent and deterministic.
    */
-  @Override // Configured<T>
+  @Override // Loader<T>
   public final Qualifiers qualifiers() {
     // NOTE: This null check is critical.  We check for null here
     // because during bootstrapping the qualifiers will not have been
@@ -290,27 +290,27 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
    * @idempotency This method is idempotent and deterministic.
    */
   // Note that the root will have itself as its parent.
-  @Override // Configured<T>
+  @Override // Loader<T>
   public final Settings<?> parent() {
     return this.parent;
   }
 
-  @Override // Configured<T>
+  @Override // Loader<T>
   public final Path<T> absolutePath() {
     return this.absolutePath;
   }
 
-  @Override // Configured<T>
+  @Override // Loader<T>
   public final T get() {
     return this.supplier.get();
   }
 
-  @Override // Configured<T>
-  public final Settings<?> configuredFor(Path<?> path) {
-    return (Settings<?>)Configured.super.configuredFor(path);
+  @Override // Loader<T>
+  public final Settings<?> loaderFor(Path<?> path) {
+    return (Settings<?>)Loader.super.loaderFor(path);
   }
 
-  @Override // Configured<T>
+  @Override // Loader<T>
   public final <U> Settings<U> of(final Path<U> path) {
     final Path<U> absolutePath = this.normalize(path);
     if (!absolutePath.isAbsolute()) {
@@ -318,7 +318,7 @@ public class Settings<T> implements AutoCloseable, Configured<T> {
     } else if (absolutePath.isRoot()) {
       throw new IllegalArgumentException("normalize(path).isRoot(): " + absolutePath);
     }
-    final Settings<?> requestor = this.configuredFor(absolutePath);
+    final Settings<?> requestor = this.loaderFor(absolutePath);
     // We deliberately do not use computeIfAbsent() because of()
     // operations can kick off other of() operations, and then you'd
     // have a cache mutating operation occuring within a cache

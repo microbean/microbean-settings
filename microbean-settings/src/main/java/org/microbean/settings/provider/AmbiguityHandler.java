@@ -24,14 +24,14 @@ import java.util.function.BiPredicate;
 
 import org.microbean.development.annotation.Experimental;
 
-import org.microbean.settings.api.Configured;
+import org.microbean.settings.api.Loader;
 import org.microbean.settings.api.Path;
 import org.microbean.settings.api.Path.Element;
 import org.microbean.settings.api.Qualifiers;
 
 /**
  * An interface whose implementations handle various kinds of
- * ambiguity that arise when a {@link Configured} seeks configured
+ * ambiguity that arise when a {@link Loader} seeks configured
  * objects by way of various {@link Provider}s.
  *
  * @author <a href="https://about.me/lairdnelson"
@@ -47,7 +47,7 @@ public interface AmbiguityHandler {
    *
    * <p>The default implementation of this method does nothing.</p>
    *
-   * @param rejector the {@link Configured} that rejected the {@link
+   * @param rejector the {@link Loader} that rejected the {@link
    * Provider}; must not be {@code null}
    *
    * @param absolutePath the {@linkplain Path#isAbsolute() absolute
@@ -60,7 +60,7 @@ public interface AmbiguityHandler {
    * @exception NullPointerException if either {@code rejector} or
    * {@code absolutePath} is {@code null}
    */
-  public default void providerRejected(final Configured<?> rejector, final Path<?> absolutePath, final Provider provider) {
+  public default void providerRejected(final Loader<?> rejector, final Path<?> absolutePath, final Provider provider) {
 
   }
 
@@ -71,7 +71,7 @@ public interface AmbiguityHandler {
    *
    * <p>The default implementation of this method does nothing.</p>
    *
-   * @param rejector the {@link Configured} that rejected the {@link
+   * @param rejector the {@link Loader} that rejected the {@link
    * Provider}; must not be {@code null}
    *
    * @param absolutePath the {@linkplain Path#isAbsolute() absolute
@@ -85,7 +85,7 @@ public interface AmbiguityHandler {
    *
    * @exception NullPointerException if any argument is {@code null}
    */
-  public default void valueRejected(final Configured<?> rejector, final Path<?> absolutePath, final Provider provider, final Value<?> value) {
+  public default void valueRejected(final Loader<?> rejector, final Path<?> absolutePath, final Provider provider, final Value<?> value) {
 
   }
 
@@ -114,7 +114,7 @@ public interface AmbiguityHandler {
    @exception NullPointerException if either parameter is {@code
    * null}
    *
-   * @see Configured#of(Path)
+   * @see Loader#of(Path)
    *
    * @threadsafety The default implementation of this method is, and
    * its overrides must be, safe for concurrent use by multiple
@@ -174,7 +174,7 @@ public interface AmbiguityHandler {
    * <p>Note that such an invocation is <em>not</em> made by the
    * default implementation of this method, but logically precedes it
    * when this method is called in the natural course of events by the
-   * {@link Configured#of(Path)} method.</p>
+   * {@link Loader#of(Path)} method.</p>
    *
    * <p>If, during scoring, {@code valuePath} is found to be wholly
    * unsuitable for further consideration or processing, {@link
@@ -202,7 +202,7 @@ public interface AmbiguityHandler {
    * @exception IllegalArgumentException if certain preconditions have
    * been violated
    *
-   * @see Configured#of(Path)
+   * @see Loader#of(Path)
    *
    * @threadsafety The default implementation of this method is, and
    * its overrides must be, safe for concurrent use by multiple
@@ -302,7 +302,7 @@ public interface AmbiguityHandler {
    * @param <U> the type of objects the {@link Value}s in question can
    * supply
    *
-   * @param requestor the {@link Configured} currently seeking a
+   * @param requestor the {@link Loader} currently seeking a
    * {@link Value}; must not be {@code null}
    *
    * @param absolutePath an {@linkplain Path#isAbsolute() absolute
@@ -337,7 +337,7 @@ public interface AmbiguityHandler {
    * its overrides must be, idempotent. The default implementation of
    * this method is deterministic, but its overrides need not be.
    */
-  public default <U> Value<U> disambiguate(final Configured<?> requestor,
+  public default <U> Value<U> disambiguate(final Loader<?> requestor,
                                            final Path<?> absolutePath,
                                            final Provider p0,
                                            final Value<U> v0,

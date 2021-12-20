@@ -20,7 +20,7 @@ import java.util.Properties;
 
 import java.util.function.Supplier;
 
-import org.microbean.settings.api.Configured;
+import org.microbean.settings.api.Loader;
 import org.microbean.settings.api.Path;
 import org.microbean.settings.api.Path.Element;
 import org.microbean.settings.api.Qualifiers;
@@ -118,7 +118,7 @@ public final class SystemPropertyProvider extends AbstractProvider<Object> {
    * get()} method in such a case.  Overrides are strongly encouraged
    * to abide by these conditions.</p>
    *
-   * @param requestor the {@link Configured} seeking a {@link Value};
+   * @param requestor the {@link Loader} seeking a {@link Value};
    * must not be {@code null}
    *
    * @param absolutePath an {@linkplain Path#isAbsolute() absolute
@@ -145,7 +145,7 @@ public final class SystemPropertyProvider extends AbstractProvider<Object> {
    * <em>not</em> guaranteed to be idempotent or deterministic.
    */
   @Override // AbstractProvider<Object>
-  public <T> Value<T> get(final Configured<?> requestor, final Path<T> absolutePath) {
+  public <T> Value<T> get(final Loader<?> requestor, final Path<T> absolutePath) {
     assert absolutePath.isAbsolute();
     assert absolutePath.startsWith(requestor.absolutePath());
     assert !absolutePath.equals(requestor.absolutePath());

@@ -20,7 +20,7 @@ import java.util.Collection;
 
 import org.junit.jupiter.api.Test;
 
-import org.microbean.settings.api.Configured;
+import org.microbean.settings.api.Loader;
 
 import org.microbean.settings.provider.Provider;
 
@@ -28,7 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
-import static org.microbean.settings.api.Configured.configured;
+import static org.microbean.settings.api.Loader.loader;
 
 final class TestProvider {
 
@@ -38,7 +38,7 @@ final class TestProvider {
 
   @Test
   final void testJavaHome() {
-    assertEquals(System.getProperty("java.home"), configured().of("java.home", String.class).get());
+    assertEquals(System.getProperty("java.home"), loader().of("java.home", String.class).get());
   }
 
   @Test

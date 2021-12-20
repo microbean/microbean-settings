@@ -23,7 +23,7 @@ import java.util.function.Supplier;
 
 import org.junit.jupiter.api.Test;
 
-import org.microbean.settings.api.Configured;
+import org.microbean.settings.api.Loader;
 import org.microbean.settings.api.Path;
 import org.microbean.settings.api.Path.Element;
 import org.microbean.settings.api.Qualifiers;
@@ -36,7 +36,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import static org.microbean.settings.api.Configured.configured;
+import static org.microbean.settings.api.Loader.loader;
 
 final class TestProxyingProvider {
 
@@ -46,7 +46,7 @@ final class TestProxyingProvider {
 
   @Test
   final void explore() {
-    final Configured<Car> carCs = configured().of(Car.class);
+    final Loader<Car> carCs = loader().of(Car.class);
     final Car car = carCs.get();
     assertNotNull(car);
     assertSame(car, carCs.get());
@@ -98,7 +98,7 @@ final class TestProxyingProvider {
     }
 
     @Override
-    public final <T> Value<T> get(final Configured<?> requestor, final Path<T> path) {
+    public final <T> Value<T> get(final Loader<?> requestor, final Path<T> path) {
       final Element<T> last = path.last();
       final List<String> arguments = last.arguments().orElse(null);
       if ("wheel".equals(last.name()) && arguments != null && !arguments.isEmpty() && "LR".equals(arguments.get(0))) {

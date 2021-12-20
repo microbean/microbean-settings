@@ -36,7 +36,7 @@ import com.fasterxml.jackson.core.TreeNode;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 
-import org.microbean.settings.api.Configured;
+import org.microbean.settings.api.Loader;
 import org.microbean.settings.api.Path;
 import org.microbean.settings.api.Path.Element;
 import org.microbean.settings.api.Qualifiers;
@@ -75,7 +75,7 @@ public abstract class JacksonProvider<T> extends AbstractProvider<T> {
 
   /**
    * Returns a {@link Value} suitable for the supplied {@link
-   * Configured} and {@link Path}, or {@code null} if there is no such
+   * Loader} and {@link Path}, or {@code null} if there is no such
    * {@link Value} now <strong>and if there never will be such a
    * {@link Value}</strong> for the supplied arguments.
    *
@@ -94,9 +94,9 @@ public abstract class JacksonProvider<T> extends AbstractProvider<T> {
    *
    * </ul>
    *
-   * <p>This implementation first {@linkplain #objectCodec(Configured,
+   * <p>This implementation first {@linkplain #objectCodec(Loader,
    * Path) acquires} an {@link ObjectCodec} and then {@linkplain
-   * #rootNode(Configured, Path, ObjectCodec) uses it to acquire the
+   * #rootNode(Loader, Path, ObjectCodec) uses it to acquire the
    * root <code>TreeNode</code> of a document}.  With this {@link
    * TreeNode} in hand, it treats the supplied {@code absolutePath} as
    * a series of names terminating in a type, much like, in principle,
@@ -105,15 +105,15 @@ public abstract class JacksonProvider<T> extends AbstractProvider<T> {
    *
    * <p>TODO: FINISH</p>
    *
-   * @param requestor the {@link Configured} seeking a {@link Value};
+   * @param requestor the {@link Loader} seeking a {@link Value};
    * must not be {@code null}
    *
    * @param absolutePath an {@linkplain Path#isAbsolute() absolute
-   * <code>Path</code>} for which the supplied {@link Configured} is
+   * <code>Path</code>} for which the supplied {@link Loader} is
    * seeking a value; must not be {@code null}
    *
    * @return a {@link Value} more or less suitable for the combination
-   * of the supplied {@link Configured} and {@link Path}, or {@code
+   * of the supplied {@link Loader} and {@link Path}, or {@code
    * null} if there is no such {@link Value} now <strong>and if there
    * never will be such a {@link Value}</strong> for the supplied
    * arguments
@@ -134,7 +134,7 @@ public abstract class JacksonProvider<T> extends AbstractProvider<T> {
    * but are not assumed to be deterministic.
    */
   @Override // AbstractProvider<Object>
-  public final <T> Value<T> get(final Configured<?> requestor, final Path<T> absolutePath) {
+  public final <T> Value<T> get(final Loader<?> requestor, final Path<T> absolutePath) {
     assert absolutePath.isAbsolute();
     assert absolutePath.startsWith(requestor.absolutePath());
     assert !absolutePath.equals(requestor.absolutePath());
@@ -222,7 +222,7 @@ public abstract class JacksonProvider<T> extends AbstractProvider<T> {
   }
 
   @SuppressWarnings("unchecked")
-  protected <T> Value<T> value(final Configured<?> requestor,
+  protected <T> Value<T> value(final Loader<?> requestor,
                                final Path<T> absolutePath,
                                final T value) {
     return new Value<>(null,
@@ -235,23 +235,23 @@ public abstract class JacksonProvider<T> extends AbstractProvider<T> {
 
   /**
    * Returns an {@link ObjectCodec} suitable for the combination of
-   * the supplied {@link Configured} and {@link Path}, or {@code null}
+   * the supplied {@link Loader} and {@link Path}, or {@code null}
    * if there is no such {@link ObjectCodec}.
    *
-   * <p>This method is called by the {@link #get(Configured, Path)}
+   * <p>This method is called by the {@link #get(Loader, Path)}
    * method in the normal course of events.</p>
    *
    * @param <T> the type of the supplied {@link Path}
    *
-   * @param requestor the {@link Configured} seeking a {@link Value};
+   * @param requestor the {@link Loader} seeking a {@link Value};
    * must not be {@code null}
    *
    * @param absolutePath an {@linkplain Path#isAbsolute() absolute
-   * <code>Path</code>} for which the supplied {@link Configured} is
+   * <code>Path</code>} for which the supplied {@link Loader} is
    * seeking a value; must not be {@code null}
    *
    * @return an {@link ObjectCodec} suitable for the combination of
-   * the supplied {@link Configured} and {@link Path}, or {@code null}
+   * the supplied {@link Loader} and {@link Path}, or {@code null}
    *
    * @nullability Implementations of this method may return {@code null}.
    *
@@ -261,35 +261,35 @@ public abstract class JacksonProvider<T> extends AbstractProvider<T> {
    * @idempotency Implementations of this method must be idempotent,
    * but not necessarily deterministic.
    */
-  protected abstract <T> ObjectCodec objectCodec(final Configured<?> requestor, final Path<T> absolutePath);
+  protected abstract <T> ObjectCodec objectCodec(final Loader<?> requestor, final Path<T> absolutePath);
 
   /**
    * Returns a {@link TreeNode} representing the root of an abstract
    * document suitable for the combination of the supplied {@link
-   * Configured} and {@link Path}, or {@code null} if there is no such
+   * Loader} and {@link Path}, or {@code null} if there is no such
    * {@link TreeNode}.
    *
-   * <p>This method will not be called by the {@link #get(Configured,
-   * Path)} method if the {@link #objectCodec(Configured, Path)}
+   * <p>This method will not be called by the {@link #get(Loader,
+   * Path)} method if the {@link #objectCodec(Loader, Path)}
    * method returns {@code null}.  Otherwise, it will be called
    * immediately afterwards on the same thread.</p>
    *
    * @param <T> the type of the supplied {@link Path}
    *
-   * @param requestor the {@link Configured} seeking a {@link Value};
+   * @param requestor the {@link Loader} seeking a {@link Value};
    * must not be {@code null}
    *
    * @param absolutePath an {@linkplain Path#isAbsolute() absolute
-   * <code>Path</code>} for which the supplied {@link Configured} is
+   * <code>Path</code>} for which the supplied {@link Loader} is
    * seeking a value; must not be {@code null}
    *
    * @param reader for convenience, the {@link ObjectCodec} returned
-   * by this {@link JacksonProvider}'s {@link #objectCodec(Configured,
+   * by this {@link JacksonProvider}'s {@link #objectCodec(Loader,
    * Path)} method; must not be {@code null}
    *
    * @return a {@link TreeNode} representing the root of an abstract
    * document suitable for the combination of the supplied {@link
-   * Configured} and {@link Path}, or {@code null}
+   * Loader} and {@link Path}, or {@code null}
    *
    * @nullability Implementations of this method may return {@code null}.
    *
@@ -299,6 +299,6 @@ public abstract class JacksonProvider<T> extends AbstractProvider<T> {
    * @idempotency Implementations of this method must be idempotent,
    * but not necessarily deterministic.
    */
-  protected abstract <T> TreeNode rootNode(final Configured<?> requestor, final Path<T> absolutePath, final ObjectCodec reader);
+  protected abstract <T> TreeNode rootNode(final Loader<?> requestor, final Path<T> absolutePath, final ObjectCodec reader);
 
 }

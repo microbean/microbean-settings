@@ -43,7 +43,7 @@ import org.microbean.type.Types;
 
 /**
  * A chain of {@link Path.Element}s representing part of a request for
- * a {@link Configured} to supply a configured object.
+ * a {@link Loader} to supply a configured object.
  *
  * @param <T> the type of the last {@link Path.Element} in this {@link
  * Path}
