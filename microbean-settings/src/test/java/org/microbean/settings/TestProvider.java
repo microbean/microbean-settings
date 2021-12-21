@@ -38,7 +38,7 @@ final class TestProvider {
 
   @Test
   final void testJavaHome() {
-    assertEquals(System.getProperty("java.home"), loader().of("java.home", String.class).get());
+    assertEquals(System.getProperty("java.home"), loader().load("java.home", String.class).get());
   }
 
   @Test

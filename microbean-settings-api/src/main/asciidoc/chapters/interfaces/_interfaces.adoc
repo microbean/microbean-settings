@@ -1,82 +1,15 @@
 [#interfaces]
 == Interfaces
 
-=== The `Configured` Interface
+=== The `Loader` Interface
 
-The `org.microbean.settings.api.Configured` interface represents the
+The `org.microbean.settings.api.Loader` interface represents the
 <<environment_loader,environment loader>> concept, and helps to
 implement the <<environment_model_acquisition>> and
 <<named_object_acquisition>> use cases.
 
-==== The Bootstrap `configured()` Method
+==== The Bootstrap `loader()` Method
 
-`Configured` defines a `static` `configured()` method that bootstraps the
-system defined by this specification:
+`Loader` defines a `static` `loader()` method that bootstraps the
+system defined by this specification.
 
-[source,java]
-----
-/**
- * Returns a non-{@code null} {@linkplain #root() root} {@link
- * Configured} that can be used to acquire configured objects.
- *
- * <p>The {@linkplain #root() root} {@link Configured} is located
- * using the {@link ServiceLoader}.  The first of all discovered
- * {@link Configured} instances is used and all others are ignored.</p>
- *
- * <p>The {@link Configured} that is loaded via this mechanism is
- * subject to the following restrictions:</p>
- *
- * <ul>
- *
- * <li>It must return a {@link Path} from its {@link
- * #absolutePath()} implementation that is equal to {@link
- * Path#root() Path.root()}.</li>
- *
- * <li>It must return itself from its {@link #parent()}
- * implementation.</li>
- *
- * <li>It must return itself from its {@link #get() get()}
- * method.</li>
- *
- * <li>It must return {@code true} from its {@link #isRoot()}
- * implementation.</li>
- *
- * <li>It must return itself from its {@link #root()} method.</li>
- *
- * </ul>
- *
- * <p>That <em>bootstrap</em> instance is then used to find the
- * "real" {@link Configured} implementation, which in most cases is
- * simply itself.</p>
- *
- * <p>The {@link Configured} that is supplied by the bootstrap
- * instance is subject to the following restrictions (which are
- * compatible with the instance's being the bootstrap instance
- * itself):</p>
- *
- * <ul>
- *
- * <li>It must return a {@link Path} from its {@link
- * #absolutePath()} implementation that is equal to {@link
- * Path#root() Path.root()}.</li>
- *
- * <li>It must return the bootstrap instance from its {@link
- * #parent()} implementation.</li>
- *
- * <li>It must return a {@link Configured} implementation, normally
- * itself, from its {@link #get() get()} method.</li>
- *
- * </ul>
- *
- * <p>This is the entry point for end users of this framework.</p>
- *
- * @return a non-{@code null} {@linkplain #root() root} {@link
- * Configured} that can be used to acquire configured objects
- *
- * @exception IllegalStateException if any of the restrictions above
- * is violated
- */
-public static Configured<?> configured() {
-  // Implementation omitted for brevity.
-}
-----

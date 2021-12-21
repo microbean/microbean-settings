@@ -114,7 +114,7 @@ public interface AmbiguityHandler {
    @exception NullPointerException if either parameter is {@code
    * null}
    *
-   * @see Loader#of(Path)
+   * @see Loader#load(Path)
    *
    * @threadsafety The default implementation of this method is, and
    * its overrides must be, safe for concurrent use by multiple
@@ -174,7 +174,7 @@ public interface AmbiguityHandler {
    * <p>Note that such an invocation is <em>not</em> made by the
    * default implementation of this method, but logically precedes it
    * when this method is called in the natural course of events by the
-   * {@link Loader#of(Path)} method.</p>
+   * {@link Loader#load(Path)} method.</p>
    *
    * <p>If, during scoring, {@code valuePath} is found to be wholly
    * unsuitable for further consideration or processing, {@link
@@ -202,7 +202,7 @@ public interface AmbiguityHandler {
    * @exception IllegalArgumentException if certain preconditions have
    * been violated
    *
-   * @see Loader#of(Path)
+   * @see Loader#load(Path)
    *
    * @threadsafety The default implementation of this method is, and
    * its overrides must be, safe for concurrent use by multiple

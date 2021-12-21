@@ -56,7 +56,7 @@ public class SystemPropertiesQualifiersProvider extends AbstractProvider<Qualifi
   private static final Qualifiers qualifiers(final Loader<?> requestor) {
     // Use the configuration system to find a String under the path
     // :void/qualifierPrefix:java.lang.String.
-    final String prefix = requestor.of("qualifierPrefix", String.class).orElse("qualifier.");
+    final String prefix = requestor.load("qualifierPrefix", String.class).orElse("qualifier.");
     final int prefixLength = prefix.length();
     final SortedMap<String, String> map = new TreeMap<>();
     final Properties systemProperties = System.getProperties();

@@ -77,6 +77,8 @@ public class Settings<T> implements AutoCloseable, Loader<T> {
   // Package-private for testing only.
   final ConcurrentMap<Qualified<Path<?>>, Settings<?>> settingsCache;
 
+  private final boolean deterministic;
+  
   private final Path<T> absolutePath;
 
   private final Settings<?> parent;
@@ -108,6 +110,7 @@ public class Settings<T> implements AutoCloseable, Loader<T> {
     this(new ConcurrentHashMap<Qualified<Path<?>>, Settings<?>>(),
          null, // providers
          null, // Qualifiers
+         true, // deterministic
          null, // parent,
          null, // absolutePath
          null, // Supplier
@@ -117,6 +120,7 @@ public class Settings<T> implements AutoCloseable, Loader<T> {
   private Settings(final ConcurrentMap<Qualified<Path<?>>, Settings<?>> settingsCache,
                    final Collection<? extends Provider> providers,
                    final Qualifiers qualifiers,
+                   final boolean deterministic,
                    final Settings<?> parent, // if null, will end up being "this" if absolutePath is null or Path.root()
                    final Path<T> absolutePath,
                    final Supplier<T> supplier, // if null, will end up being () -> this if absolutePath is null or Path.root()
@@ -130,6 +134,7 @@ public class Settings<T> implements AutoCloseable, Loader<T> {
         @SuppressWarnings("unchecked")
         final Path<T> p = (Path<T>)Path.root();
         this.absolutePath = p;
+        this.deterministic = true;
         this.parent = this; // NOTE
         this.supplier = supplier == null ? this::returnThis : supplier; // NOTE
         this.providers = List.copyOf(providers == null ? loadedProviders() : providers);
@@ -142,8 +147,8 @@ public class Settings<T> implements AutoCloseable, Loader<T> {
         // accounts for this and will return Qualifiers.of() instead,
         // and the ambiguityHandler() instance method does as well.
         try {
-          this.qualifiers = this.of(Qualifiers.class).orElseGet(Qualifiers::of);
-          this.ambiguityHandler = this.of(AmbiguityHandler.class).orElseGet(Settings::loadedAmbiguityHandler);
+          this.qualifiers = this.load(Qualifiers.class).orElseGet(Qualifiers::of);
+          this.ambiguityHandler = this.load(AmbiguityHandler.class).orElseGet(Settings::loadedAmbiguityHandler);
         } finally {
           this.settingsCache.remove(qp);
         }
@@ -158,6 +163,7 @@ public class Settings<T> implements AutoCloseable, Loader<T> {
       throw new IllegalArgumentException("!parent.absolutePath().isAbsolute(): " + parent.absolutePath());
     } else {
       this.absolutePath = absolutePath;
+      this.deterministic = deterministic;
       this.parent = parent;
       this.supplier = Objects.requireNonNull(supplier, "supplier");
       this.providers = List.copyOf(providers);
@@ -300,6 +306,10 @@ public class Settings<T> implements AutoCloseable, Loader<T> {
     return this.absolutePath;
   }
 
+  public final boolean deterministic() {
+    return this.deterministic;
+  }
+
   @Override // Loader<T>
   public final T get() {
     return this.supplier.get();
@@ -311,7 +321,7 @@ public class Settings<T> implements AutoCloseable, Loader<T> {
   }
 
   @Override // Loader<T>
-  public final <U> Settings<U> of(final Path<U> path) {
+  public final <U> Settings<U> load(final Path<U> path) {
     final Path<U> absolutePath = this.normalize(path);
     if (!absolutePath.isAbsolute()) {
       throw new IllegalArgumentException("!normalize(path).isAbsolute(): " + absolutePath);
@@ -319,8 +329,8 @@ public class Settings<T> implements AutoCloseable, Loader<T> {
       throw new IllegalArgumentException("normalize(path).isRoot(): " + absolutePath);
     }
     final Settings<?> requestor = this.loaderFor(absolutePath);
-    // We deliberately do not use computeIfAbsent() because of()
-    // operations can kick off other of() operations, and then you'd
+    // We deliberately do not use computeIfAbsent() because load()
+    // operations can kick off other load() operations, and then you'd
     // have a cache mutating operation occuring within a cache
     // mutating operation, which is forbidden.  Sometimes you get an
     // IllegalStateException as you are supposed to; other times you
@@ -487,13 +497,23 @@ public class Settings<T> implements AutoCloseable, Loader<T> {
         }
       }
     }
+    final Supplier<U> supplier;
+    final boolean deterministic;
+    if (candidate == null) {
+      supplier = Settings::throwNoSuchElementException;
+      deterministic = true;
+    } else {
+      supplier = candidate;
+      deterministic = candidate.deterministic();
+    }
     return
       new Settings<>(this.settingsCache,
                      providers,
                      qualifiers,
+                     deterministic,
                      requestor, // parent
                      absolutePath,
-                     candidate == null ? Settings::throwNoSuchElementException : candidate,
+                     supplier,
                      ambiguityHandler);
   }
 

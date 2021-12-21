@@ -10,14 +10,14 @@ implemented are discussed later in this specification.
 
 ==== Overview
 
- . The <<component_developer>> wants to acquire a single Java object
-   whose class she has designed that models the current
-   <<component,component's>> <<environment,environment>>.
+ . While writing code for her component, the <<component_developer>>
+   wants to acquire a single Java object whose class she has designed
+   that models the current <<component,component's>>
+   <<environment,environment>>.
 
- . She invokes a simple method on a simple specification-defined
+ . She invokes a method on a specification-defined
    <<environment_loader,environment loader>>, supplying it with the
-   class designating the object that models the type of
-   <<environment,environment>> she wants to acquire.
+   class designating the type of object that she wants to acquire.
 
  .. The <<qualifier,qualifiers>> for the current
     <<application,application>> are determined automatically.
@@ -34,27 +34,26 @@ implemented are discussed later in this specification.
 
 ==== Overview
 
- . The <<component_developer>> wants to acquire a _portion_ of a
-   <<component,component's>> <<environment,environment>>, represented
-   as a Java object whose class she may or may not have designed. The
-   object may be a simple scalar value, such as a `String` or an
-   `int`, or a structured type, or any other kind of object.
+ . While writing code for her component, the <<component_developer>>
+   wants to acquire a _portion_ of a <<component,component's>>
+   <<environment,environment>>, represented as a Java object whose
+   class she may or may not have designed. The object may be a simple
+   scalar value, such as a `String` or an `Integer`, a primitive type,
+   such as `int`, a collection-like object, such as an array or a
+   `List` or a `Map`, or any other kind of object.
 
  .. The object representing the portion is qualified by a particular
     <<path,path>> belonging notionally to the <<component,component>>
-    namespace. The <<path,path>> may consist of, effectively, a single
+    pathspace. The <<path,path>> may consist of, effectively, a single
     name, or multiple name components.
 +
 NOTE: A <<path,path>> that is effectively a single name used to
 retrieve an object that is a simple scalar value models retrieving a
 "property", a use case found in many other configuration frameworks.
 
- .. The object representing the portion may be a simple scalar
-    value, such as a `String` or an `int`, or a structured type.
-
- . She invokes a simple method on a simple specification-defined
+ . She invokes a method on a specification-defined
    <<environment_loader,environment loader>>, supplying it with the
-   component-namespaced <<path,path>> and the class designating the
+   component-pathspaced <<path,path>> and the class designating the
    object she wants.
 
  .. The <<qualifier,qualifiers>> for the current
@@ -63,8 +62,8 @@ retrieve an object that is a simple scalar value models retrieving a
  .. The <<environment_loader,environment loader>> consults any
     <<disambiguation,disambiguation>> information supplied by the
     <<application_assembler>> and transliterates the
-    component-namespaced <<path,path>> into an equivalent
-    <<application,application>>-namespaced <<path,path>>, thus turning
+    component-pathspaced <<path,path>> into an equivalent
+    <<application,application>>-pathspaced <<path,path>>, thus turning
     a <<component_concern,component concern>> into an equivalent
     <<application_concern,application concern>>
 

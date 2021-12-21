@@ -46,7 +46,7 @@ final class TestProxyingProvider {
 
   @Test
   final void explore() {
-    final Loader<Car> carCs = loader().of(Car.class);
+    final Loader<Car> carCs = loader().load(Car.class);
     final Car car = carCs.get();
     assertNotNull(car);
     assertSame(car, carCs.get());

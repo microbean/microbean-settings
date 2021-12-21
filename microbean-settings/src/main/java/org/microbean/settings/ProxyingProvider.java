@@ -468,7 +468,7 @@ public class ProxyingProvider extends AbstractProvider<Object> {
           assert path.type() == returnType : "path.type() != returnType: " + path.type() + " != " + returnType;
           assert !path.isAbsolute() : "path.isAbsolute(): " + path;
           @SuppressWarnings("unchecked")
-          final OptionalSupplier<Object> s = (OptionalSupplier<Object>)this.requestor.of(this.absolutePath.plus(path));
+          final OptionalSupplier<Object> s = (OptionalSupplier<Object>)this.requestor.load(this.absolutePath.plus(path));
           return s.orElseGet(() -> defaultValue(proxy, m, args));
         }
       }

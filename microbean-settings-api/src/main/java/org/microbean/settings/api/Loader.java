@@ -23,8 +23,6 @@ import java.util.ServiceLoader;
 
 import java.util.function.Supplier;
 
-import java.util.stream.Stream;
-
 import org.microbean.development.annotation.Convenience;
 import org.microbean.development.annotation.EntryPoint;
 import org.microbean.development.annotation.Experimental;
@@ -52,7 +50,7 @@ import org.microbean.settings.api.Path.Element;
  *
  * @see OptionalSupplier#get()
  *
- * @see #of(Path)
+ * @see #load(Path)
  */
 public interface Loader<T> extends OptionalSupplier<T> {
 
@@ -183,7 +181,7 @@ public interface Loader<T> extends OptionalSupplier<T> {
    * and deterministic.
    */
   @EntryPoint
-  public <U> Loader<U> of(final Path<U> path);
+  public <U> Loader<U> load(final Path<U> path);
 
 
   /*
@@ -192,45 +190,10 @@ public interface Loader<T> extends OptionalSupplier<T> {
 
 
   /**
-   * Returns a {@link Stream} of {@link Path}s <strong>{@linkplain
-   * Path#isRelative() relative} to this {@link Loader}</strong>
-   * that are known to be valid.
-   *
-   * <p>The {@link Path}s supplied by the returned {@link Stream}
-   * constitute a subset of all valid {@link Path}s.</p>
-   *
-   * <p>The {@link Stream} may supply duplicate {@link Path} objects.
-   * It is up to the caller how to process them.</p>
-   *
-   * <p>It is often impossible for a configuration system to know its
-   * valid {@link Path}s in advance, in which case the return value of
-   * this method might very well be equal to the return value of the
-   * {@link Stream#empty()} method.</p>
-   *
-   * <p>The default implementation of this method returns the return
-   * value of an invocation of the {@link Stream#empty()} method.</p>
-   *
-   * @return a {@link Stream} of {@link Path}s; never {@code null}
-   *
-   * @nullability This method never returns {@code null}
-   *
-   * @idempotency This method is, and its overrides must be,
-   * idempotent.  This method is, but its overrides need not be,
-   * deterministic.
-   *
-   * @threadsafety This method is, and its overrides must be, safe for
-   * concurrent use by multiple threads.
-   */
-  @Experimental
-  public default Stream<Path<?>> paths() {
-    return Stream.empty();
-  }
-
-  /**
    * <em>Transliterates</em> the supplied {@linkplain
    * Path#isAbsolute() absolute <code>Path</code>} into some other
-   * {@link Path} whose meaning is the same but whose representation
-   * may be different that will be used instead.
+   * {@link Path}, whose meaning is the same, but whose representation
+   * may be different, that will be used instead.
    *
    * <p>The {@link Path} that is returned may be the {@link Path} that
    * was supplied.  This may happen, for example, if {@linkplain
@@ -244,12 +207,12 @@ public interface Loader<T> extends OptionalSupplier<T> {
    * single application.</p>
    *
    * <p>Path transliteration must occur during the execution of any
-   * implementation of the {@link #of(Path)} method, such that the
+   * implementation of the {@link #load(Path)} method, such that the
    * {@link Path} supplied to that method, once it has been verified
    * to be {@linkplain Path#isAbsolute() absolute}, is supplied to an
    * implementation of this method. The {@link Path} returned by an
    * implementation of this method must then be used during the rest
-   * of the invocation of the {@link #of(Path)} method, as if it had
+   * of the invocation of the {@link #load(Path)} method, as if it had
    * been supplied in the first place.</p>
    *
    * <p>Behavior resulting from any other usage of an implementation
@@ -269,7 +232,7 @@ public interface Loader<T> extends OptionalSupplier<T> {
    * result.</p>
    *
    * <p>Overrides of this method <strong>must not call {@link
-   * #of(Path)} with the supplied {@code path}</strong> or an infinite
+   * #load(Path)} with the supplied {@code path}</strong> or an infinite
    * loop may result.</p>
    *
    * <p>An implementation of {@link Loader} will find {@link
@@ -308,7 +271,7 @@ public interface Loader<T> extends OptionalSupplier<T> {
    *
    * @see #loaderFor(Path)
    *
-   * @see #of(Path)
+   * @see #load(Path)
    */
   @OverridingDiscouraged
   public default <U> Path<U> transliterate(final Path<U> path) {
@@ -325,7 +288,7 @@ public interface Loader<T> extends OptionalSupplier<T> {
       }
     }
     return
-      this.of(this.absolutePath().plus(Path.of(Element.of("transliterate", // name
+      this.load(this.absolutePath().plus(Path.of(Element.of("transliterate", // name
                                                           new TypeToken<Path<U>>() {}, // type
                                                           Path.class, // parameter
                                                           path.toString())))) // sole argument
@@ -334,65 +297,65 @@ public interface Loader<T> extends OptionalSupplier<T> {
 
   @Convenience
   @OverridingDiscouraged
-  public default <U> Loader<U> of(final Class<U> type) {
-    return this.of(Element.of(type));
+  public default <U> Loader<U> load(final Class<U> type) {
+    return this.load(Element.of(type));
   }
 
   @Convenience
   @OverridingDiscouraged
-  public default <U> Loader<U> of(final TypeToken<U> type) {
-    return this.of(Element.of(type));
+  public default <U> Loader<U> load(final TypeToken<U> type) {
+    return this.load(Element.of(type));
   }
 
   @Convenience
   @OverridingDiscouraged
-  public default Loader<?> of(final Type type) {
-    return this.of(Element.of(type));
+  public default Loader<?> load(final Type type) {
+    return this.load(Element.of(type));
   }
 
   @Convenience
   @OverridingDiscouraged
-  public default <U> Loader<U> of(final String element, final Class<U> type) {
-    return this.of(Element.of(element, type));
+  public default <U> Loader<U> load(final String element, final Class<U> type) {
+    return this.load(Element.of(element, type));
   }
 
   @Convenience
   @OverridingDiscouraged
-  public default <U> Loader<U> of(final String element, final TypeToken<U> type) {
-    return this.of(Element.of(element, type));
+  public default <U> Loader<U> load(final String element, final TypeToken<U> type) {
+    return this.load(Element.of(element, type));
   }
 
   @Convenience
   @OverridingDiscouraged
-  public default Loader<?> of(final String element, final Type type) {
-    return this.of(Element.of(element, type));
+  public default Loader<?> load(final String element, final Type type) {
+    return this.load(Element.of(element, type));
   }
 
   @Convenience
   @OverridingDiscouraged
-  public default <U> Loader<U> of(final List<? extends String> names, final Class<U> type) {
-    return this.of(Path.of(names, type));
+  public default <U> Loader<U> load(final List<? extends String> names, final Class<U> type) {
+    return this.load(Path.of(names, type));
   }
 
   @Convenience
   @OverridingDiscouraged
-  public default <U> Loader<U> of(final List<? extends String> names, final TypeToken<U> type) {
-    return this.of(Path.of(names, type));
+  public default <U> Loader<U> load(final List<? extends String> names, final TypeToken<U> type) {
+    return this.load(Path.of(names, type));
   }
 
   @Convenience
   @OverridingDiscouraged
-  public default Loader<?> of(final List<? extends String> names, final Type type) {
-    return this.of(Path.of(names, type));
+  public default Loader<?> load(final List<? extends String> names, final Type type) {
+    return this.load(Path.of(names, type));
   }
 
   @Convenience
   @OverridingDiscouraged
-  public default <U> Loader<U> of(final Element<U> nonRootElement) {
+  public default <U> Loader<U> load(final Element<U> nonRootElement) {
     if (nonRootElement.isRoot()) {
       throw new IllegalArgumentException("nonRootElement.isRoot(): " + nonRootElement);
     }
-    return this.of(Path.of(nonRootElement));
+    return this.load(Path.of(nonRootElement));
   }
 
   /**
@@ -450,11 +413,11 @@ public interface Loader<T> extends OptionalSupplier<T> {
   }
 
   /**
-   * Returns a {@link Loader} derived from this {@link Loader}
-   * that is suitable for a {@linkplain #normalize(Path) normalized
-   * version} of the supplied {@code path} for cases where during the
-   * execution of the {@link #of(Path)} method a {@link Loader}
-   * must be supplied to some other class.
+   * Returns a {@link Loader}, derived from this {@link Loader}, that
+   * is suitable for a {@linkplain #normalize(Path) normalized
+   * version} of the supplied {@code path}, particularly for cases
+   * where, during the execution of the {@link #load(Path)} method, a
+   * {@link Loader} must be supplied to some other class.
    *
    * <p>The returned {@link Loader} must be one whose {@link
    * #absolutePath()} method returns the {@linkplain Path#size()
@@ -462,14 +425,18 @@ public interface Loader<T> extends OptionalSupplier<T> {
    * #normalize(Path) normalized}) supplied {@code path}.  In many
    * cases {@code this} will be returned.</p>
    *
+   * <p>Typically only classes implementing this interface will need
+   * to call this method.</p>
+   *
    * @param path the {@link Path} in question; must not be {@code
    * null}
    *
-   * @return a {@link Loader} derived from this {@link Loader}
-   * that is suitable for a {@linkplain #normalize(Path) normalized
-   * version} of the supplied {@code path} for cases where during the
-   * execution of the {@link #of(Path)} method a {@link Loader}
-   * must be supplied to some other class; never {@code null}
+   * @return a {@link Loader}, derived from this {@link Loader}, that
+   * is suitable for a {@linkplain #normalize(Path) normalized
+   * version} of the supplied {@code path}, particularly for cases
+   * where, during the execution of the {@link #load(Path)} method, a
+   * {@link Loader} must be supplied to some other class; never {@code
+   * null}
    *
    * @exception NullPointerException if {@code path} is {@code null}
    *
@@ -660,7 +627,7 @@ public interface Loader<T> extends OptionalSupplier<T> {
         } else if (bootstrapLoader.root() != bootstrapLoader) {
           throw new IllegalStateException("bootstrapLoader.root(): " + bootstrapLoader.root());
         }
-        INSTANCE = bootstrapLoader.of(new TypeToken<Loader<?>>() {}).orElse(bootstrapLoader);
+        INSTANCE = bootstrapLoader.load(new TypeToken<Loader<?>>() {}).orElse(bootstrapLoader);
         if (!Path.root().equals(INSTANCE.absolutePath())) {
           throw new IllegalStateException("INSTANCE.absolutePath(): " + INSTANCE.absolutePath());
         } else if (INSTANCE.parent() != bootstrapLoader) {

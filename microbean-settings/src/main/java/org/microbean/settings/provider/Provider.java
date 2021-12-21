@@ -18,8 +18,6 @@ package org.microbean.settings.provider;
 
 import java.lang.reflect.Type;
 
-import java.util.stream.Stream;
-
 import org.microbean.settings.api.Loader;
 import org.microbean.settings.api.Path;
 
@@ -80,10 +78,6 @@ public interface Provider {
    */
   public default Type upperBound() {
     return Object.class;
-  }
-
-  public default Stream<Path<?>> paths() {
-    return Stream.empty();
   }
 
   /**

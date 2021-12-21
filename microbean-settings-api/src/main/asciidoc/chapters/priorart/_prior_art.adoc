@@ -3,8 +3,9 @@
 
 === Java Naming and Directory Interface
 
-Known now mostly as a library for accessing LDAP servers, JNDI is
-actually primarily a specification for what amounts to
+Known now mostly as a library for accessing LDAP servers,
+https://docs.oracle.com/en/java/javase/17/docs/api/java.naming/javax/naming/package-summary.html[JNDI]
+is actually primarily a specification for what amounts to
 <<named_object_acquisition,the Named Object Acquisition use case>>,
 complete with namespace resolution, partial or complete
 <<environment,environmental>> object acquisition, user-supplied
@@ -14,13 +15,16 @@ JNDI.
 
 === DropWizard
 
-DropWizard forces an application to model its entire configuration as
-a Java object that is deserialized by Jackson, often thought of
-incorrectly as just a JSON library.  This specification leans heavily
-on DropWizard's insistence that configuration be modeled up front and
-by the user, and imagines a deliberately unspecified "back end" to
-permit technologies other than Jackson to play the role of object
-deserializer.
+https://www.dropwizard.io/[DropWizard]
+https://www.dropwizard.io/en/latest/getting-started.html#creating-a-configuration-class[forces
+an application to model its entire configuration as a Java object that
+is deserialized by Jackson] (often thought of incorrectly as just a
+JSON library).  This specification leans heavily on DropWizard's
+insistence that configuration be modeled up front and by the user, and
+imagines a deliberately unspecified "back end" to permit technologies
+other than
+https://github.com/FasterXML/jackson#jackson-project-home-github[Jackson]
+to play the role of object deserializer.
 
 === Spring Boot's Type-Safe Configuration Properties
 

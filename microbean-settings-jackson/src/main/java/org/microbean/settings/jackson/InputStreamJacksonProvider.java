@@ -178,7 +178,7 @@ public class InputStreamJacksonProvider<T> extends JacksonProvider<T> {
       return (c, p) -> {
         // Note that otherwise potential infinite loops are handled in
         // the Settings class.
-        final ObjectMapper mapper = c.of(ObjectMapper.class).orElseGet(mapperSupplier);
+        final ObjectMapper mapper = c.load(ObjectMapper.class).orElseGet(mapperSupplier);
         if (mapper == null) {
           return null;
         }

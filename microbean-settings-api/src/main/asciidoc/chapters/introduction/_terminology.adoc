@@ -190,6 +190,16 @@ accidentally designate two different Java types for the same name.
 Paths can be absolute or relative to some preexisting location in
 <<environment_space,environment space>>.
 
+[#pathspace]
+==== Pathspace
+
+A notional domain containing <<path,paths>>, much like a namespace is
+a notional domain containing names.
+
+For the purposes of this specification, a pathspace may be implicitly
+defined by a <<component,component>> or an
+<<application,application>>.
+
 [#qualifier]
 ==== Qualifier
 
