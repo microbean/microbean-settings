@@ -44,6 +44,14 @@ import org.microbean.settings.api.Qualifiers;
 import org.microbean.settings.provider.AbstractProvider;
 import org.microbean.settings.provider.Value;
 
+/**
+ * A partial {@link AbstractProvider} implementation backed by <a
+ * href="https://github.com/FasterXML/jackson"
+ * target="_top">Jackson</a>.
+ *
+ * @author <a href="https://about.me/lairdnelson"
+ * target="_parent">Laird Nelson</a>
+ */
 public abstract class JacksonProvider<T> extends AbstractProvider<T> {
 
 
@@ -221,6 +229,38 @@ public abstract class JacksonProvider<T> extends AbstractProvider<T> {
     }
   }
 
+  /**
+   * Returns a {@linkplain Value#deterministic() deterministic} {@link
+   * Value} suitable for the combination of the supplied {@link
+   * Loader}, {@link Path} and object.
+   *
+   * @param <T> the type of the supplied {@link Path} and hence also
+   * of the returned {@link Value}
+   *
+   * @param requestor the {@link Loader} seeking a {@link Value};
+   * must not be {@code null}
+   *
+   * @param absolutePath an {@linkplain Path#isAbsolute() absolute
+   * <code>Path</code>} for which the supplied {@link Loader} is
+   * seeking a value; must not be {@code null}
+   *
+   * @param value the object the returned {@link Value} will
+   * {@linkplain Value#get() supply}; may be {@code null}
+   *
+   * @return a new {@link Value}; never {@code null}
+   *
+   * @exception NullPointerException if {@code requestor} or {@code
+   * absolutePath} is {@code null}
+   *
+   * @nullability This method does not, and its overrides must not,
+   * return {@code null}.
+   *
+   * @threadsafety This method is, and its overrides must be, safe for
+   * concurrent use by multiple threads.
+   *
+   * @idempotency This method is, and its overrides must be,
+   * idempotent and deterministic.
+   */
   @SuppressWarnings("unchecked")
   protected <T> Value<T> value(final Loader<?> requestor,
                                final Path<T> absolutePath,

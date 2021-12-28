@@ -16,6 +16,18 @@
  */
 package org.microbean.settings.api;
 
+/**
+ * A pairing of a {@link Qualifiers} and an object qualified by them.
+ *
+ * @param <T> the type of qualified object
+ *
+ * @param qualifiers the {@link Qualifiers} in question
+ *
+ * @param qualified the qualified object
+ *
+ * @author <a href="https://about.me/lairdnelson"
+ * target="_parent">Laird Nelson</a>
+ */
 public record Qualified<T>(Qualifiers qualifiers, T qualified) {
 
 }

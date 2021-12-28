@@ -53,7 +53,7 @@ import org.microbean.type.Types;
 /**
  * An {@link AbstractProvider} that is capable of {@linkplain Proxy
  * proxying} {@linkplain #isProxiable(Loader, Path) certain}
- * interfaces and supplying them as configured objects.
+ * interfaces and supplying them as environmental objects.
  *
  * @author <a href="https://about.me/lairdnelson"
  * target="_parent">Laird Nelson</a>
@@ -147,7 +147,7 @@ public class ProxyingProvider extends AbstractProvider<Object> {
    * test codified by the {@link #isIndexLike(Class)} method or more
    * than one parameter.</p>
    *
-   * @param requestor the {@link Loader} seeking a configured
+   * @param requestor the {@link Loader} seeking an environmental
    * object; must not be {@code null}; ignored by the default
    * implementation of this method
    *
@@ -393,33 +393,33 @@ public class ProxyingProvider extends AbstractProvider<Object> {
   private static final class Handler implements InvocationHandler {
 
     /**
-     * A {@link Loader} whose {@link Loader#of(Path)} method
-     * will eventually be called by the {@link #invoke(Object, Method,
+     * A {@link Loader} whose {@link Loader#of(Path)} method will
+     * eventually be called by the {@link #invoke(Object, Method,
      * Object[])} method.
      *
      * <p>Note that this {@link Loader}'s {@link
-     * Loader#absolutePath()} method will return a {@link Path}
-     * that <em>does not identify</em> the actual interface being
-     * proxied, much less the {@link Method} being handled by this
-     * {@link Handler}.  The {@link #absolutePath} field, instead,
-     * contains the {@link Path} identifying the proxied interface
-     * (and it will {@linkplain Path#startsWith(Path) start with} the
-     * return value of {@link #requestor requestor.absolutePath()}).
-     * During execution of the {@link #invoke(Object, Method,
-     * Object[])} method, the contents of the {@link #absolutePath}
-     * field will be appended with a relative {@link Path}
-     * corresponding to the {@link Method} being handled, and
-     * <em>that</em> resulting absolute {@link Path} will be supplied
-     * to the {@link Loader#of(Path)} method.  Note further that
-     * the {@link Loader#of(Path)} method will internally adjust
-     * the <em>actual</em> {@link Loader} used (see {@link
-     * Loader#configuredFor(Path)}).</p>
+     * Loader#absolutePath()} method will return a {@link Path} that
+     * <em>does not identify</em> the actual interface being proxied,
+     * much less the {@link Method} being handled by this {@link
+     * Handler}.  The {@link #absolutePath} field, instead, contains
+     * the {@link Path} identifying the proxied interface (and it will
+     * {@linkplain Path#startsWith(Path) start with} the return value
+     * of {@link #requestor requestor.absolutePath()}).  During
+     * execution of the {@link #invoke(Object, Method, Object[])}
+     * method, the contents of the {@link #absolutePath} field will be
+     * appended with a relative {@link Path} corresponding to the
+     * {@link Method} being handled, and <em>that</em> resulting
+     * absolute {@link Path} will be supplied to the {@link
+     * Loader#of(Path)} method.  Note further that the {@link
+     * Loader#of(Path)} method will internally adjust the
+     * <em>actual</em> {@link Loader} used (see {@link
+     * Loader#loaderFor(Path)}).</p>
      *
-     * <p>All of this to say: this {@link Loader} is just a handle
-     * of sorts to the proper {@link Loader} that will eventually
-     * be used to locate the configured object corresponding to the
-     * return value of the {@link Method} being handled, and serves no
-     * other purpose.</p>
+     * <p>All of this to say: this {@link Loader} is just a handle of
+     * sorts to the proper {@link Loader} that will eventually be used
+     * to locate the environmental object corresponding to the return
+     * value of the {@link Method} being handled, and serves no other
+     * purpose.</p>
      *
      * @see #absolutePath
      *

@@ -3,79 +3,97 @@
 
 === Components
 
-A _component_, for the purposes of this specification, is a Java class
-or a collection of Java classes that may behave differently based on
-state loaded from its surrounding environment without requiring its
-source code to change.
+A <<component,_component_>>, for the purposes of this specification,
+is a Java class or a collection of Java classes that may behave
+differently based on state loaded from its surrounding
+<<environment,environment>> without any change having been made to its
+source code.
 
-Because components are often developed by different people and
-organizations and combined only at the point of application assembly,
-they can inadvertently make configuration-related assumptions that may
-be true during development, in isolation, but may not be true in the
-presence of other components, such as, for example, during application
-assembly.
+Because <<component,components>> are often developed by different
+people and organizations and combined only at the point of
+<<assemble,application assembly>>, they can inadvertently make
+<<configuration,configuration>>-related assumptions that may be true
+during development, in isolation, but may not be true in the presence
+of other <<component,components>>, e.g. during <<assemble,application
+assembly>>.
 
-For example, where names are involved, two components might reference
-the same name but expect different named objects or results as a
-result of the reference. In order to assemble these components into an
-application, an application assembler will have to resolve this
-conflict.
+For example, where <<path,paths>> are involved, two
+<<component,components>> might reference the same <<path,path>> but
+expect different named objects or results as a result of the
+reference. In order to <<assemble,assemble>> these
+<<component,components>> into an <<application,application>>, an
+<<application_assembler,application assembler>> will have to resolve
+this conflict.
 
-In the realm of configuration, namespaces are an example of component
-concerns clashing with application concerns. Where there is a
-conflict, the application assembler must be able to disambiguate
-component concerns and reframe them as application concerns.
+In the realm of <<configuration,configuration>>,
+<<pathspace,pathspaces>> are an example of
+<<component_concern,component concerns>> clashing with
+<<application_concern,application concerns>>. Where there is a
+conflict, the <<application_assembler,application assembler>> must be
+able to disambiguate <<component_concern,component concerns>> and
+reframe them as <<application_concern,application concerns>>.
 
 ****
-Consider a hypothetical method invocation from a component:
+Consider a hypothetical method invocation from a
+<<component,component>>:
 [source,java]
 ----
 final Frobnicator f = gorp.getFrobnicator("special");
 ----
-The namespace governing "`special`" in this example is that of the
-invoker of the `getFrobnicator("special")` method.
+The <<pathspace,pathspace>> governing "`special`" in this example is
+that of the invoker of the `getFrobnicator("special")` method.
 
 Now consider another hypothetical method invocation from another
-component:
+<<component,component>>:
 [source,java]
 ----
 final Caturgiator c = floo.getCaturgiator("special");
 ----
-If `gorp` and `floo` access configuration based on the name they are
-supplied, there could be clashing component concerns. An application
-assembler would have to somehow resolve the conflicting facts that in
-the first example "`special`" refers to a particular kind of
-`Frobnicator`, and in the second example "`special`" refers to a
-particular kind of `Caturgiator`.
+If `gorp` and `floo` access <<configuration,configuration>> based on
+the name they are supplied, there could be clashing
+<<component_concern,component concerns>>. An
+<<application_assembler,application assembler>> would have to somehow
+resolve the conflicting facts that in the first example "`special`"
+refers to a particular kind of `Frobnicator`, and in the second
+example "`special`" refers to a particular kind of `Caturgiator`.
 ****
 
-Components are not directly represented in the APIs defined by this
-specification.
+<<component,Components>> are not directly represented in the APIs
+defined by this specification.
 
 === Applications
 
-An _application_, for the purposes of this specification, is an
-assembled collection of components whose component concerns have been
-reframed as application concerns by an application assembler.
+An <<application,_application_>>, for the purposes of this
+specification, is an <<assemble,assembled>> collection of
+<<component,components>> whose <<component_concern,component
+concerns>> have been reframed as <<application_concern,application
+concerns>> by an <<application_assembler,application assembler>>
+during <<assemble,application assembly>>.
 
-Applications are deployed into environments.
+<<application,Applications>> are <<deploy,deployed>> into
+<<environment,environments>>.
 
-Applications are not directly represented in the APIs defined by this
-specification.
+<<application,Applications>> are not directly represented in the APIs
+defined by this specification.
 
-Applications are particularly significant nonetheless to this
-specification because applications, not their constituent components,
-are what is deployed into environments, and the namespaces (and other
-similar concerns) of an application deployment are that of the
-deployed application, not of any of its constituent components.
+<<application,Applications>> are particularly significant nonetheless
+to this specification because <<application,applications>>, not their
+constituent <<component,components>>, are what is <<deploy,deployed>>
+into <<environment,environments>>, and the <<pathspace,pathspaces>>
+(and other similar concerns) of an <<deployment,application
+deployment>> are those of the <<deploy,deployed>>
+<<application,application>>, not of any of its constituent
+<<component,components>>.
 
 === Configurations
 
-A _configuration_, for the purposes of this specification, is a persistent
-human-authored collection of named values that serves as a portion of
-the externalized state of a component.
+A <<configuration,_configuration_>>, for the purposes of this
+specification, is persistent, externalized, human-authored state that
+serves as a portion of the externalized state of a
+<<component,component>>.
 
-A configuration belongs to one and only one environment.
+A <<configuration,configuration>> belongs to one and only one
+<<environment,environment>>.
 
 [#determinism]
 === Determinism
@@ -93,7 +111,7 @@ is deterministic, though it produces a value that is
 === Presence
 
 This specification makes a distinction between notional
-<<configuration,configuration>> values that are:
+<<configuration,configurations>> that are:
 
  * Currently present (or absent), but perhaps not so in the future
 
@@ -125,7 +143,7 @@ specification:
 changes over time to values underlying, and possibly represented by,
 the <<configuration,configuration>>, as well as changes over time to
 the _structure_ of the <<configuration,configuration>>, i.e. changes
-to the set of its values for which it is even sensible to issue a
+to the set of its objects for which it is even sensible to issue a
 request.  The first kind of changes are _content changes_.  The second
 kind of changes are _morphology changes_.
 

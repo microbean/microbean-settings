@@ -8,7 +8,12 @@ implemented are discussed later in this specification.
 [#environment_model_acquisition]
 === Environment Model Acquisition
 
-==== Overview
+==== Actors
+
+ * <<component_developer>>
+ * <<environment_loader,Environment Loader>>
+
+==== Basic Case
 
  . While writing code for her component, the <<component_developer>>
    wants to acquire a single Java object whose class she has designed
@@ -23,24 +28,34 @@ implemented are discussed later in this specification.
     <<application,application>> are determined automatically.
 
  . The <<environment_loader,environment loader>> takes the
-   <<qualifier,qualifiers>> into consideration as well as the desired
+   <<application,application's>> <<qualifier,qualifiers>> into
+   consideration as well as the desired
    <<environment,environment>>-modeling class, and arranges for the
-   proper object representing the current qualified
+   proper object of that class representing the current qualified
    <<application,application's>> <<environment,environment>> to be
    selected, instantiated and retrieved.
 
 [#named_object_acquisition]
 === Named Object Acquisition
 
-==== Overview
+==== Actors
+
+ * <<component_developer>>
+ * <<environment_loader,Environment Loader>>
+ * <<application_assembler>>
+
+==== Basic Case
 
  . While writing code for her component, the <<component_developer>>
    wants to acquire a _portion_ of a <<component,component's>>
    <<environment,environment>>, represented as a Java object whose
-   class she may or may not have designed. The object may be a simple
-   scalar value, such as a `String` or an `Integer`, a primitive type,
-   such as `int`, a collection-like object, such as an array or a
-   `List` or a `Map`, or any other kind of object.
+   class she may or may not have designed.
++
+****
+The object may be a simple scalar value, such as a `String` or an
+`Integer`, a primitive type, such as `int`, a collection-like object,
+such as an array or a `List` or a `Map`, or any other kind of object.
+****
 
  .. The object representing the portion is qualified by a particular
     <<path,path>> belonging notionally to the <<component,component>>
@@ -53,21 +68,23 @@ retrieve an object that is a simple scalar value models retrieving a
 
  . She invokes a method on a specification-defined
    <<environment_loader,environment loader>>, supplying it with the
-   component-pathspaced <<path,path>> and the class designating the
-   object she wants.
+   <<component,component>>-<<pathspace,pathspaced>> <<path,path>> and
+   the class designating the object she wants.
 
  .. The <<qualifier,qualifiers>> for the current
     <<application,application>> are determined automatically.
 
- .. The <<environment_loader,environment loader>> consults any
+ .. The <<environment_loader,environment loader>> consults
     <<disambiguation,disambiguation>> information supplied by the
-    <<application_assembler>> and transliterates the
-    component-pathspaced <<path,path>> into an equivalent
-    <<application,application>>-pathspaced <<path,path>>, thus turning
-    a <<component_concern,component concern>> into an equivalent
-    <<application_concern,application concern>>
+    <<application_assembler>>, if there is any, and transliterates the
+    <<component,component>>-<<pathspace,pathspaced>> <<path,path>>
+    into an equivalent
+    <<application,application>>-<<pathspace,pathspaced>>
+    <<path,path>>, thus turning a <<component_concern,component
+    concern>> into an equivalent <<application_concern,application
+    concern>>.
 
- . The <<environment_loader,environment loader>> takes the (possibly
+ . The <<environment_loader,environment loader>> takes this (possibly
    transliterated) <<path,path>> designating the portion of the
    <<environment,environment>> to retrieve, the
    <<application,application>> <<qualifier,qualifiers>> and the
@@ -77,7 +94,12 @@ retrieve an object that is a simple scalar value models retrieving a
 [#disambiguation]
 === Disambiguation
 
-==== Overview
+==== Actors
+
+ * <<application_assembler>>
+ * <<environment_loader,Environment Loader>>
+
+==== Basic Case
 
  . The <<application_assembler>> wants to resolve the ambiguity
    introduced when two <<component,components>> that she is

@@ -39,7 +39,7 @@ import static java.util.Collections.unmodifiableSortedSet;
 
 /**
  * An immutable set of {@link String}-typed key-value pair coordinates
- * that locate configuration in configuration space.
+ * that locate an environment in environment space.
  *
  * <p>This is a <a
  * href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/doc-files/ValueBased.html">value-based

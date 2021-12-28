@@ -32,7 +32,7 @@ import org.microbean.development.annotation.OverridingEncouraged;
 import org.microbean.settings.api.Path.Element;
 
 /**
- * An {@link OptionalSupplier} of configured objects.
+ * An {@link OptionalSupplier} of environmental objects.
  *
  * <p><strong>Note:</strong> {@link Loader} implementations are
  * expected to be immutable with respect to the methods exposed by
@@ -40,7 +40,7 @@ import org.microbean.settings.api.Path.Element;
  * Loader}-typed return type require their implementations to
  * return a <em>new</em> {@link Loader}.</p>
  *
- * @param <T> the type of configured objects this {@link Loader}
+ * @param <T> the type of environmental objects this {@link Loader}
  * supplies
  *
  * @author <a href="https://about.me/lairdnelson"
@@ -130,7 +130,7 @@ public interface Loader<T> extends OptionalSupplier<T> {
   public Path<T> absolutePath();
 
   /**
-   * Returns a {@link Loader} that can supply configured objects
+   * Returns a {@link Loader} that can supply environmental objects
    * that are suitable for the supplied {@code path}.
    *
    * <p>After {@linkplain #loader() bootstrapping}, this method serves as
@@ -161,7 +161,7 @@ public interface Loader<T> extends OptionalSupplier<T> {
    * @param path the {@link Path} for which a {@link Loader}
    * should be returned; must not be {@code null}
    *
-   * @return a {@link Loader} capable of supplying configured
+   * @return a {@link Loader} capable of supplying environmental
    * objects suitable for the supplied {@code path}; never {@code
    * null}
    *
@@ -295,60 +295,393 @@ public interface Loader<T> extends OptionalSupplier<T> {
       .orElse(path);
   }
 
+  /**
+   * Calls the {@link #load(Element)} method and returns its result.
+   *
+   * @param <U> the type of the returned {@link Loader}
+   *
+   * @param type the {@linkplain Element#type() type} of an {@link
+   * Element}; must not be {@code null}
+   *
+   * @return a {@link Loader} capable of supplying environmental
+   * objects suitable for the supplied {@code nonRootElement}; never
+   * {@code null}
+   *
+   * @exception NullPointerException if {@code nonRootElement} is
+   * {@code null}
+   *
+   * @exception IllegalArgumentException if {@code nonRootElement}
+   * returns {@code true} from its {@link Element#isRoot() isRoot()}
+   * method
+   *
+   * @nullability This method never returns, and its overrides must
+   * not return, {@code null}.
+   *
+   * @threadsafety This method is, and its overrides must be, safe for
+   * concurrent use by multiple threads.
+   *
+   * @idempotency This method is, and its overrides must be,
+   * idempotent and deterministic.
+   *
+   * @see #load(Element)
+   *
+   * @see Element#of(Class)
+   */
   @Convenience
   @OverridingDiscouraged
   public default <U> Loader<U> load(final Class<U> type) {
     return this.load(Element.of(type));
   }
 
+  /**
+   * Calls the {@link #load(Element)} method and returns its result.
+   *
+   * @param <U> the type of the returned {@link Loader}
+   *
+   * @param type the {@linkplain Element#type() type} of an {@link
+   * Element}; must not be {@code null}
+   *
+   * @return a {@link Loader} capable of supplying environmental
+   * objects suitable for the supplied {@code nonRootElement}; never
+   * {@code null}
+   *
+   * @exception NullPointerException if {@code nonRootElement} is
+   * {@code null}
+   *
+   * @exception IllegalArgumentException if {@code nonRootElement}
+   * returns {@code true} from its {@link Element#isRoot() isRoot()}
+   * method
+   *
+   * @nullability This method never returns, and its overrides must
+   * not return, {@code null}.
+   *
+   * @threadsafety This method is, and its overrides must be, safe for
+   * concurrent use by multiple threads.
+   *
+   * @idempotency This method is, and its overrides must be,
+   * idempotent and deterministic.
+   *
+   * @see #load(Element)
+   *
+   * @see Element#of(TypeToken)
+   */
   @Convenience
   @OverridingDiscouraged
   public default <U> Loader<U> load(final TypeToken<U> type) {
     return this.load(Element.of(type));
   }
 
+  /**
+   * Calls the {@link #load(Element)} method and returns its result.
+   *
+   * @param type the {@linkplain Element#type() type} of an {@link
+   * Element}; must not be {@code null}
+   *
+   * @return a {@link Loader} capable of supplying environmental
+   * objects suitable for the supplied {@code nonRootElement}; never
+   * {@code null}
+   *
+   * @exception NullPointerException if {@code nonRootElement} is
+   * {@code null}
+   *
+   * @exception IllegalArgumentException if {@code nonRootElement}
+   * returns {@code true} from its {@link Element#isRoot() isRoot()}
+   * method
+   *
+   * @nullability This method never returns, and its overrides must
+   * not return, {@code null}.
+   *
+   * @threadsafety This method is, and its overrides must be, safe for
+   * concurrent use by multiple threads.
+   *
+   * @idempotency This method is, and its overrides must be,
+   * idempotent and deterministic.
+   *
+   * @see #load(Element)
+   *
+   * @see Element#of(Type)
+   */
   @Convenience
   @OverridingDiscouraged
   public default Loader<?> load(final Type type) {
     return this.load(Element.of(type));
   }
 
+  /**
+   * Calls the {@link #load(Element)} method and returns its result.
+   *
+   * @param <U> the type of the returned {@link Loader}
+   *
+   * @param name the {@linkplain Element#name() name} of an {@link
+   * Element}; must not be {@code null}
+   *
+   * @param type the {@linkplain Element#type() type} of an {@link
+   * Element}; must not be {@code null}
+   *
+   * @return a {@link Loader} capable of supplying environmental
+   * objects suitable for the supplied {@code nonRootElement}; never
+   * {@code null}
+   *
+   * @exception NullPointerException if {@code nonRootElement} is
+   * {@code null}
+   *
+   * @exception IllegalArgumentException if {@code nonRootElement}
+   * returns {@code true} from its {@link Element#isRoot() isRoot()}
+   * method
+   *
+   * @nullability This method never returns, and its overrides must
+   * not return, {@code null}.
+   *
+   * @threadsafety This method is, and its overrides must be, safe for
+   * concurrent use by multiple threads.
+   *
+   * @idempotency This method is, and its overrides must be,
+   * idempotent and deterministic.
+   *
+   * @see #load(Element)
+   *
+   * @see Element#of(String, Class)
+   */
   @Convenience
   @OverridingDiscouraged
-  public default <U> Loader<U> load(final String element, final Class<U> type) {
-    return this.load(Element.of(element, type));
+  public default <U> Loader<U> load(final String name, final Class<U> type) {
+    return this.load(Element.of(name, type));
   }
 
+  /**
+   * Calls the {@link #load(Element)} method and returns its result.
+   *
+   * @param <U> the type of the returned {@link Loader}
+   *
+   * @param name the {@linkplain Element#name() name} of an {@link
+   * Element}; must not be {@code null}
+   *
+   * @param type the {@linkplain Element#type() type} of an {@link
+   * Element}; must not be {@code null}
+   *
+   * @return a {@link Loader} capable of supplying environmental
+   * objects suitable for the supplied {@code nonRootElement}; never
+   * {@code null}
+   *
+   * @exception NullPointerException if {@code nonRootElement} is
+   * {@code null}
+   *
+   * @exception IllegalArgumentException if {@code nonRootElement}
+   * returns {@code true} from its {@link Element#isRoot() isRoot()}
+   * method
+   *
+   * @nullability This method never returns, and its overrides must
+   * not return, {@code null}.
+   *
+   * @threadsafety This method is, and its overrides must be, safe for
+   * concurrent use by multiple threads.
+   *
+   * @idempotency This method is, and its overrides must be,
+   * idempotent and deterministic.
+   *
+   * @see #load(Element)
+   *
+   * @see Element#of(String, TypeToken)
+   */
   @Convenience
   @OverridingDiscouraged
-  public default <U> Loader<U> load(final String element, final TypeToken<U> type) {
-    return this.load(Element.of(element, type));
+  public default <U> Loader<U> load(final String name, final TypeToken<U> type) {
+    return this.load(Element.of(name, type));
   }
 
+  /**
+   * Calls the {@link #load(Element)} method and returns its result.
+   *
+   * @param name the {@linkplain Element#name() name} of an {@link
+   * Element}; must not be {@code null}
+   *
+   * @param type the {@linkplain Element#type() type} of an {@link
+   * Element}; must not be {@code null}
+   *
+   * @return a {@link Loader} capable of supplying environmental
+   * objects suitable for the supplied {@code nonRootElement}; never
+   * {@code null}
+   *
+   * @exception NullPointerException if {@code nonRootElement} is
+   * {@code null}
+   *
+   * @exception IllegalArgumentException if {@code nonRootElement}
+   * returns {@code true} from its {@link Element#isRoot() isRoot()}
+   * method
+   *
+   * @nullability This method never returns, and its overrides must
+   * not return, {@code null}.
+   *
+   * @threadsafety This method is, and its overrides must be, safe for
+   * concurrent use by multiple threads.
+   *
+   * @idempotency This method is, and its overrides must be,
+   * idempotent and deterministic.
+   *
+   * @see #load(Element)
+   *
+   * @see Element#of(String, Type)
+   */
   @Convenience
   @OverridingDiscouraged
-  public default Loader<?> load(final String element, final Type type) {
-    return this.load(Element.of(element, type));
+  public default Loader<?> load(final String name, final Type type) {
+    return this.load(Element.of(name, type));
   }
 
+  /**
+   * Calls the {@link #load(Path)} method and returns its result.
+   *
+   * @param <U> the type of the returned {@link Loader}
+   *
+   * @param names a sequence of {@link Element} {@linkplain
+   * Element#name() names}; must not be {@code null}
+   *
+   * @param type an {@link Element} {@linkplain Element#type() type};
+   * must not be {@code null}
+   *
+   * @return a {@link Loader} capable of supplying environmental
+   * objects suitable for the supplied {@code nonRootElement}; never
+   * {@code null}
+   *
+   * @exception NullPointerException if {@code nonRootElement} is
+   * {@code null}
+   *
+   * @exception IllegalArgumentException if {@code nonRootElement}
+   * returns {@code true} from its {@link Element#isRoot() isRoot()}
+   * method
+   *
+   * @nullability This method never returns, and its overrides must
+   * not return, {@code null}.
+   *
+   * @threadsafety This method is, and its overrides must be, safe for
+   * concurrent use by multiple threads.
+   *
+   * @idempotency This method is, and its overrides must be,
+   * idempotent and deterministic.
+   *
+   * @see #load(Path)
+   *
+   * @see Path#of(List, Class)
+   */
   @Convenience
   @OverridingDiscouraged
   public default <U> Loader<U> load(final List<? extends String> names, final Class<U> type) {
     return this.load(Path.of(names, type));
   }
 
+  /**
+   * Calls the {@link #load(Path)} method and returns its result.
+   *
+   * @param <U> the type of the returned {@link Loader}
+   *
+   * @param names a sequence of {@link Element} {@linkplain
+   * Element#name() names}; must not be {@code null}
+   *
+   * @param type an {@link Element} {@linkplain Element#type() type};
+   * must not be {@code null}
+   *
+   * @return a {@link Loader} capable of supplying environmental
+   * objects suitable for the supplied {@code nonRootElement}; never
+   * {@code null}
+   *
+   * @exception NullPointerException if {@code nonRootElement} is
+   * {@code null}
+   *
+   * @exception IllegalArgumentException if {@code nonRootElement}
+   * returns {@code true} from its {@link Element#isRoot() isRoot()}
+   * method
+   *
+   * @nullability This method never returns, and its overrides must
+   * not return, {@code null}.
+   *
+   * @threadsafety This method is, and its overrides must be, safe for
+   * concurrent use by multiple threads.
+   *
+   * @idempotency This method is, and its overrides must be,
+   * idempotent and deterministic.
+   *
+   * @see #load(Path)
+   *
+   * @see Path#of(List, TypeToken)
+   */
   @Convenience
   @OverridingDiscouraged
   public default <U> Loader<U> load(final List<? extends String> names, final TypeToken<U> type) {
     return this.load(Path.of(names, type));
   }
 
+  /**
+   * Calls the {@link #load(Path)} method and returns its result.
+   *
+   * @param names a sequence of {@link Element} {@linkplain
+   * Element#name() names}; must not be {@code null}
+   *
+   * @param type an {@link Element} {@linkplain Element#type() type};
+   * must not be {@code null}
+   *
+   * @return a {@link Loader} capable of supplying environmental
+   * objects suitable for the supplied {@code nonRootElement}; never
+   * {@code null}
+   *
+   * @exception NullPointerException if {@code nonRootElement} is
+   * {@code null}
+   *
+   * @exception IllegalArgumentException if {@code nonRootElement}
+   * returns {@code true} from its {@link Element#isRoot() isRoot()}
+   * method
+   *
+   * @nullability This method never returns, and its overrides must
+   * not return, {@code null}.
+   *
+   * @threadsafety This method is, and its overrides must be, safe for
+   * concurrent use by multiple threads.
+   *
+   * @idempotency This method is, and its overrides must be,
+   * idempotent and deterministic.
+   *
+   * @see #load(Path)
+   *
+   * @see Path#of(List, Type)
+   */
   @Convenience
   @OverridingDiscouraged
   public default Loader<?> load(final List<? extends String> names, final Type type) {
     return this.load(Path.of(names, type));
   }
 
+  /**
+   * Calls the {@link #load(Path)} method and returns its result.
+   *
+   * @param <U> the type of the returned {@link Loader}
+   *
+   * @param nonRootElement an {@link Element}; must not be {@code
+   * null}; must not return {@code true} from its {@link
+   * Element#isRoot() isRoot()} method
+   *
+   * @return a {@link Loader} capable of supplying environmental
+   * objects suitable for the supplied {@code nonRootElement}; never
+   * {@code null}
+   *
+   * @exception NullPointerException if {@code nonRootElement} is
+   * {@code null}
+   *
+   * @exception IllegalArgumentException if {@code nonRootElement}
+   * returns {@code true} from its {@link Element#isRoot() isRoot()}
+   * method
+   *
+   * @nullability This method never returns, and its overrides must
+   * not return, {@code null}.
+   *
+   * @threadsafety This method is, and its overrides must be, safe for
+   * concurrent use by multiple threads.
+   *
+   * @idempotency This method is, and its overrides must be,
+   * idempotent and deterministic.
+   *
+   * @see #load(Path)
+   *
+   * @see Path#of(Element)
+   */
   @Convenience
   @OverridingDiscouraged
   public default <U> Loader<U> load(final Element<U> nonRootElement) {
@@ -549,7 +882,7 @@ public interface Loader<T> extends OptionalSupplier<T> {
 
   /**
    * Returns a non-{@code null} {@linkplain #root() root} {@link
-   * Loader} that can be used to acquire configured objects.
+   * Loader} that can be used to acquire environmental objects.
    *
    * <p>The {@linkplain #root() root} {@link Loader} is located
    * using the {@link ServiceLoader}.  The first of all discovered
@@ -603,7 +936,7 @@ public interface Loader<T> extends OptionalSupplier<T> {
    * <p>This is the entry point for end users of this framework.</p>
    *
    * @return a non-{@code null} {@linkplain #root() root} {@link
-   * Loader} that can be used to acquire configured objects
+   * Loader} that can be used to acquire environmental objects
    *
    * @exception IllegalStateException if any of the restrictions above
    * is violated

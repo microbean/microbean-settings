@@ -42,8 +42,8 @@ import org.microbean.settings.api.Path.Element;
 import org.microbean.type.Types;
 
 /**
- * A chain of {@link Path.Element}s representing part of a request for
- * a {@link Loader} to supply a configured object.
+ * A sequence of {@link Path.Element}s representing part of a request
+ * for a {@link Loader} to supply an environmental object.
  *
  * @param <T> the type of the last {@link Path.Element} in this {@link
  * Path}
@@ -114,8 +114,8 @@ public final class Path<T> implements Iterable<Element<?>> {
 
 
   /**
-   * Returns an {@link Iterator} over the {@link Path.Element}s in
-   * this {@link Path}.
+   * Returns an {@link Iterator} over the {@link Element}s in this
+   * {@link Path}.
    *
    * @return an {@link Iterator} over the {@link Path.Element}s in
    * this {@link Path}; never {@code null}
@@ -996,7 +996,7 @@ public final class Path<T> implements Iterable<Element<?>> {
      * parameter types because {@link Path.Element} instances must be
      * wholly immutable.  In practice, since arguments and parameters
      * in a {@link Path.Element} are used for informational purposes
-     * during configured object selection, typing all arguments as
+     * during environmental object selection, typing all arguments as
      * {@link String}s is adequate.</p>
      *
      * @return a non-{@code null} but possibly {@linkplain

@@ -14,9 +14,7 @@ Use Cases::
 
  * *Secondly*, this specification should focus on the <<use_cases,use
    cases>> of the <<application_assembler>> as she seeks to
-   <<assemble,combine disparate components into a Java application>>,
-   while <<disambiguation,resolving>>
-   <<configuration,configuration>>-related conflicts.
+   <<assemble,combine disparate components into a Java application>>.
 
  * *Thirdly*, this specification should focus on any <<use_cases,use
    cases>> of the <<infrastructure_developer>> as she seeks to adapt a
@@ -26,13 +24,15 @@ Use Cases::
 Abstraction::
 
  * This specification should aim to abstract away as much as possible
-   the details of how a <<configuration,configuration>> is represented
-   persistently.
+   the details of how any <<configuration,configuration>> is
+   represented persistently.
 
 Self-Configurability::
 
  * A conforming implementation should be able to configure itself
-   using itself.
+   using itself, i.e. parts of the implementation should be able to
+   use the implementation itself to acquire
+   <<environment,environmental>> objects.
 
 No Dependency Injection::
 

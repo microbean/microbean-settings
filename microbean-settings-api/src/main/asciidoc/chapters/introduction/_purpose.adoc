@@ -7,10 +7,9 @@ for:
  * a <<component_developer>> to use in order to:
 
  ** <<environment_model_acquisition,acquire>> Java objects from
-    <<configuration,configurations>> and their containing
     <<environment,environments>>
 
- ** advertise the kind of
+ ** advertise the
     <<configuration,configuration>> her <<component,component>> needs
 
  * an <<application_assembler>> to use in order to
@@ -19,8 +18,8 @@ for:
    <<application,application>> for <<deploy,deployment>>
 
  * an <<infrastructure_developer>> to use in order to adapt a
-   configuration system to a conforming implementation of this
-   specification
+   <<configuration_system,configuration system>> to a conforming
+   implementation of this specification
 
  * a <<configuration_author>> to use in order to discover and create
    proper <<configuration,configurations>> for a given
